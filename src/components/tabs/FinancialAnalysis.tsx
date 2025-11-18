@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, TrendingUp, AlertCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
@@ -20,6 +20,9 @@ export const FinancialAnalysis = () => {
     businessBalanceSheetPeriods,
     affiliateEntities,
     debts,
+    uses,
+    interestRate,
+    termMonths,
     financialAnalysis,
     setFinancialAnalysis,
   } = useSpreadsheet();
@@ -125,6 +128,22 @@ export const FinancialAnalysis = () => {
                                debts.reduce((sum, debt) => sum + (parseFloat(debt.payment) || 0), 0);
     const annualDebtService = monthlyDebtPayment * 12;
     
+    // Calculate proposed debt service
+    const calculateProposedDebtService = () => {
+      const loanAmount = uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
+      const rate = parseFloat(interestRate) || 0;
+      const term = parseFloat(termMonths) || 0;
+      
+      if (rate === 0 || term === 0 || loanAmount === 0) return 0;
+      
+      const monthlyRate = rate / 100 / 12;
+      const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1);
+      return monthlyPayment * 12;
+    };
+    
+    const proposedAnnualDebtService = calculateProposedDebtService();
+    const totalProposedAnnualDebtService = annualDebtService + proposedAnnualDebtService;
+    
     const monthlyPersonalIncome = personalIncome / 12;
     const personalDebtToIncome = monthlyPersonalIncome > 0 ? (monthlyDebtPayment / monthlyPersonalIncome) * 100 : 0;
     const personalDebtToAssets = totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0;
@@ -160,8 +179,9 @@ export const FinancialAnalysis = () => {
       const netIncome = ebit - interest - taxes;
       const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
       
-      // DSCR = EBITDA / Annual Debt Service
-      const dscr = annualDebtService > 0 ? ebitda / annualDebtService : 0;
+      // DSCR calculations - Existing vs Proposed
+      const existingDSCR = annualDebtService > 0 ? ebitda / annualDebtService : 0;
+      const proposedDSCR = totalProposedAnnualDebtService > 0 ? ebitda / totalProposedAnnualDebtService : 0;
       
       return {
         revenue,
@@ -171,7 +191,9 @@ export const FinancialAnalysis = () => {
         ebitda,
         netIncome,
         netMargin,
-        dscr,
+        dscr: existingDSCR,  // Keep for backward compatibility
+        existingDSCR,
+        proposedDSCR,
         opEx,
         rentExpense,
         officersComp,
@@ -300,6 +322,8 @@ export const FinancialAnalysis = () => {
         fullYear: fullYearMetrics,
         interim: interimMetrics,
         annualDebtService,
+        proposedAnnualDebtService,
+        totalProposedAnnualDebtService,
       },
       global: {
         totalAssets: globalTotalAssets,
@@ -1169,60 +1193,53 @@ export const FinancialAnalysis = () => {
                 </div>
               </div>
               
-              {/* DSCR ANALYSIS - Full Year vs Interim */}
+              {/* DSCR ANALYSIS - Existing vs Proposed */}
               <div className="pt-6 border-t">
-                <h3 className="text-lg font-semibold mb-4 text-primary">Debt Service Coverage Ratio (DSCR) Analysis</h3>
+                <h3 className="text-lg font-semibold mb-4 text-primary">Debt Service Coverage Ratio (DSCR) Analysis - Existing vs Proposed</h3>
                 
-                {/* DSCR Trend Chart */}
+                {/* DSCR Comparison Chart */}
                 <Card className="mb-6 print-chart">
                   <CardHeader>
-                    <CardTitle>DSCR Trend Over Time</CardTitle>
+                    <CardTitle>DSCR Comparison: Existing vs Proposed Debt</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={[
                         ratios.dscr.fullYear ? { 
-                          name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year 1',
-                          dscr: ratios.dscr.fullYear.dscr,
-                          ebitda: ratios.dscr.fullYear.ebitda,
-                          debtService: ratios.dscr.annualDebtService
+                          name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year',
+                          existingDSCR: ratios.dscr.fullYear.existingDSCR,
+                          proposedDSCR: ratios.dscr.fullYear.proposedDSCR,
                         } : null,
                         ratios.dscr.interim ? {
                           name: businessPeriodLabels[2] || 'Interim',
-                          dscr: ratios.dscr.interim.dscr,
-                          ebitda: ratios.dscr.interim.ebitda,
-                          debtService: ratios.dscr.annualDebtService
+                          existingDSCR: ratios.dscr.interim.existingDSCR,
+                          proposedDSCR: ratios.dscr.interim.proposedDSCR,
                         } : null
                       ].filter(Boolean)}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" />
                         <YAxis />
-                        <RechartsTooltip 
-                          formatter={(value: number) => value.toFixed(2)}
-                          labelFormatter={(label) => `Period: ${label}`}
-                        />
+                        <RechartsTooltip formatter={(value: number) => value.toFixed(2)} />
                         <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="dscr" 
-                          stroke="#8b5cf6" 
-                          strokeWidth={3}
-                          name="DSCR"
-                          dot={{ r: 6 }}
-                        />
+                        <ReferenceLine y={1.15} stroke="hsl(var(--success))" strokeDasharray="3 3" label="Target (1.15)" />
+                        <ReferenceLine y={1.0} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label="Minimum (1.0)" />
+                        <Line type="monotone" dataKey="existingDSCR" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Existing DSCR" />
+                        <Line type="monotone" dataKey="proposedDSCR" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" name="Proposed DSCR" />
                       </LineChart>
                     </ResponsiveContainer>
-                    <div className="mt-4 p-4 bg-muted/30 rounded-lg">
-                      <p className="text-sm font-semibold mb-2">Trend Analysis:</p>
-                      {ratios.dscr.fullYear && ratios.dscr.interim && (
-                        <p className="text-sm text-muted-foreground">
-                          DSCR {ratios.dscr.interim.dscr > ratios.dscr.fullYear.dscr ? 'improved' : 'declined'} from{' '}
-                          <span className="font-semibold">{ratios.dscr.fullYear.dscr.toFixed(2)}</span> to{' '}
-                          <span className="font-semibold">{ratios.dscr.interim.dscr.toFixed(2)}</span>
-                          {' '}({((ratios.dscr.interim.dscr - ratios.dscr.fullYear.dscr) / ratios.dscr.fullYear.dscr * 100).toFixed(1)}% change).
-                          {ratios.dscr.interim.dscr < 1.15 && ' ⚠️ Below target threshold of 1.15.'}
-                        </p>
-                      )}
+                    <div className="mt-4 grid grid-cols-3 gap-4">
+                      <div className="p-3 bg-muted/30 rounded">
+                        <p className="text-xs font-semibold mb-1">Existing Debt Service</p>
+                        <p className="text-lg font-bold">${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                      </div>
+                      <div className="p-3 bg-primary/10 rounded border border-primary/20">
+                        <p className="text-xs font-semibold mb-1">New Loan Payment</p>
+                        <p className="text-lg font-bold">+${ratios.dscr.proposedAnnualDebtService.toLocaleString()}</p>
+                      </div>
+                      <div className="p-3 bg-accent/30 rounded">
+                        <p className="text-xs font-semibold mb-1">Total Proposed</p>
+                        <p className="text-lg font-bold">${ratios.dscr.totalProposedAnnualDebtService.toLocaleString()}</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
