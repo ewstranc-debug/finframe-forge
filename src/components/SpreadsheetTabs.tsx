@@ -4,6 +4,7 @@ import { BusinessFinancials } from "./tabs/BusinessFinancials";
 import { AffiliateFinancials } from "./tabs/AffiliateFinancials";
 import { ExistingDebts } from "./tabs/ExistingDebts";
 import { ProposedDebts } from "./tabs/ProposedDebts";
+import { LoanDetails } from "./tabs/LoanDetails";
 import { Summary } from "./tabs/Summary";
 
 export const SpreadsheetTabs = () => {
@@ -46,6 +47,12 @@ export const SpreadsheetTabs = () => {
         >
           Proposed Debts
         </TabsTrigger>
+        <TabsTrigger 
+          value="loan" 
+          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+        >
+          Loan Details
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="summary" className="mt-0">
@@ -65,6 +72,10 @@ export const SpreadsheetTabs = () => {
       </TabsContent>
       <TabsContent value="proposed" className="mt-0">
         <ProposedDebts />
+      </TabsContent>
+
+      <TabsContent value="loan" className="mt-0">
+        <LoanDetails />
       </TabsContent>
     </Tabs>
   );
