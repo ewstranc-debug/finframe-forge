@@ -18,12 +18,18 @@ export const PersonalFinancials = () => {
     { salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0" }
   ]);
 
-  const periodLabels = ["Year 1", "Year 2", "Year 3", "Interim"];
+  const [periodLabels, setPeriodLabels] = useState(["Year 1", "Year 2", "Year 3", "Interim"]);
 
   const updateField = (periodIndex: number, field: keyof PeriodData, value: string) => {
     const newPeriods = [...periods];
     newPeriods[periodIndex] = { ...newPeriods[periodIndex], [field]: value };
     setPeriods(newPeriods);
+  };
+
+  const updatePeriodLabel = (index: number, value: string) => {
+    const newLabels = [...periodLabels];
+    newLabels[index] = value;
+    setPeriodLabels(newLabels);
   };
 
   const calculateTotal = (periodIndex: number) => {
@@ -41,7 +47,13 @@ export const PersonalFinancials = () => {
             <div className="grid grid-cols-5 bg-muted font-medium text-sm min-w-[800px]">
               <div className="p-3 border-r border-border">Income Source</div>
               {periodLabels.map((label, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0">{label}</div>
+                <div key={i} className="border-r border-border last:border-r-0">
+                  <EditableCell
+                    value={label}
+                    onChange={(val) => updatePeriodLabel(i, val)}
+                    type="text"
+                  />
+                </div>
               ))}
             </div>
 
