@@ -62,6 +62,25 @@ export const PersonalFinancialStatement = () => {
     return calculateTotalAssets() - calculateTotalLiabilities();
   };
 
+  const calculateDebtToAssetsRatio = () => {
+    const totalAssets = calculateTotalAssets();
+    const totalLiabilities = calculateTotalLiabilities();
+    return totalAssets > 0 ? (totalLiabilities / totalAssets) * 100 : 0;
+  };
+
+  const calculateLiquidityRatio = () => {
+    const liquidAssets = parseFloat(assets.liquidAssets) || 0;
+    const totalLiabilities = calculateTotalLiabilities();
+    return totalLiabilities > 0 ? liquidAssets / totalLiabilities : 0;
+  };
+
+  const calculateDebtServiceCoverage = () => {
+    const monthlyDebt = calculateTotalMonthlyDebt();
+    const netWorth = calculateNetWorth();
+    const estimatedMonthlyIncome = netWorth * 0.005; // Assume 0.5% monthly return
+    return monthlyDebt > 0 ? estimatedMonthlyIncome / monthlyDebt : 0;
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center mb-4">
@@ -277,6 +296,34 @@ export const PersonalFinancialStatement = () => {
               <span className="font-bold">Net Worth:</span>
               <span className={`font-bold ${calculateNetWorth() >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateNetWorth())}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Financial Ratios</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex justify-between text-lg">
+              <span className="font-medium">Debt-to-Assets Ratio:</span>
+              <span className={`font-bold ${calculateDebtToAssetsRatio() > 50 ? 'text-destructive' : 'text-success'}`}>
+                {calculateDebtToAssetsRatio().toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex justify-between text-lg border-t pt-3">
+              <span className="font-medium">Liquidity Ratio:</span>
+              <span className={`font-bold ${calculateLiquidityRatio() < 1 ? 'text-destructive' : 'text-success'}`}>
+                {calculateLiquidityRatio().toFixed(2)}x
+              </span>
+            </div>
+            <div className="flex justify-between text-lg border-t pt-3">
+              <span className="font-medium">Debt Service Coverage:</span>
+              <span className={`font-bold ${calculateDebtServiceCoverage() < 1.25 ? 'text-destructive' : 'text-success'}`}>
+                {calculateDebtServiceCoverage().toFixed(2)}x
               </span>
             </div>
           </div>
