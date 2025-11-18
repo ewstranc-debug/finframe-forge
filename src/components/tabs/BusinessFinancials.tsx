@@ -47,6 +47,15 @@ export const BusinessFinancials = () => {
     setBusinessPeriods(newPeriods);
   };
 
+  const calculateGrossProfit = (periodIndex: number) => {
+    const period = businessPeriods[periodIndex];
+    const months = parseFloat(period.periodMonths) || 12;
+    const annualizationFactor = 12 / months;
+    const revenue = (parseFloat(period.revenue) || 0) * annualizationFactor;
+    const cogs = (parseFloat(period.cogs) || 0) * annualizationFactor;
+    return revenue - cogs;
+  };
+
   const calculateEBITDA = (periodIndex: number) => {
     const period = businessPeriods[periodIndex];
     const revenue = (parseFloat(period.revenue) || 0) + (parseFloat(period.otherIncome) || 0);
@@ -92,6 +101,17 @@ export const BusinessFinancials = () => {
     // Annualize based on period months
     const months = parseFloat(period.periodMonths) || 12;
     return netIncome + (addbacksTotal * (12 / months));
+  };
+
+  const calculateEBT = (periodIndex: number) => {
+    const period = businessPeriods[periodIndex];
+    const months = parseFloat(period.periodMonths) || 12;
+    const annualizationFactor = 12 / months;
+    const ebit = calculateEBIT(periodIndex);
+    const otherIncome = (parseFloat(period.otherIncome) || 0) * annualizationFactor;
+    const otherExpenses = (parseFloat(period.otherExpenses) || 0) * annualizationFactor;
+    const interest = (parseFloat(period.interest) || 0) * annualizationFactor;
+    return ebit + otherIncome - otherExpenses - interest;
   };
 
   const calculateGrossMargin = (periodIndex: number) => {
@@ -324,8 +344,8 @@ export const BusinessFinancials = () => {
               </thead>
               <tbody>
                 {/* Revenue */}
-                <tr className="bg-primary/10">
-                  <td className="border border-border p-2 font-semibold sticky left-0">Revenue</td>
+                <tr>
+                  <td className="border border-border p-2 font-semibold sticky left-0 bg-background">Revenue</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
@@ -336,13 +356,8 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
-
-                {/* Expenses */}
-                <tr className="bg-primary/10">
-                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Operating Expenses</td>
-                </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">COGS</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Less: Cost of Goods Sold</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
@@ -352,6 +367,19 @@ export const BusinessFinancials = () => {
                       />
                     </td>
                   ))}
+                </tr>
+                <tr className="bg-secondary/30 font-semibold">
+                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">Gross Profit</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateGrossProfit(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Operating Expenses */}
+                <tr className="bg-muted/50">
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Operating Expenses</td>
                 </tr>
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Operating Expenses</td>
@@ -389,6 +417,16 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
+                <tr className="bg-secondary/30 font-semibold">
+                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">EBITDA</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateEBITDA(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Non-Cash Expenses */}
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Depreciation</td>
                   {businessPeriods.map((_, i) => (
@@ -425,6 +463,43 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
+                <tr className="bg-secondary/30 font-semibold">
+                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">EBIT</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateEBIT(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Other Income/Expenses */}
+                <tr className="bg-muted/50">
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Other Income & Expenses</td>
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Other Income</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].otherIncome}
+                        onChange={(val) => updateField(i, "otherIncome", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Other Expenses</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].otherExpenses}
+                        onChange={(val) => updateField(i, "otherExpenses", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Interest Expense</td>
                   {businessPeriods.map((_, i) => (
@@ -437,6 +512,16 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
+                <tr className="bg-secondary/30 font-semibold">
+                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">Earnings Before Tax (EBT)</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateEBT(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Taxes */}
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Taxes</td>
                   {businessPeriods.map((_, i) => (
@@ -449,34 +534,69 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
+                <tr className="bg-primary/20 font-bold">
+                  <td className="border border-border p-2 sticky left-0 bg-primary/20">Net Income</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4 font-bold">
+                      ${calculateNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
 
-                {/* Other Income/Expenses */}
-                <tr className="bg-primary/10">
-                  <td className="border border-border p-2 font-semibold sticky left-0">Other Income</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].otherIncome}
-                        onChange={(val) => updateField(i, "otherIncome", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
+                {/* Cash Flow Addbacks */}
+                <tr className="bg-muted/50">
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Cash Flow Addbacks</td>
                 </tr>
-                <tr className="bg-primary/10">
-                  <td className="border border-border p-2 font-semibold sticky left-0">Other Expenses</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].otherExpenses}
-                        onChange={(val) => updateField(i, "otherExpenses", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Depreciation</td>
+                  {businessPeriods.map((_, i) => {
+                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
+                    const annualized = (parseFloat(businessPeriods[i].depreciation) || 0) * (12 / months);
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
+                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    );
+                  })}
                 </tr>
-                <tr className="bg-primary/10">
-                  <td className="border border-border p-2 font-semibold sticky left-0">Other Addbacks</td>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Amortization</td>
+                  {businessPeriods.map((_, i) => {
+                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
+                    const annualized = (parseFloat(businessPeriods[i].amortization) || 0) * (12 / months);
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
+                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Section 179</td>
+                  {businessPeriods.map((_, i) => {
+                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
+                    const annualized = (parseFloat(businessPeriods[i].section179) || 0) * (12 / months);
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
+                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Interest Expense</td>
+                  {businessPeriods.map((_, i) => {
+                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
+                    const annualized = (parseFloat(businessPeriods[i].interest) || 0) * (12 / months);
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
+                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Other Addbacks</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
@@ -487,44 +607,18 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
-
-                {/* Calculated Metrics */}
-                <tr className="bg-secondary/20 font-semibold">
-                  <td className="border border-border p-2 sticky left-0 bg-secondary/20">EBITDA</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateEBITDA(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="bg-secondary/20 font-semibold">
-                  <td className="border border-border p-2 sticky left-0 bg-secondary/20">EBIT</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateEBIT(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                  ))}
-                </tr>
                 <tr className="bg-primary/20 font-bold">
-                  <td className="border border-border p-2 sticky left-0 bg-primary/20">Net Income</td>
+                  <td className="border border-border p-2 sticky left-0 bg-primary/20">Cash Flow</td>
                   {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="bg-accent/20 font-bold">
-                  <td className="border border-border p-2 sticky left-0 bg-accent/20">Cash Flow (for DSCR)</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border p-2 text-right pr-4">
+                    <td key={i} className="border border-border p-2 text-right pr-4 font-bold">
                       ${calculateCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
                   ))}
                 </tr>
 
                 {/* M1 Reconciliation */}
-                <tr className="bg-primary/10">
-                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">M1 Reconciliation</td>
+                <tr className="bg-muted/50">
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">M1 Reconciliation (Tax Return)</td>
                 </tr>
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Book Income (Per Return)</td>
