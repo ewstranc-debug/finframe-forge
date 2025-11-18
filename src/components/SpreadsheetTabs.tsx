@@ -3,9 +3,9 @@ import { Summary } from "./tabs/Summary";
 import { PersonalFinancials } from "./tabs/PersonalFinancials";
 import { PersonalFinancialStatement } from "./tabs/PersonalFinancialStatement";
 import { BusinessFinancials } from "./tabs/BusinessFinancials";
+import { BusinessBalanceSheet } from "./tabs/BusinessBalanceSheet";
 import { AffiliateFinancials } from "./tabs/AffiliateFinancials";
 import { ExistingDebts } from "./tabs/ExistingDebts";
-import { ProposedDebts } from "./tabs/ProposedDebts";
 
 export const SpreadsheetTabs = () => {
   return (
@@ -33,7 +33,13 @@ export const SpreadsheetTabs = () => {
           value="business" 
           className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
         >
-          Business
+          Business P&L
+        </TabsTrigger>
+        <TabsTrigger 
+          value="balance" 
+          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+        >
+          Business B/S
         </TabsTrigger>
         <TabsTrigger 
           value="affiliate" 
@@ -46,12 +52,6 @@ export const SpreadsheetTabs = () => {
           className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
         >
           Existing Debts
-        </TabsTrigger>
-        <TabsTrigger 
-          value="proposed" 
-          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
-        >
-          Proposed Debts
         </TabsTrigger>
       </TabsList>
 
@@ -67,14 +67,14 @@ export const SpreadsheetTabs = () => {
       <TabsContent value="business" className="mt-0">
         <BusinessFinancials />
       </TabsContent>
+      <TabsContent value="balance" className="mt-0">
+        <BusinessBalanceSheet />
+      </TabsContent>
       <TabsContent value="affiliate" className="mt-0">
         <AffiliateFinancials />
       </TabsContent>
       <TabsContent value="existing" className="mt-0">
         <ExistingDebts />
-      </TabsContent>
-      <TabsContent value="proposed" className="mt-0">
-        <ProposedDebts />
       </TabsContent>
     </Tabs>
   );
