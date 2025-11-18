@@ -168,6 +168,10 @@ interface SpreadsheetContextType {
   setBusinessBalanceSheetPeriods: (periods: BusinessBalanceSheetPeriodData[]) => void;
   businessBalanceSheetLabels: string[];
   setBusinessBalanceSheetLabels: (labels: string[]) => void;
+  
+  // Financial Analysis state
+  financialAnalysis: string;
+  setFinancialAnalysis: (analysis: string) => void;
 }
 
 const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(undefined);
@@ -305,6 +309,9 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   ]);
   const [businessBalanceSheetLabels, setBusinessBalanceSheetLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
+  // Financial Analysis state
+  const [financialAnalysis, setFinancialAnalysis] = useState("");
+
   return (
     <SpreadsheetContext.Provider value={{
       interestRate, setInterestRate,
@@ -326,6 +333,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       affiliatePeriodLabels, setAffiliatePeriodLabels,
       businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods,
       businessBalanceSheetLabels, setBusinessBalanceSheetLabels,
+      financialAnalysis, setFinancialAnalysis,
     }}>
       {children}
     </SpreadsheetContext.Provider>

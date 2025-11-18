@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 export const FinancialAnalysis = () => {
   const {
@@ -16,9 +17,10 @@ export const FinancialAnalysis = () => {
     businessPeriods,
     affiliateEntities,
     debts,
+    financialAnalysis,
+    setFinancialAnalysis,
   } = useSpreadsheet();
 
-  const [analysis, setAnalysis] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Calculate income trends
@@ -120,7 +122,7 @@ export const FinancialAnalysis = () => {
 
       if (error) throw error;
 
-      setAnalysis(data.analysis);
+      setFinancialAnalysis(data.analysis);
       toast.success("Financial analysis generated successfully");
     } catch (error) {
       console.error("Error generating analysis:", error);
@@ -275,8 +277,8 @@ export const FinancialAnalysis = () => {
       </div>
 
       {/* AI-Generated Analysis Narrative */}
-      {analysis && (
-        <Card className="border-primary/20">
+      {financialAnalysis && (
+        <Card className="border-primary/20 bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-primary" />
@@ -284,14 +286,30 @@ export const FinancialAnalysis = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="prose prose-sm max-w-none whitespace-pre-wrap">
-              {analysis}
+            <div className="prose prose-slate dark:prose-invert max-w-none">
+              <ReactMarkdown
+                components={{
+                  h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-4 text-foreground" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-xl font-semibold mt-5 mb-3 text-foreground" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground" {...props} />,
+                  p: ({node, ...props}) => <p className="mb-4 text-foreground leading-relaxed" {...props} />,
+                  ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
+                  ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
+                  li: ({node, ...props}) => <li className="text-foreground" {...props} />,
+                  strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
+                  em: ({node, ...props}) => <em className="italic text-muted-foreground" {...props} />,
+                  blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic my-4 text-muted-foreground" {...props} />,
+                  code: ({node, ...props}) => <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
+                }}
+              >
+                {financialAnalysis}
+              </ReactMarkdown>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {!analysis && (
+      {!financialAnalysis && (
         <Card className="border-dashed">
           <CardContent className="pt-6">
             <div className="text-center text-muted-foreground">

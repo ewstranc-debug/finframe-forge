@@ -32,8 +32,9 @@ serve(async (req) => {
     7. Specific actionable recommendations for improvement
     8. Risk mitigation strategies
     
-    Be specific, reference actual numbers from the data, and provide professional yet accessible insights.
-    Format your response in clear sections with headers.`;
+    Format your response using markdown with clear headers, bullet points, and emphasis where appropriate.
+    Use ## for main sections, ### for subsections, **bold** for important metrics, and bullet points for lists.
+    Be specific, reference actual numbers from the data, and provide professional yet accessible insights.`;
 
     const userPrompt = `Analyze this financial profile:
 
