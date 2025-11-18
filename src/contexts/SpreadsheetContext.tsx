@@ -65,6 +65,55 @@ export interface LiabilityData {
   otherLiabilitiesMonthly: string;
 }
 
+export interface Debt {
+  id: string;
+  creditor: string;
+  balance: string;
+  payment: string;
+  rate: string;
+  term: string;
+}
+
+export interface AffiliateIncomeData {
+  revenue: string;
+  cogs: string;
+  operatingExpenses: string;
+  depreciation: string;
+  amortization: string;
+  interest: string;
+  taxes: string;
+  periodDate: string;
+  periodMonths: string;
+}
+
+export interface AffiliateBalanceSheetData {
+  cash: string;
+  accountsReceivable: string;
+  inventory: string;
+  realEstate: string;
+  accumulatedDepreciation: string;
+  currentLiabilities: string;
+  longTermDebt: string;
+}
+
+export interface AffiliateEntity {
+  id: string;
+  name: string;
+  incomePeriods: AffiliateIncomeData[];
+  balancePeriods: AffiliateBalanceSheetData[];
+}
+
+export interface BusinessBalanceSheetPeriodData {
+  cash: string;
+  accountsReceivable: string;
+  inventory: string;
+  otherCurrentAssets: string;
+  realEstate: string;
+  accumulatedDepreciation: string;
+  currentLiabilities: string;
+  longTermDebt: string;
+}
+
 interface SpreadsheetContextType {
   // Summary state
   interestRate: string;
@@ -103,6 +152,22 @@ interface SpreadsheetContextType {
   setPersonalAssets: (assets: AssetData) => void;
   personalLiabilities: LiabilityData;
   setPersonalLiabilities: (liabilities: LiabilityData) => void;
+  
+  // Existing Debts state
+  debts: Debt[];
+  setDebts: (debts: Debt[]) => void;
+  
+  // Affiliate Financials state
+  affiliateEntities: AffiliateEntity[];
+  setAffiliateEntities: (entities: AffiliateEntity[]) => void;
+  affiliatePeriodLabels: string[];
+  setAffiliatePeriodLabels: (labels: string[]) => void;
+  
+  // Business Balance Sheet state
+  businessBalanceSheetPeriods: BusinessBalanceSheetPeriodData[];
+  setBusinessBalanceSheetPeriods: (periods: BusinessBalanceSheetPeriodData[]) => void;
+  businessBalanceSheetLabels: string[];
+  setBusinessBalanceSheetLabels: (labels: string[]) => void;
 }
 
 const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(undefined);
@@ -205,6 +270,41 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     otherLiabilitiesMonthly: "0"
   });
 
+  // Existing Debts state
+  const [debts, setDebts] = useState<Debt[]>([
+    { id: "1", creditor: "Creditor 1", balance: "0", payment: "0", rate: "0", term: "0" }
+  ]);
+
+  // Affiliate Financials state
+  const [affiliateEntities, setAffiliateEntities] = useState<AffiliateEntity[]>([
+    { 
+      id: "1", 
+      name: "Affiliate 1", 
+      incomePeriods: [
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" }
+      ],
+      balancePeriods: [
+        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
+        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
+        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
+        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" }
+      ]
+    }
+  ]);
+  const [affiliatePeriodLabels, setAffiliatePeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+
+  // Business Balance Sheet state
+  const [businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods] = useState<BusinessBalanceSheetPeriodData[]>([
+    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
+    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
+    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
+    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" }
+  ]);
+  const [businessBalanceSheetLabels, setBusinessBalanceSheetLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+
   return (
     <SpreadsheetContext.Provider value={{
       interestRate, setInterestRate,
@@ -221,6 +321,11 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       interimPeriodMonths, setInterimPeriodMonths,
       personalAssets, setPersonalAssets,
       personalLiabilities, setPersonalLiabilities,
+      debts, setDebts,
+      affiliateEntities, setAffiliateEntities,
+      affiliatePeriodLabels, setAffiliatePeriodLabels,
+      businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods,
+      businessBalanceSheetLabels, setBusinessBalanceSheetLabels,
     }}>
       {children}
     </SpreadsheetContext.Provider>

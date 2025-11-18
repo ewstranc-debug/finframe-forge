@@ -1,22 +1,11 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
-
-interface Debt {
-  id: string;
-  creditor: string;
-  balance: string;
-  payment: string;
-  rate: string;
-  term: string;
-}
+import { useSpreadsheet, type Debt } from "@/contexts/SpreadsheetContext";
 
 export const ExistingDebts = () => {
-  const [debts, setDebts] = useState<Debt[]>([
-    { id: "1", creditor: "Creditor 1", balance: "0", payment: "0", rate: "0", term: "0" }
-  ]);
+  const { debts, setDebts } = useSpreadsheet();
 
   const addDebt = () => {
     const newId = (debts.length + 1).toString();

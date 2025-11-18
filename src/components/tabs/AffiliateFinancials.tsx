@@ -1,40 +1,11 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
-
-interface IncomeData {
-  revenue: string;
-  cogs: string;
-  operatingExpenses: string;
-  depreciation: string;
-  amortization: string;
-  interest: string;
-  taxes: string;
-  periodDate: string;
-  periodMonths: string;
-}
-
-interface BalanceSheetData {
-  cash: string;
-  accountsReceivable: string;
-  inventory: string;
-  realEstate: string;
-  accumulatedDepreciation: string;
-  currentLiabilities: string;
-  longTermDebt: string;
-}
-
-interface AffiliateEntity {
-  id: string;
-  name: string;
-  incomePeriods: IncomeData[];
-  balancePeriods: BalanceSheetData[];
-}
+import { useSpreadsheet, type AffiliateIncomeData as IncomeData, type AffiliateBalanceSheetData as BalanceSheetData, type AffiliateEntity } from "@/contexts/SpreadsheetContext";
 
 export const AffiliateFinancials = () => {
-  const [periodLabels, setPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+  const { affiliateEntities: entities, setAffiliateEntities: setEntities, affiliatePeriodLabels: periodLabels, setAffiliatePeriodLabels: setPeriodLabels } = useSpreadsheet();
 
   const focusNextCell = (entityId: string, currentRow: string, currentCol: number) => {
     const incomeFields = ['revenue', 'cogs', 'operatingExpenses', 'depreciation', 'amortization', 'interest', 'taxes'];
@@ -57,25 +28,6 @@ export const AffiliateFinancials = () => {
       if (nextInput) nextInput.focus();
     }
   };
-  
-  const [entities, setEntities] = useState<AffiliateEntity[]>([
-    { 
-      id: "1", 
-      name: "Affiliate 1", 
-      incomePeriods: [
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" }
-      ],
-      balancePeriods: [
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" }
-      ]
-    }
-  ]);
 
   const addEntity = () => {
     const newId = (entities.length + 1).toString();
