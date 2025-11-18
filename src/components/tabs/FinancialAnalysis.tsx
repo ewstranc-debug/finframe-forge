@@ -16,6 +16,8 @@ export const FinancialAnalysis = () => {
     personalAssets,
     personalLiabilities,
     businessPeriods,
+    businessPeriodLabels,
+    businessBalanceSheetPeriods,
     affiliateEntities,
     debts,
     financialAnalysis,
@@ -144,6 +146,32 @@ export const FinancialAnalysis = () => {
     setIsLoading(true);
     
     try {
+      // Calculate comprehensive metrics for analysis
+      const totalPersonalAssets = Object.values(personalAssets).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+      const totalPersonalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) + 
+                                       (parseFloat(personalLiabilities.mortgages) || 0) +
+                                       (parseFloat(personalLiabilities.vehicleLoans) || 0) +
+                                       (parseFloat(personalLiabilities.otherLiabilities) || 0) +
+                                       debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
+      
+      // Calculate business metrics
+      const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
+      const businessRevenue = parseFloat(latestBusinessPeriod?.revenue) || 0;
+      const businessCOGS = parseFloat(latestBusinessPeriod?.cogs) || 0;
+      const businessOpEx = parseFloat(latestBusinessPeriod?.operatingExpenses) || 0;
+      const businessNetIncome = businessRevenue - businessCOGS - businessOpEx;
+      
+      // Calculate business balance sheet metrics
+      const latestBalanceSheet = businessBalanceSheetPeriods[2] || businessBalanceSheetPeriods[1] || businessBalanceSheetPeriods[0];
+      const businessCurrentAssets = (parseFloat(latestBalanceSheet?.cash) || 0) + 
+                                   (parseFloat(latestBalanceSheet?.accountsReceivable) || 0) +
+                                   (parseFloat(latestBalanceSheet?.inventory) || 0);
+      const businessTotalAssets = businessCurrentAssets + 
+                                 (parseFloat(latestBalanceSheet?.realEstate) || 0) -
+                                 (parseFloat(latestBalanceSheet?.accumulatedDepreciation) || 0);
+      const businessCurrentLiabilities = parseFloat(latestBalanceSheet?.currentLiabilities) || 0;
+      const businessTotalLiabilities = businessCurrentLiabilities + (parseFloat(latestBalanceSheet?.longTermDebt) || 0);
+      
       // Prepare comprehensive financial data for analysis
       const financialData = {
         personalPeriods,
@@ -151,14 +179,36 @@ export const FinancialAnalysis = () => {
         personalAssets,
         personalLiabilities,
         businessPeriods,
+        businessPeriodLabels,
+        businessBalanceSheetPeriods,
         affiliateEntities,
         debts,
-        summary: {
-          totalAssets: Object.values(personalAssets).reduce((sum, val) => sum + (parseFloat(val) || 0), 0),
-          totalLiabilities: (parseFloat(personalLiabilities.creditCards) || 0) + 
-                           (parseFloat(personalLiabilities.mortgages) || 0) +
-                           (parseFloat(personalLiabilities.vehicleLoans) || 0) +
-                           (parseFloat(personalLiabilities.otherLiabilities) || 0),
+        calculatedMetrics: {
+          personal: {
+            totalAssets: totalPersonalAssets,
+            totalLiabilities: totalPersonalLiabilities,
+            netWorth: totalPersonalAssets - totalPersonalLiabilities,
+            liquidAssets: parseFloat(personalAssets.liquidAssets) || 0,
+            debtToAssets: totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0,
+            liquidityRatio: totalPersonalLiabilities > 0 ? (parseFloat(personalAssets.liquidAssets) || 0) / totalPersonalLiabilities : 0,
+          },
+          business: {
+            revenue: businessRevenue,
+            grossProfit: businessRevenue - businessCOGS,
+            grossMargin: businessRevenue > 0 ? ((businessRevenue - businessCOGS) / businessRevenue) * 100 : 0,
+            netIncome: businessNetIncome,
+            netMargin: businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0,
+            totalAssets: businessTotalAssets,
+            totalLiabilities: businessTotalLiabilities,
+            currentRatio: businessCurrentLiabilities > 0 ? businessCurrentAssets / businessCurrentLiabilities : 0,
+            debtToEquity: (businessTotalAssets - businessTotalLiabilities) > 0 ? 
+                         businessTotalLiabilities / (businessTotalAssets - businessTotalLiabilities) : 0,
+          },
+          combined: {
+            totalAssets: totalPersonalAssets + businessTotalAssets,
+            totalLiabilities: totalPersonalLiabilities + businessTotalLiabilities,
+            totalNetWorth: (totalPersonalAssets + businessTotalAssets) - (totalPersonalLiabilities + businessTotalLiabilities),
+          }
         },
       };
 
