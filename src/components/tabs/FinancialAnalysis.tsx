@@ -712,41 +712,42 @@ export const FinancialAnalysis = () => {
                     </Tooltip>
                   )}
 
-                  {/* INTERIM DSCR - PROMINENT */}
-                  {ratios.dscr.interim && (
-                    <Tooltip>
+                  {/* INTERIM PERIOD DSCR(s) */}
+                  {ratios.dscr.interimPeriods && ratios.dscr.interimPeriods.length > 0 && ratios.dscr.interimPeriods.map((interimMetric: any, idx: number) => (
+                    <Tooltip key={idx}>
                       <TooltipTrigger asChild>
-                        <div className="space-y-1 cursor-help col-span-2 md:col-span-2 bg-primary/5 p-3 rounded-lg border-2 border-primary/20">
-                          <p className="text-sm text-muted-foreground font-semibold">DSCR - Interim</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.interim.dscr < 1.0 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                            {ratios.dscr.interim.dscr.toFixed(2)}
+                        <div className="space-y-1 cursor-help col-span-2 md:col-span-2 bg-secondary/5 p-3 rounded-lg border border-secondary/20">
+                          <p className="text-sm text-muted-foreground font-semibold">DSCR - Interim Period</p>
+                          <p className={`text-2xl font-bold ${interimMetric.existingDSCR < 1.0 ? 'text-destructive' : interimMetric.existingDSCR < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {interimMetric.existingDSCR.toFixed(2)}
                           </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | {businessPeriodLabels[2]}</p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | {interimMetric.periodLabel} ({interimMetric.periodMonths}mo)</p>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
                         <div className="space-y-2">
-                          <p className="font-semibold">Interim DSCR Calculation:</p>
+                          <p className="font-semibold">Interim Period DSCR ({interimMetric.periodLabel}):</p>
                           <div className="space-y-1 text-sm">
                             <p className="font-medium">EBITDA Components:</p>
-                            <p>Revenue: ${ratios.dscr.interim.revenue.toLocaleString()}</p>
-                            <p>+ Other Income: ${ratios.dscr.interim.otherIncome.toLocaleString()}</p>
-                            <p>- COGS: ${ratios.dscr.interim.cogs.toLocaleString()}</p>
-                            <p>- Operating Expenses: ${ratios.dscr.interim.opEx.toLocaleString()}</p>
-                            <p>- Rent: ${ratios.dscr.interim.rentExpense.toLocaleString()}</p>
-                            <p>- Officers Comp: ${ratios.dscr.interim.officersComp.toLocaleString()}</p>
-                            <p>- Other Expenses: ${ratios.dscr.interim.otherExpenses.toLocaleString()}</p>
-                            <p>+ Addbacks: ${ratios.dscr.interim.addbacks.toLocaleString()}</p>
-                            <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.interim.ebitda.toLocaleString()}</p>
+                            <p>Revenue: ${interimMetric.revenue.toLocaleString()}</p>
+                            <p>+ Other Income: ${interimMetric.otherIncome.toLocaleString()}</p>
+                            <p>- COGS: ${interimMetric.cogs.toLocaleString()}</p>
+                            <p>- Operating Expenses: ${interimMetric.opEx.toLocaleString()}</p>
+                            <p>- Rent: ${interimMetric.rentExpense.toLocaleString()}</p>
+                            <p>- Officers Comp: ${interimMetric.officersComp.toLocaleString()}</p>
+                            <p>- Other Expenses: ${interimMetric.otherExpenses.toLocaleString()}</p>
+                            <p>+ Addbacks: ${interimMetric.addbacks.toLocaleString()}</p>
+                            <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${interimMetric.ebitda.toLocaleString()}</p>
                           </div>
                           <div className="space-y-1 text-sm border-t pt-2">
                             <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
                           </div>
-                          <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.interim.dscr.toFixed(2)}</p>
+                          <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {interimMetric.existingDSCR.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Note: Interim period annualized for comparison</p>
                         </div>
                       </TooltipContent>
                     </Tooltip>
-                  )}
+                  ))}
 
                   <Tooltip>
                     <TooltipTrigger asChild>
