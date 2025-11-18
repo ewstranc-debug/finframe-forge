@@ -3,28 +3,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown, PieChart } from "lucide-react";
 import { EditableCell } from "../EditableCell";
 
+interface UseOfFunds {
+  id: string;
+  description: string;
+  amount: string;
+}
+
 export const Summary = () => {
-  const [loanAmount, setLoanAmount] = useState("0");
   const [interestRate, setInterestRate] = useState("0");
   const [termMonths, setTermMonths] = useState("120");
   const [guaranteePercent, setGuaranteePercent] = useState("75");
   const [injectionEquity, setInjectionEquity] = useState("0");
-  const [closingCosts, setClosingCosts] = useState("0");
-  const [workingCapital, setWorkingCapital] = useState("0");
+  
+  const [uses, setUses] = useState<UseOfFunds[]>([
+    { id: "1", description: "RE Purchase", amount: "0" },
+    { id: "2", description: "Refinance", amount: "0" },
+    { id: "3", description: "Working Capital", amount: "0" },
+    { id: "4", description: "Inventory", amount: "0" },
+    { id: "5", description: "Business Acquisition", amount: "0" },
+    { id: "6", description: "Construction", amount: "0" },
+    { id: "7", description: "Contingency", amount: "0" },
+    { id: "8", description: "Interest Reserve", amount: "0" },
+  ]);
 
-  const calculateSBAFees = () => {
-    const amount = parseFloat(loanAmount) || 0;
+  const updateUse = (id: string, field: keyof UseOfFunds, value: string) => {
+    setUses(uses.map(u => u.id === id ? { ...u, [field]: value } : u));
+  };
+
+  const calculatePrimaryRequest = () => {
+    return uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
+  };
+
+  const calculateSBAFees = (primaryAmount: number) => {
     const guaranteePct = parseFloat(guaranteePercent) || 75;
-    const guaranteedAmount = amount * (guaranteePct / 100);
+    const guaranteedAmount = primaryAmount * (guaranteePct / 100);
     
     let upfrontFee = 0;
     
-    if (amount <= 150000) {
+    if (primaryAmount <= 150000) {
       upfrontFee = 0;
-    } else if (amount <= 700000) {
-      upfrontFee = (amount - 150000) * 0.03;
+    } else if (primaryAmount <= 700000) {
+      upfrontFee = (primaryAmount - 150000) * 0.03;
     } else {
-      upfrontFee = (550000 * 0.03) + ((amount - 700000) * 0.035);
+      upfrontFee = (550000 * 0.03) + ((primaryAmount - 700000) * 0.035);
     }
     
     const annualFee = guaranteedAmount * 0.0055;
@@ -32,8 +53,7 @@ export const Summary = () => {
     return { upfrontFee, annualFee, guaranteedAmount };
   };
 
-  const calculateMonthlyPayment = () => {
-    const principal = parseFloat(loanAmount) || 0;
+  const calculateMonthlyPayment = (principal: number) => {
     const rate = (parseFloat(interestRate) || 0) / 100 / 12;
     const term = parseFloat(termMonths) || 1;
     
@@ -43,10 +63,12 @@ export const Summary = () => {
     return payment;
   };
 
-  const fees = calculateSBAFees();
-  const monthlyPayment = calculateMonthlyPayment();
-  const totalSources = parseFloat(loanAmount) + parseFloat(injectionEquity);
-  const totalUses = fees.upfrontFee + parseFloat(closingCosts) + parseFloat(workingCapital);
+  const primaryRequest = calculatePrimaryRequest();
+  const fees = calculateSBAFees(primaryRequest);
+  const finalLoanAmount = primaryRequest + fees.upfrontFee;
+  const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
+  const totalSources = finalLoanAmount + parseFloat(injectionEquity);
+  const totalUses = primaryRequest + fees.upfrontFee;
 
   return (
     <div className="p-6 space-y-6">
@@ -56,17 +78,62 @@ export const Summary = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Uses */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-primary">Uses of Funds</h3>
+              <div className="border border-border rounded-lg overflow-hidden mb-4">
+                <div className="grid grid-cols-2 bg-muted font-medium text-sm">
+                  <div className="p-3 border-r border-border">Description</div>
+                  <div className="p-3">Amount</div>
+                </div>
+                {uses.map((use) => (
+                  <div key={use.id} className="grid grid-cols-2 border-b border-border">
+                    <div className="border-r border-border bg-secondary/30">
+                      <EditableCell
+                        value={use.description}
+                        onChange={(val) => updateUse(use.id, "description", val)}
+                        type="text"
+                      />
+                    </div>
+                    <div>
+                      <EditableCell
+                        value={use.amount}
+                        onChange={(val) => updateUse(use.id, "amount", val)}
+                        type="currency"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <div className="grid grid-cols-2 bg-primary/10">
+                  <div className="p-3 border-r border-border font-bold">Primary Request</div>
+                  <div className="p-3 font-bold">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(primaryRequest)}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 bg-destructive/10">
+                  <div className="p-3 border-r border-border font-medium">SBA Guarantee Fee</div>
+                  <div className="p-3 font-medium text-destructive">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(fees.upfrontFee)}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 bg-success/10">
+                  <div className="p-3 border-r border-border font-bold text-lg">Final Loan Amount</div>
+                  <div className="p-3 font-bold text-lg text-success">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(finalLoanAmount)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Sources */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-success">Sources</h3>
+              <h3 className="text-lg font-semibold mb-4 text-success">Sources of Funds</h3>
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium mb-1 block">SBA 7(a) Loan</label>
-                  <EditableCell
-                    value={loanAmount}
-                    onChange={setLoanAmount}
-                    type="currency"
-                  />
+                  <div className="p-3 bg-success/10 rounded-md font-bold text-success">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(finalLoanAmount)}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-1 block">Equity Injection</label>
@@ -81,43 +148,6 @@ export const Summary = () => {
                     <span>Total Sources</span>
                     <span className="text-success">
                       {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalSources)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Uses */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-primary">Uses</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">SBA Guarantee Fee</label>
-                  <div className="p-3 bg-muted/50 rounded-md font-medium text-destructive">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(fees.upfrontFee)}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Closing Costs</label>
-                  <EditableCell
-                    value={closingCosts}
-                    onChange={setClosingCosts}
-                    type="currency"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Working Capital</label>
-                  <EditableCell
-                    value={workingCapital}
-                    onChange={setWorkingCapital}
-                    type="currency"
-                  />
-                </div>
-                <div className="pt-3 border-t border-border">
-                  <div className="flex justify-between items-center font-bold text-lg">
-                    <span>Total Uses</span>
-                    <span className="text-primary">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalUses)}
                     </span>
                   </div>
                 </div>

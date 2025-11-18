@@ -34,10 +34,31 @@ export const ExistingDebts = () => {
     setDebts(debts.filter(d => d.id !== id));
   };
 
+  const calculateMonthlyPayment = (balance: number, rate: number, term: number) => {
+    if (rate === 0 || term === 0) return 0;
+    const monthlyRate = rate / 100 / 12;
+    const payment = balance * (monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1);
+    return payment;
+  };
+
   const updateDebt = (id: string, field: keyof Debt, value: string) => {
-    setDebts(debts.map(d => 
-      d.id === id ? { ...d, [field]: value } : d
-    ));
+    setDebts(debts.map(d => {
+      if (d.id === id) {
+        const updated = { ...d, [field]: value };
+        // Auto-calculate payment if balance, rate, or term changes and payment is 0 or not manually set
+        if ((field === 'balance' || field === 'rate' || field === 'term')) {
+          const balance = parseFloat(updated.balance) || 0;
+          const rate = parseFloat(updated.rate) || 0;
+          const term = parseFloat(updated.term) || 0;
+          if (balance > 0 && rate > 0 && term > 0) {
+            const calculatedPayment = calculateMonthlyPayment(balance, rate, term);
+            updated.payment = calculatedPayment.toFixed(2);
+          }
+        }
+        return updated;
+      }
+      return d;
+    }));
   };
 
   const calculateTotalBalance = () => {
