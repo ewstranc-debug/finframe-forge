@@ -137,16 +137,14 @@ export const AffiliateFinancials = () => {
 
   const calculateNetIncome = (entity: AffiliateEntity, periodIndex: number) => {
     const period = entity.incomePeriods[periodIndex];
-    const months = parseFloat(period.periodMonths) || 12;
-    const annualizationFactor = 12 / months;
     
-    const revenue = (parseFloat(period.revenue) || 0) * annualizationFactor;
-    const expenses = ((parseFloat(period.cogs) || 0) +
+    const revenue = parseFloat(period.revenue) || 0;
+    const expenses = (parseFloat(period.cogs) || 0) +
                      (parseFloat(period.operatingExpenses) || 0) +
                      (parseFloat(period.depreciation) || 0) +
                      (parseFloat(period.amortization) || 0) +
                      (parseFloat(period.interest) || 0) +
-                     (parseFloat(period.taxes) || 0)) * annualizationFactor;
+                     (parseFloat(period.taxes) || 0);
     return revenue - expenses;
   };
 
