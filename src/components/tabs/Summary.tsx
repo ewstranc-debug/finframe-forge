@@ -15,6 +15,8 @@ export const Summary = () => {
     businessPeriods,
     personalPeriods,
     interimPeriodMonths,
+    debts,
+    personalLiabilities,
   } = useSpreadsheet();
 
   const updateUse = (id: string, field: "description" | "amount", value: string) => {
@@ -92,14 +94,27 @@ export const Summary = () => {
                           (parseFloat(personalPeriod.schedCDepreciation) || 0) + 
                           (parseFloat(personalPeriod.schedCAmortization) || 0) +
                           (parseFloat(personalPeriod.schedCOther) || 0);
-    const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
+    const schedCNetIncome = (schedCRevenue - schedCExpenses) + schedCAddbacks;
     
-    const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow;
+    const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCNetIncome;
     
     const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
     const estimatedTaxOnOfficersComp = officersComp * 0.30;
     
     const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp;
+    
+    // Calculate existing debt payments
+    const existingDebtPayment = debts.reduce((sum, debt) => {
+      const payment = parseFloat(debt.payment) || 0;
+      return sum + (payment * 12);
+    }, 0);
+    
+    // Calculate personal debt payments from all liability categories
+    const personalDebtPayment = 
+      (parseFloat(personalLiabilities.creditCardsMonthly) || 0) * 12 +
+      (parseFloat(personalLiabilities.mortgagesMonthly) || 0) * 12 +
+      (parseFloat(personalLiabilities.vehicleLoansMonthly) || 0) * 12 +
+      (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0) * 12;
     
     const primaryRequest = calculatePrimaryRequest();
     const fees = calculateSBAFees(primaryRequest);
@@ -107,11 +122,20 @@ export const Summary = () => {
     const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
     const annualDebtService = monthlyPayment * 12;
     
+    const totalDebtService = annualDebtService + existingDebtPayment + personalDebtPayment;
+    
     return {
-      dscr: annualDebtService > 0 ? netCashAvailable / annualDebtService : 0,
+      dscr: totalDebtService > 0 ? netCashAvailable / totalDebtService : 0,
       totalIncome: totalIncomeAvailable,
       netCashFlow: netCashAvailable,
-      debtService: annualDebtService
+      debtService: totalDebtService,
+      businessCashFlow,
+      personalW2Income,
+      schedCNetIncome,
+      officersComp,
+      existingDebtPayment,
+      personalDebtPayment,
+      personalExpenses,
     };
   };
 
@@ -316,10 +340,31 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">Total Income Calculation:</p>
-                              <p className="text-sm">Business Cash Flow + Personal W-2 Income + Schedule C Net Income + Officer's Compensation</p>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials tab + Personal Financials tab</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">Total Income Breakdown:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4">
+                                  <span>Business Cash Flow:</span>
+                                  <span className="font-mono">${lastFullYear.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Personal W-2 Income:</span>
+                                  <span className="font-mono">${lastFullYear.personalW2Income.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Schedule C Net Income:</span>
+                                  <span className="font-mono">${lastFullYear.schedCNetIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Officer's Compensation:</span>
+                                  <span className="font-mono">${lastFullYear.officersComp.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>Total:</span>
+                                  <span className="font-mono">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              </div>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials + Personal Financials tabs</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -339,10 +384,27 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">Debt Service Calculation:</p>
-                              <p className="text-sm">Annual Payment (Loan) + Existing Debt Annual Payments + Personal Debt Annual Payments</p>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary tab (loan terms) + Existing Debts tab + Personal Financial Statement tab</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">Debt Service Breakdown:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4">
+                                  <span>Proposed Loan Payment:</span>
+                                  <span className="font-mono">${annualPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Existing Business Debts:</span>
+                                  <span className="font-mono">${lastFullYear.existingDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Personal Debt Payments:</span>
+                                  <span className="font-mono">${lastFullYear.personalDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>Total:</span>
+                                  <span className="font-mono">${lastFullYear.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              </div>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary + Existing Debts + Personal Financial Statement tabs</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -362,9 +424,26 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">Net Cash Flow Calculation:</p>
-                              <p className="text-sm">Total Income - Total Debt Service - Personal Expenses</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">Net Cash Flow Breakdown:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4 text-green-600">
+                                  <span>Total Income:</span>
+                                  <span className="font-mono">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-red-600">
+                                  <span>Total Debt Service:</span>
+                                  <span className="font-mono">-${lastFullYear.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-red-600">
+                                  <span>Personal Expenses:</span>
+                                  <span className="font-mono">-${lastFullYear.personalExpenses.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>Net Cash Flow:</span>
+                                  <span className="font-mono">${lastFullYear.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              </div>
                               <p className="text-xs mt-2 text-muted-foreground">Sources: Total Income & Debt Service (above) + Personal Financials tab</p>
                             </TooltipContent>
                           </Tooltip>
@@ -385,11 +464,23 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">DSCR Calculation:</p>
-                              <p className="text-sm">Total Income ÷ Total Debt Service</p>
-                              <p className="text-xs mt-2">A ratio showing ability to cover debt obligations. &gt;1.25 is strong, 1.0-1.25 is acceptable, &lt;1.0 is weak.</p>
-                              <p className="text-xs mt-1 text-muted-foreground">Sources: Total Income & Debt Service (above)</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">DSCR Calculation:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4">
+                                  <span>Total Income:</span>
+                                  <span className="font-mono">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>÷ Total Debt Service:</span>
+                                  <span className="font-mono">${lastFullYear.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>DSCR Ratio:</span>
+                                  <span className="font-mono">{lastFullYear.dscr.toFixed(2)}x</span>
+                                </div>
+                              </div>
+                              <p className="text-xs mt-2">Indicates ability to cover debt. &gt;1.25 is strong, 1.0-1.25 is acceptable, &lt;1.0 is weak.</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -417,10 +508,31 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">Total Income Calculation:</p>
-                              <p className="text-sm">Business Cash Flow (annualized) + Personal W-2 Income + Schedule C Net Income + Officer's Compensation</p>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials tab (interim period) + Personal Financials tab</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">Total Income Breakdown:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4">
+                                  <span>Business Cash Flow:</span>
+                                  <span className="font-mono">${interimPeriod.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Personal W-2 Income:</span>
+                                  <span className="font-mono">${interimPeriod.personalW2Income.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Schedule C Net Income:</span>
+                                  <span className="font-mono">${interimPeriod.schedCNetIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Officer's Compensation:</span>
+                                  <span className="font-mono">${interimPeriod.officersComp.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>Total:</span>
+                                  <span className="font-mono">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              </div>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials (interim, annualized) + Personal Financials tabs</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -440,10 +552,27 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">Debt Service Calculation:</p>
-                              <p className="text-sm">Annual Payment (Loan) + Existing Debt Annual Payments + Personal Debt Annual Payments</p>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary tab (loan terms) + Existing Debts tab + Personal Financial Statement tab</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">Debt Service Breakdown:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4">
+                                  <span>Proposed Loan Payment:</span>
+                                  <span className="font-mono">${annualPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Existing Business Debts:</span>
+                                  <span className="font-mono">${interimPeriod.existingDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Personal Debt Payments:</span>
+                                  <span className="font-mono">${interimPeriod.personalDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>Total:</span>
+                                  <span className="font-mono">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              </div>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary + Existing Debts + Personal Financial Statement tabs</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
@@ -463,9 +592,26 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">Net Cash Flow Calculation:</p>
-                              <p className="text-sm">Total Income - Total Debt Service - Personal Expenses</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">Net Cash Flow Breakdown:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4 text-green-600">
+                                  <span>Total Income:</span>
+                                  <span className="font-mono">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-red-600">
+                                  <span>Total Debt Service:</span>
+                                  <span className="font-mono">-${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-red-600">
+                                  <span>Personal Expenses:</span>
+                                  <span className="font-mono">-${interimPeriod.personalExpenses.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>Net Cash Flow:</span>
+                                  <span className="font-mono">${interimPeriod.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                              </div>
                               <p className="text-xs mt-2 text-muted-foreground">Sources: Total Income & Debt Service (above) + Personal Financials tab</p>
                             </TooltipContent>
                           </Tooltip>
@@ -486,11 +632,23 @@ export const Summary = () => {
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="font-semibold mb-1">DSCR Calculation:</p>
-                              <p className="text-sm">Total Income ÷ Total Debt Service</p>
-                              <p className="text-xs mt-2">A ratio showing ability to cover debt obligations. &gt;1.25 is strong, 1.0-1.25 is acceptable, &lt;1.0 is weak.</p>
-                              <p className="text-xs mt-1 text-muted-foreground">Sources: Total Income & Debt Service (above)</p>
+                            <TooltipContent className="max-w-sm">
+                              <p className="font-semibold mb-2">DSCR Calculation:</p>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between gap-4">
+                                  <span>Total Income:</span>
+                                  <span className="font-mono">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>÷ Total Debt Service:</span>
+                                  <span className="font-mono">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                </div>
+                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                  <span>DSCR Ratio:</span>
+                                  <span className="font-mono">{interimPeriod.dscr.toFixed(2)}x</span>
+                                </div>
+                              </div>
+                              <p className="text-xs mt-2">Indicates ability to cover debt. &gt;1.25 is strong, 1.0-1.25 is acceptable, &lt;1.0 is weak.</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
