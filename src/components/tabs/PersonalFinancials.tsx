@@ -1,69 +1,50 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
-
-interface PeriodData {
-  salary: string;
-  bonuses: string;
-  investments: string;
-  rentalIncome: string;
-  otherIncome: string;
-  costOfLiving: string;
-  personalTaxes: string;
-  schedCRevenue: string;
-  schedCCOGS: string;
-  schedCExpenses: string;
-  schedCInterest: string;
-  schedCDepreciation: string;
-  schedCAmortization: string;
-  schedCOther: string;
-}
+import { useSpreadsheet, PersonalPeriodData } from "@/contexts/SpreadsheetContext";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 export const PersonalFinancials = () => {
-  const [periods, setPeriods] = useState<PeriodData[]>([
-    { 
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
-      costOfLiving: "0", personalTaxes: "0",
-      schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
-    },
-    { 
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
-      costOfLiving: "0", personalTaxes: "0",
-      schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
-    },
-    { 
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
-      costOfLiving: "0", personalTaxes: "0",
-      schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
-    }
-  ]);
+  const {
+    personalPeriods,
+    setPersonalPeriods,
+    personalPeriodLabels,
+    setPersonalPeriodLabels,
+  } = useSpreadsheet();
 
-  const [periodLabels, setPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025"]);
-
-  const updateField = (periodIndex: number, field: keyof PeriodData, value: string) => {
-    const newPeriods = [...periods];
+  const updateField = (periodIndex: number, field: keyof PersonalPeriodData, value: string) => {
+    const newPeriods = [...personalPeriods];
     newPeriods[periodIndex] = { ...newPeriods[periodIndex], [field]: value };
-    setPeriods(newPeriods);
+    setPersonalPeriods(newPeriods);
   };
 
   const updatePeriodLabel = (index: number, value: string) => {
-    const newLabels = [...periodLabels];
+    const newLabels = [...personalPeriodLabels];
     newLabels[index] = value;
-    setPeriodLabels(newLabels);
+    setPersonalPeriodLabels(newLabels);
+  };
+
+  const clearColumn = (periodIndex: number) => {
+    const clearedPeriod: PersonalPeriodData = {
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      costOfLiving: "0", personalTaxes: "0",
+      schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0",
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+    };
+    const newPeriods = [...personalPeriods];
+    newPeriods[periodIndex] = clearedPeriod;
+    setPersonalPeriods(newPeriods);
   };
 
   const calculateW2Income = (periodIndex: number) => {
-    const period = periods[periodIndex];
+    const period = personalPeriods[periodIndex];
     return (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0) +
            (parseFloat(period.investments) || 0) + (parseFloat(period.rentalIncome) || 0) +
            (parseFloat(period.otherIncome) || 0);
   };
 
   const calculateSchedCNetIncome = (periodIndex: number) => {
-    const period = periods[periodIndex];
+    const period = personalPeriods[periodIndex];
     const revenue = parseFloat(period.schedCRevenue) || 0;
     const expenses = (parseFloat(period.schedCCOGS) || 0) + (parseFloat(period.schedCExpenses) || 0);
     return revenue - expenses;
@@ -71,7 +52,7 @@ export const PersonalFinancials = () => {
 
   const calculateSchedCCashFlow = (periodIndex: number) => {
     const netIncome = calculateSchedCNetIncome(periodIndex);
-    const period = periods[periodIndex];
+    const period = personalPeriods[periodIndex];
     const addbacks = (parseFloat(period.schedCInterest) || 0) + 
                      (parseFloat(period.schedCDepreciation) || 0) + 
                      (parseFloat(period.schedCAmortization) || 0) +
@@ -84,7 +65,7 @@ export const PersonalFinancials = () => {
   };
 
   const calculateTotalExpenses = (periodIndex: number) => {
-    const period = periods[periodIndex];
+    const period = personalPeriods[periodIndex];
     return (parseFloat(period.costOfLiving) || 0) + (parseFloat(period.personalTaxes) || 0);
   };
 
@@ -105,302 +86,301 @@ export const PersonalFinancials = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6">
       <Card>
         <CardHeader>
           <CardTitle>Personal Income Statement</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
-            <div className="grid grid-cols-4 bg-muted font-medium text-sm min-w-[600px]">
-              <div className="p-3 border-r border-border">Income Source</div>
-              {periodLabels.map((label, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={label}
-                    onChange={(val) => updatePeriodLabel(i, val)}
-                    type="text"
-                  />
-                </div>
-              ))}
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="border border-border p-3 text-left font-semibold sticky left-0 bg-muted z-10">Item</th>
+                  {personalPeriodLabels.map((label, i) => (
+                    <th key={i} className="border border-border p-3 text-center min-w-[180px]">
+                      <div className="space-y-2">
+                        <EditableCell
+                          value={label}
+                          onChange={(val) => updatePeriodLabel(i, val)}
+                          type="text"
+                          className="text-center font-semibold"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => clearColumn(i)}
+                          className="w-full text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Clear Column
+                        </Button>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* W2 Income Section */}
+                <tr className="bg-primary/10">
+                  <td colSpan={4} className="border border-border p-2 font-semibold sticky left-0">W2 / Salary Income</td>
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Salary/Wages</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].salary}
+                        onChange={(val) => updateField(i, "salary", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Bonuses</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].bonuses}
+                        onChange={(val) => updateField(i, "bonuses", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Investments</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].investments}
+                        onChange={(val) => updateField(i, "investments", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Rental Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].rentalIncome}
+                        onChange={(val) => updateField(i, "rentalIncome", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Other Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].otherIncome}
+                        onChange={(val) => updateField(i, "otherIncome", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-secondary/20 font-semibold">
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Total W2 Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateW2Income(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
 
-            <div className="mt-2 mb-2 px-3">
-              <h4 className="text-sm font-semibold text-success">W-2 Income</h4>
-            </div>
+                {/* Schedule C Section */}
+                <tr className="bg-primary/10">
+                  <td colSpan={4} className="border border-border p-2 font-semibold sticky left-0">Schedule C Business Income</td>
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Revenue</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].schedCRevenue}
+                        onChange={(val) => updateField(i, "schedCRevenue", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">COGS</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].schedCCOGS}
+                        onChange={(val) => updateField(i, "schedCCOGS", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Operating Expenses</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].schedCExpenses}
+                        onChange={(val) => updateField(i, "schedCExpenses", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-secondary/20">
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Schedule C Net Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateSchedCNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
 
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Salary/Wages</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.salary}
-                    onChange={(val) => updateField(i, "salary", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
+                {/* Addbacks */}
+                <tr className="bg-accent/10">
+                  <td colSpan={4} className="border border-border p-2 pl-6 font-medium sticky left-0">Schedule C Addbacks</td>
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-8 sticky left-0 bg-background">Interest</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].schedCInterest}
+                        onChange={(val) => updateField(i, "schedCInterest", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-8 sticky left-0 bg-background">Depreciation</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].schedCDepreciation}
+                        onChange={(val) => updateField(i, "schedCDepreciation", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-8 sticky left-0 bg-background">Amortization</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].schedCAmortization}
+                        onChange={(val) => updateField(i, "schedCAmortization", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-8 sticky left-0 bg-background">Other Addbacks</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].schedCOther}
+                        onChange={(val) => updateField(i, "schedCOther", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-secondary/20 font-semibold">
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Schedule C Cash Flow</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateSchedCCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
 
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Bonuses/Commission</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.bonuses}
-                    onChange={(val) => updateField(i, "bonuses", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
+                {/* Expenses */}
+                <tr className="bg-primary/10">
+                  <td colSpan={4} className="border border-border p-2 font-semibold sticky left-0">Personal Expenses</td>
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Cost of Living</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].costOfLiving}
+                        onChange={(val) => updateField(i, "costOfLiving", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Personal Taxes</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i].personalTaxes}
+                        onChange={(val) => updateField(i, "personalTaxes", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
 
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Investment Income</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.investments}
-                    onChange={(val) => updateField(i, "investments", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
+                {/* Totals */}
+                <tr className="bg-primary/20 font-bold">
+                  <td className="border border-border p-2 sticky left-0 bg-primary/20">Total Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateTotalIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-primary/20 font-bold">
+                  <td className="border border-border p-2 sticky left-0 bg-primary/20">Total Expenses</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateTotalExpenses(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-accent/20 font-bold">
+                  <td className="border border-border p-2 sticky left-0 bg-accent/20">Net Cash Flow</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateNetCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
 
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Rental Income</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.rentalIncome}
-                    onChange={(val) => updateField(i, "rentalIncome", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Other Income</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.otherIncome}
-                    onChange={(val) => updateField(i, "otherIncome", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-2 mb-2 px-3">
-              <h4 className="text-sm font-semibold text-success">Schedule C Business Income</h4>
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Gross Revenue</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.schedCRevenue}
-                    onChange={(val) => updateField(i, "schedCRevenue", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Cost of Goods Sold</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.schedCCOGS}
-                    onChange={(val) => updateField(i, "schedCCOGS", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Operating Expenses</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.schedCExpenses}
-                    onChange={(val) => updateField(i, "schedCExpenses", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border bg-muted min-w-[600px]">
-              <div className="p-3 border-r border-border font-medium">Schedule C Net Income</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0 font-medium">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateSchedCNetIncome(i))}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-2 mb-2 px-3">
-              <h4 className="text-sm font-semibold text-accent">Add-backs (Schedule C)</h4>
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Interest</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.schedCInterest}
-                    onChange={(val) => updateField(i, "schedCInterest", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Depreciation</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.schedCDepreciation}
-                    onChange={(val) => updateField(i, "schedCDepreciation", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Amortization</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.schedCAmortization}
-                    onChange={(val) => updateField(i, "schedCAmortization", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Other Add-backs</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.schedCOther}
-                    onChange={(val) => updateField(i, "schedCOther", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border bg-accent/10 min-w-[600px]">
-              <div className="p-3 border-r border-border font-bold">Schedule C Cash Flow</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateSchedCCashFlow(i))}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b-2 border-border bg-success/10 min-w-[600px]">
-              <div className="p-3 border-r border-border font-bold text-lg">Total Income</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold text-lg">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalIncome(i))}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-2 mb-2 px-3">
-              <h4 className="text-sm font-semibold text-destructive">Expenses</h4>
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Cost of Living</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.costOfLiving}
-                    onChange={(val) => updateField(i, "costOfLiving", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Personal Taxes</div>
-              {periods.map((period, i) => (
-                <div key={i} className="border-r border-border last:border-r-0">
-                  <EditableCell
-                    value={period.personalTaxes}
-                    onChange={(val) => updateField(i, "personalTaxes", val)}
-                    type="currency"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b-2 border-border bg-destructive/10 min-w-[600px]">
-              <div className="p-3 border-r border-border font-bold">Total Expenses</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalExpenses(i))}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 bg-primary/10 min-w-[600px]">
-              <div className="p-3 border-r border-border font-bold text-lg">Net Cash Flow</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold text-lg">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateNetCashFlow(i))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Personal Financial Ratios</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="border border-border rounded-lg overflow-hidden">
-            <div className="grid grid-cols-4 bg-muted font-medium text-sm min-w-[600px]">
-              <div className="p-3 border-r border-border">Ratio</div>
-              {periodLabels.map((label, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0">{label}</div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Savings Rate</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0">
-                  {calculateSavingsRate(i).toFixed(1)}%
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Expense Ratio</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0">
-                  {calculateExpenseRatio(i).toFixed(1)}%
-                </div>
-              ))}
-            </div>
+                {/* Financial Ratios */}
+                <tr className="bg-primary/10">
+                  <td colSpan={4} className="border border-border p-2 font-semibold sticky left-0">Financial Ratios</td>
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Savings Rate</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      {calculateSavingsRate(i).toFixed(2)}%
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Expense Ratio</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      {calculateExpenseRatio(i).toFixed(2)}%
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

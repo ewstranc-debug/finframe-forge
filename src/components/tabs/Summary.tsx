@@ -1,32 +1,21 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown, PieChart } from "lucide-react";
 import { EditableCell } from "../EditableCell";
-
-interface UseOfFunds {
-  id: string;
-  description: string;
-  amount: string;
-}
+import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 
 export const Summary = () => {
-  const [interestRate, setInterestRate] = useState("0");
-  const [termMonths, setTermMonths] = useState("120");
-  const [guaranteePercent, setGuaranteePercent] = useState("75");
-  const [injectionEquity, setInjectionEquity] = useState("0");
-  
-  const [uses, setUses] = useState<UseOfFunds[]>([
-    { id: "1", description: "RE Purchase", amount: "0" },
-    { id: "2", description: "Refinance", amount: "0" },
-    { id: "3", description: "Working Capital", amount: "0" },
-    { id: "4", description: "Inventory", amount: "0" },
-    { id: "5", description: "Business Acquisition", amount: "0" },
-    { id: "6", description: "Construction", amount: "0" },
-    { id: "7", description: "Contingency", amount: "0" },
-    { id: "8", description: "Interest Reserve", amount: "0" },
-  ]);
+  const {
+    interestRate, setInterestRate,
+    termMonths, setTermMonths,
+    guaranteePercent, setGuaranteePercent,
+    injectionEquity, setInjectionEquity,
+    equityPercentage, setEquityPercentage,
+    uses, setUses,
+    businessPeriods,
+    personalPeriods,
+  } = useSpreadsheet();
 
-  const updateUse = (id: string, field: keyof UseOfFunds, value: string) => {
+  const updateUse = (id: string, field: "description" | "amount", value: string) => {
     setUses(uses.map(u => u.id === id ? { ...u, [field]: value } : u));
   };
 
@@ -63,12 +52,76 @@ export const Summary = () => {
     return payment;
   };
 
+  const calculateAnnualPayment = (monthlyPayment: number) => {
+    return monthlyPayment * 12;
+  };
+
+  const calculateGlobalDSCR = () => {
+    const latestBusinessPeriod = businessPeriods[2];
+    
+    const businessRevenue = (parseFloat(latestBusinessPeriod.revenue) || 0) + (parseFloat(latestBusinessPeriod.otherIncome) || 0);
+    const businessExpenses = (parseFloat(latestBusinessPeriod.cogs) || 0) + 
+                            (parseFloat(latestBusinessPeriod.operatingExpenses) || 0) +
+                            (parseFloat(latestBusinessPeriod.rentExpense) || 0) +
+                            (parseFloat(latestBusinessPeriod.otherExpenses) || 0);
+    const businessEBITDA = businessRevenue - businessExpenses;
+    
+    const officersComp = parseFloat(latestBusinessPeriod.officersComp) || 0;
+    const depreciationAddback = parseFloat(latestBusinessPeriod.depreciation) || 0;
+    const amortizationAddback = parseFloat(latestBusinessPeriod.amortization) || 0;
+    const section179Addback = parseFloat(latestBusinessPeriod.section179) || 0;
+    const otherAddbacks = parseFloat(latestBusinessPeriod.addbacks) || 0;
+    
+    const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
+    
+    const latestPersonalPeriod = personalPeriods[2];
+    const personalW2Income = (parseFloat(latestPersonalPeriod.salary) || 0) + 
+                            (parseFloat(latestPersonalPeriod.bonuses) || 0) +
+                            (parseFloat(latestPersonalPeriod.investments) || 0) +
+                            (parseFloat(latestPersonalPeriod.rentalIncome) || 0) +
+                            (parseFloat(latestPersonalPeriod.otherIncome) || 0);
+    
+    const schedCRevenue = parseFloat(latestPersonalPeriod.schedCRevenue) || 0;
+    const schedCExpenses = (parseFloat(latestPersonalPeriod.schedCCOGS) || 0) + (parseFloat(latestPersonalPeriod.schedCExpenses) || 0);
+    const schedCAddbacks = (parseFloat(latestPersonalPeriod.schedCInterest) || 0) + 
+                          (parseFloat(latestPersonalPeriod.schedCDepreciation) || 0) + 
+                          (parseFloat(latestPersonalPeriod.schedCAmortization) || 0) +
+                          (parseFloat(latestPersonalPeriod.schedCOther) || 0);
+    const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
+    
+    const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow;
+    
+    const personalExpenses = (parseFloat(latestPersonalPeriod.costOfLiving) || 0) + (parseFloat(latestPersonalPeriod.personalTaxes) || 0);
+    const estimatedTaxOnOfficersComp = officersComp * 0.30;
+    
+    const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp;
+    
+    const primaryRequest = calculatePrimaryRequest();
+    const fees = calculateSBAFees(primaryRequest);
+    const finalLoanAmount = primaryRequest + fees.upfrontFee;
+    const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
+    const annualDebtService = monthlyPayment * 12;
+    
+    return annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
+  };
+
+  const handleEquityPercentageChange = (value: string) => {
+    setEquityPercentage(value);
+    const primaryRequest = calculatePrimaryRequest();
+    const fees = calculateSBAFees(primaryRequest);
+    const totalProjectCost = primaryRequest + fees.upfrontFee;
+    const calculatedEquity = (parseFloat(value) || 0) / 100 * totalProjectCost;
+    setInjectionEquity(calculatedEquity.toString());
+  };
+
   const primaryRequest = calculatePrimaryRequest();
   const fees = calculateSBAFees(primaryRequest);
   const finalLoanAmount = primaryRequest + fees.upfrontFee;
   const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
+  const annualPayment = calculateAnnualPayment(monthlyPayment);
   const totalSources = finalLoanAmount + parseFloat(injectionEquity);
   const totalUses = primaryRequest + fees.upfrontFee;
+  const globalDSCR = calculateGlobalDSCR();
 
   return (
     <div className="p-6 space-y-6">
@@ -78,7 +131,6 @@ export const Summary = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Uses */}
             <div>
               <h3 className="text-lg font-semibold mb-4 text-primary">Uses of Funds</h3>
               <div className="border border-border rounded-lg overflow-hidden mb-4">
@@ -104,52 +156,56 @@ export const Summary = () => {
                     </div>
                   </div>
                 ))}
-                <div className="grid grid-cols-2 bg-primary/10">
-                  <div className="p-3 border-r border-border font-bold">Primary Request</div>
-                  <div className="p-3 font-bold">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(primaryRequest)}
-                  </div>
+                <div className="grid grid-cols-2 font-semibold bg-primary/10">
+                  <div className="p-3 border-r border-border">Primary Request</div>
+                  <div className="p-3">${primaryRequest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
-                <div className="grid grid-cols-2 bg-destructive/10">
-                  <div className="p-3 border-r border-border font-medium">SBA Guarantee Fee</div>
-                  <div className="p-3 font-medium text-destructive">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(fees.upfrontFee)}
-                  </div>
+                <div className="grid grid-cols-2">
+                  <div className="p-3 border-r border-border">SBA Guarantee Fee (Upfront)</div>
+                  <div className="p-3">${fees.upfrontFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
-                <div className="grid grid-cols-2 bg-success/10">
-                  <div className="p-3 border-r border-border font-bold text-lg">Final Loan Amount</div>
-                  <div className="p-3 font-bold text-lg text-success">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(finalLoanAmount)}
-                  </div>
+                <div className="grid grid-cols-2 font-bold bg-primary/20">
+                  <div className="p-3 border-r border-border">Total Uses</div>
+                  <div className="p-3">${totalUses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               </div>
             </div>
 
-            {/* Sources */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-success">Sources of Funds</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">SBA 7(a) Loan</label>
-                  <div className="p-3 bg-success/10 rounded-md font-bold text-success">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(finalLoanAmount)}
+              <h3 className="text-lg font-semibold mb-4 text-primary">Sources of Funds</h3>
+              <div className="border border-border rounded-lg overflow-hidden mb-4">
+                <div className="grid grid-cols-2 bg-muted font-medium text-sm">
+                  <div className="p-3 border-r border-border">Description</div>
+                  <div className="p-3">Amount</div>
+                </div>
+                <div className="grid grid-cols-2 border-b border-border">
+                  <div className="p-3 border-r border-border bg-secondary/30">SBA 7(a) Loan</div>
+                  <div className="p-3">${finalLoanAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                </div>
+                <div className="grid grid-cols-2 border-b border-border">
+                  <div className="p-3 border-r border-border bg-secondary/30">Equity Injection</div>
+                  <div>
+                    <EditableCell
+                      value={injectionEquity}
+                      onChange={setInjectionEquity}
+                      type="currency"
+                    />
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Equity Injection</label>
-                  <EditableCell
-                    value={injectionEquity}
-                    onChange={setInjectionEquity}
-                    type="currency"
-                  />
-                </div>
-                <div className="pt-3 border-t border-border">
-                  <div className="flex justify-between items-center font-bold text-lg">
-                    <span>Total Sources</span>
-                    <span className="text-success">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalSources)}
-                    </span>
+                <div className="grid grid-cols-2 border-b border-border bg-accent/20">
+                  <div className="p-3 border-r border-border text-sm">Equity % of Total Project</div>
+                  <div className="p-2">
+                    <EditableCell
+                      value={equityPercentage}
+                      onChange={handleEquityPercentageChange}
+                      type="number"
+                      className="text-sm"
+                    />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 font-bold bg-primary/20">
+                  <div className="p-3 border-r border-border">Total Sources</div>
+                  <div className="p-3">${totalSources.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               </div>
             </div>
@@ -162,9 +218,9 @@ export const Summary = () => {
           <CardTitle>Loan Terms & Payment</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
-              <label className="text-sm font-medium mb-1 block">Interest Rate (%)</label>
+              <label className="text-sm font-medium mb-2 block">Interest Rate (%)</label>
               <EditableCell
                 value={interestRate}
                 onChange={setInterestRate}
@@ -172,7 +228,7 @@ export const Summary = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Term (months)</label>
+              <label className="text-sm font-medium mb-2 block">Term (months)</label>
               <EditableCell
                 value={termMonths}
                 onChange={setTermMonths}
@@ -180,7 +236,7 @@ export const Summary = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">SBA Guarantee (%)</label>
+              <label className="text-sm font-medium mb-2 block">SBA Guarantee (%)</label>
               <EditableCell
                 value={guaranteePercent}
                 onChange={setGuaranteePercent}
@@ -188,117 +244,92 @@ export const Summary = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Monthly Payment</label>
-              <div className="p-3 bg-primary/10 rounded-md font-bold text-primary">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(monthlyPayment)}
+              <label className="text-sm font-medium mb-2 block">SBA Annual Fee</label>
+              <div className="h-9 px-3 py-2 bg-muted rounded-md flex items-center">
+                ${fees.annualFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Guaranteed Amount:</span>
-              <span className="font-semibold">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(fees.guaranteedAmount)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Annual Servicing Fee:</span>
-              <span className="font-semibold">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(fees.annualFee)}
-              </span>
-            </div>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground mb-1">Annual Payment</div>
+                <div className="text-2xl font-bold text-primary">
+                  ${annualPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground mb-1">Monthly Payment</div>
+                <div className="text-2xl font-bold text-primary">
+                  ${monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-accent/10">
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground mb-1">Global DSCR</div>
+                <div className={`text-2xl font-bold ${globalDSCR >= 1.25 ? 'text-green-600' : globalDSCR >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {globalDSCR.toFixed(2)}x
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Income</CardTitle>
-            <DollarSign className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">$0.00</div>
-            <p className="text-xs text-muted-foreground mt-1">Combined from all sources</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Debts</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">$0.00</div>
-            <p className="text-xs text-muted-foreground mt-1">Existing + Proposed</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Net Cash Flow</CardTitle>
-            <TrendingUp className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">$0.00</div>
-            <p className="text-xs text-muted-foreground mt-1">Income - Expenses</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Debt-to-Income</CardTitle>
-            <PieChart className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">0%</div>
-            <p className="text-xs text-muted-foreground mt-1">DTI Ratio</p>
-          </CardContent>
-        </Card>
-      </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Financial Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Income Sources</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Personal Income:</span>
-                    <span className="font-medium">$0.00</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-2">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Income</p>
+                    <p className="text-2xl font-bold mt-1">$0</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Business Income:</span>
-                    <span className="font-medium">$0.00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Affiliate Income:</span>
-                    <span className="font-medium">$0.00</span>
-                  </div>
+                  <TrendingUp className="h-8 w-8 text-green-600" />
                 </div>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Debt Obligations</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Existing Debts:</span>
-                    <span className="font-medium">$0.00</span>
+              </CardContent>
+            </Card>
+            <Card className="border-2">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Debts</p>
+                    <p className="text-2xl font-bold mt-1">$0</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Proposed Debts:</span>
-                    <span className="font-medium">$0.00</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold">Total:</span>
-                    <span className="font-semibold">$0.00</span>
-                  </div>
+                  <TrendingDown className="h-8 w-8 text-red-600" />
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+            <Card className="border-2">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Net Cash Flow</p>
+                    <p className="text-2xl font-bold mt-1">$0</p>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-2">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Debt Service</p>
+                    <p className="text-2xl font-bold mt-1">${annualPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                  </div>
+                  <PieChart className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>

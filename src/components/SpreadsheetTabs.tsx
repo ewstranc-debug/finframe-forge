@@ -6,10 +6,12 @@ import { BusinessFinancials } from "./tabs/BusinessFinancials";
 import { BusinessBalanceSheet } from "./tabs/BusinessBalanceSheet";
 import { AffiliateFinancials } from "./tabs/AffiliateFinancials";
 import { ExistingDebts } from "./tabs/ExistingDebts";
+import { SpreadsheetProvider } from "@/contexts/SpreadsheetContext";
 
 export const SpreadsheetTabs = () => {
   return (
-    <Tabs defaultValue="summary" className="w-full">
+    <SpreadsheetProvider>
+      <Tabs defaultValue="summary" className="w-full">
       <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
         <TabsTrigger 
           value="summary" 
@@ -77,5 +79,6 @@ export const SpreadsheetTabs = () => {
         <ExistingDebts />
       </TabsContent>
     </Tabs>
+    </SpreadsheetProvider>
   );
 };
