@@ -271,7 +271,7 @@ export const Summary = () => {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="bg-primary/5">
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">Annual Payment</div>
@@ -290,9 +290,17 @@ export const Summary = () => {
             </Card>
             <Card className="bg-accent/10">
               <CardContent className="pt-6">
-                <div className="text-sm text-muted-foreground mb-1">Global DSCR</div>
-                <div className={`text-2xl font-bold ${globalDSCR >= 1.25 ? 'text-green-600' : globalDSCR >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                  {globalDSCR.toFixed(2)}x
+                <div className="text-sm text-muted-foreground mb-1">Global DSCR - Last Full Year</div>
+                <div className={`text-2xl font-bold ${lastFullYear.dscr >= 1.25 ? 'text-green-600' : lastFullYear.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {lastFullYear.dscr.toFixed(2)}x
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-accent/10">
+              <CardContent className="pt-6">
+                <div className="text-sm text-muted-foreground mb-1">Global DSCR - Interim Period</div>
+                <div className={`text-2xl font-bold ${interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {interimPeriod.dscr.toFixed(2)}x
                 </div>
               </CardContent>
             </Card>
