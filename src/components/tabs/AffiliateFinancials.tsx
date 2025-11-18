@@ -35,6 +35,28 @@ interface AffiliateEntity {
 
 export const AffiliateFinancials = () => {
   const [periodLabels, setPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+
+  const focusNextCell = (entityId: string, currentRow: string, currentCol: number) => {
+    const incomeFields = ['revenue', 'cogs', 'operatingExpenses', 'depreciation', 'amortization', 'interest', 'taxes'];
+    const balanceFields = ['cash', 'accountsReceivable', 'inventory', 'realEstate', 'accumulatedDepreciation', 'currentLiabilities', 'longTermDebt'];
+    
+    const isIncomeField = incomeFields.includes(currentRow);
+    const fields = isIncomeField ? incomeFields : balanceFields;
+    const currentIndex = fields.indexOf(currentRow);
+    
+    if (currentIndex < fields.length - 1) {
+      const nextField = fields[currentIndex + 1];
+      const nextInput = document.querySelector(`input[data-field="${entityId}-${nextField}-${currentCol}"]`) as HTMLInputElement;
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const focusRightCell = (entityId: string, currentRow: string, currentCol: number) => {
+    if (currentCol < 3) {
+      const nextInput = document.querySelector(`input[data-field="${entityId}-${currentRow}-${currentCol + 1}"]`) as HTMLInputElement;
+      if (nextInput) nextInput.focus();
+    }
+  };
   
   const [entities, setEntities] = useState<AffiliateEntity[]>([
     { 
@@ -252,6 +274,9 @@ export const AffiliateFinancials = () => {
                             value={period.revenue}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "revenue", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'revenue', i)}
+                            onTab={() => focusRightCell(entity.id, 'revenue', i)}
+                            dataField={`${entity.id}-revenue-${i}`}
                           />
                         </div>
                       ))}
@@ -265,6 +290,9 @@ export const AffiliateFinancials = () => {
                             value={period.cogs}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "cogs", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'cogs', i)}
+                            onTab={() => focusRightCell(entity.id, 'cogs', i)}
+                            dataField={`${entity.id}-cogs-${i}`}
                           />
                         </div>
                       ))}
@@ -278,6 +306,9 @@ export const AffiliateFinancials = () => {
                             value={period.operatingExpenses}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "operatingExpenses", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'operatingExpenses', i)}
+                            onTab={() => focusRightCell(entity.id, 'operatingExpenses', i)}
+                            dataField={`${entity.id}-operatingExpenses-${i}`}
                           />
                         </div>
                       ))}
@@ -291,6 +322,9 @@ export const AffiliateFinancials = () => {
                             value={period.depreciation}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "depreciation", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'depreciation', i)}
+                            onTab={() => focusRightCell(entity.id, 'depreciation', i)}
+                            dataField={`${entity.id}-depreciation-${i}`}
                           />
                         </div>
                       ))}
@@ -304,6 +338,9 @@ export const AffiliateFinancials = () => {
                             value={period.amortization}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "amortization", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'amortization', i)}
+                            onTab={() => focusRightCell(entity.id, 'amortization', i)}
+                            dataField={`${entity.id}-amortization-${i}`}
                           />
                         </div>
                       ))}
@@ -317,6 +354,9 @@ export const AffiliateFinancials = () => {
                             value={period.interest}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "interest", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'interest', i)}
+                            onTab={() => focusRightCell(entity.id, 'interest', i)}
+                            dataField={`${entity.id}-interest-${i}`}
                           />
                         </div>
                       ))}
@@ -330,6 +370,9 @@ export const AffiliateFinancials = () => {
                             value={period.taxes}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "taxes", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'taxes', i)}
+                            onTab={() => focusRightCell(entity.id, 'taxes', i)}
+                            dataField={`${entity.id}-taxes-${i}`}
                           />
                         </div>
                       ))}
@@ -372,6 +415,9 @@ export const AffiliateFinancials = () => {
                             value={period.cash}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "cash", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'cash', i)}
+                            onTab={() => focusRightCell(entity.id, 'cash', i)}
+                            dataField={`${entity.id}-cash-${i}`}
                           />
                         </div>
                       ))}
@@ -385,6 +431,9 @@ export const AffiliateFinancials = () => {
                             value={period.accountsReceivable}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "accountsReceivable", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'accountsReceivable', i)}
+                            onTab={() => focusRightCell(entity.id, 'accountsReceivable', i)}
+                            dataField={`${entity.id}-accountsReceivable-${i}`}
                           />
                         </div>
                       ))}
@@ -398,6 +447,9 @@ export const AffiliateFinancials = () => {
                             value={period.inventory}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "inventory", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'inventory', i)}
+                            onTab={() => focusRightCell(entity.id, 'inventory', i)}
+                            dataField={`${entity.id}-inventory-${i}`}
                           />
                         </div>
                       ))}
@@ -411,6 +463,9 @@ export const AffiliateFinancials = () => {
                             value={period.realEstate}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "realEstate", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'realEstate', i)}
+                            onTab={() => focusRightCell(entity.id, 'realEstate', i)}
+                            dataField={`${entity.id}-realEstate-${i}`}
                           />
                         </div>
                       ))}
@@ -424,6 +479,9 @@ export const AffiliateFinancials = () => {
                             value={period.accumulatedDepreciation}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "accumulatedDepreciation", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'accumulatedDepreciation', i)}
+                            onTab={() => focusRightCell(entity.id, 'accumulatedDepreciation', i)}
+                            dataField={`${entity.id}-accumulatedDepreciation-${i}`}
                           />
                         </div>
                       ))}
@@ -450,6 +508,9 @@ export const AffiliateFinancials = () => {
                             value={period.currentLiabilities}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "currentLiabilities", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'currentLiabilities', i)}
+                            onTab={() => focusRightCell(entity.id, 'currentLiabilities', i)}
+                            dataField={`${entity.id}-currentLiabilities-${i}`}
                           />
                         </div>
                       ))}
@@ -463,6 +524,9 @@ export const AffiliateFinancials = () => {
                             value={period.longTermDebt}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "longTermDebt", val)}
                             type="currency"
+                            onEnter={() => focusNextCell(entity.id, 'longTermDebt', i)}
+                            onTab={() => focusRightCell(entity.id, 'longTermDebt', i)}
+                            dataField={`${entity.id}-longTermDebt-${i}`}
                           />
                         </div>
                       ))}
