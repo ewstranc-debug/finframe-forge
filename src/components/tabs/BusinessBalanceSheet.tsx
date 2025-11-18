@@ -1,63 +1,9 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
-
-interface PeriodData {
-  cash: string;
-  accountsReceivable: string;
-  inventory: string;
-  otherCurrentAssets: string;
-  realEstate: string;
-  accumulatedDepreciation: string;
-  currentLiabilities: string;
-  longTermDebt: string;
-}
+import { useSpreadsheet, type BusinessBalanceSheetPeriodData as PeriodData } from "@/contexts/SpreadsheetContext";
 
 export const BusinessBalanceSheet = () => {
-  const [periods, setPeriods] = useState<PeriodData[]>([
-    { 
-      cash: "0", 
-      accountsReceivable: "0", 
-      inventory: "0", 
-      otherCurrentAssets: "0",
-      realEstate: "0",
-      accumulatedDepreciation: "0",
-      currentLiabilities: "0",
-      longTermDebt: "0"
-    },
-    { 
-      cash: "0", 
-      accountsReceivable: "0", 
-      inventory: "0", 
-      otherCurrentAssets: "0",
-      realEstate: "0",
-      accumulatedDepreciation: "0",
-      currentLiabilities: "0",
-      longTermDebt: "0"
-    },
-    { 
-      cash: "0", 
-      accountsReceivable: "0", 
-      inventory: "0", 
-      otherCurrentAssets: "0",
-      realEstate: "0",
-      accumulatedDepreciation: "0",
-      currentLiabilities: "0",
-      longTermDebt: "0"
-    },
-    { 
-      cash: "0", 
-      accountsReceivable: "0", 
-      inventory: "0", 
-      otherCurrentAssets: "0",
-      realEstate: "0",
-      accumulatedDepreciation: "0",
-      currentLiabilities: "0",
-      longTermDebt: "0"
-    }
-  ]);
-
-  const [periodLabels, setPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+  const { businessBalanceSheetPeriods: periods, setBusinessBalanceSheetPeriods: setPeriods, businessBalanceSheetLabels: periodLabels, setBusinessBalanceSheetLabels: setPeriodLabels } = useSpreadsheet();
 
   const updateField = (periodIndex: number, field: keyof PeriodData, value: string) => {
     const newPeriods = [...periods];
