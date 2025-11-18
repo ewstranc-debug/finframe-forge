@@ -116,11 +116,14 @@ export const FinancialAnalysis = () => {
                           (parseFloat(latestPersonalPeriod?.rentalIncome) || 0);
     const personalExpenses = (parseFloat(latestPersonalPeriod?.costOfLiving) || 0) + 
                             (parseFloat(latestPersonalPeriod?.personalTaxes) || 0);
+    
+    // Calculate total annual debt service
     const monthlyDebtPayment = (parseFloat(personalLiabilities.creditCardsMonthly) || 0) +
                                (parseFloat(personalLiabilities.mortgagesMonthly) || 0) +
                                (parseFloat(personalLiabilities.vehicleLoansMonthly) || 0) +
                                (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0) +
                                debts.reduce((sum, debt) => sum + (parseFloat(debt.payment) || 0), 0);
+    const annualDebtService = monthlyDebtPayment * 12;
     
     const monthlyPersonalIncome = personalIncome / 12;
     const personalDebtToIncome = monthlyPersonalIncome > 0 ? (monthlyDebtPayment / monthlyPersonalIncome) * 100 : 0;
@@ -129,19 +132,80 @@ export const FinancialAnalysis = () => {
     const personalLiquidityRatio = totalPersonalLiabilities > 0 ? liquidAssets / totalPersonalLiabilities : 0;
     const personalCurrentRatio = totalPersonalLiabilities > 0 ? totalPersonalAssets / totalPersonalLiabilities : 0;
     
-    // BUSINESS METRICS
+    // BUSINESS METRICS - Calculate for each period
+    // Period 0: Full Year 1 (oldest)
+    const calcBusinessMetrics = (periodIndex: number) => {
+      const period = businessPeriods[periodIndex];
+      if (!period) return null;
+      
+      const revenue = parseFloat(period.revenue) || 0;
+      const cogs = parseFloat(period.cogs) || 0;
+      const opEx = parseFloat(period.operatingExpenses) || 0;
+      const rentExpense = parseFloat(period.rentExpense) || 0;
+      const officersComp = parseFloat(period.officersComp) || 0;
+      const depreciation = parseFloat(period.depreciation) || 0;
+      const amortization = parseFloat(period.amortization) || 0;
+      const interest = parseFloat(period.interest) || 0;
+      const taxes = parseFloat(period.taxes) || 0;
+      const otherIncome = parseFloat(period.otherIncome) || 0;
+      const otherExpenses = parseFloat(period.otherExpenses) || 0;
+      const addbacks = parseFloat(period.addbacks) || 0;
+      
+      const grossProfit = revenue - cogs;
+      const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+      
+      // EBITDA = Revenue + Other Income - COGS - OpEx - Rent - Officers Comp - Other Expenses
+      const ebitda = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks;
+      const ebit = ebitda - depreciation - amortization;
+      const netIncome = ebit - interest - taxes;
+      const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
+      
+      // DSCR = EBITDA / Annual Debt Service
+      const dscr = annualDebtService > 0 ? ebitda / annualDebtService : 0;
+      
+      return {
+        revenue,
+        cogs,
+        grossProfit,
+        grossMargin,
+        ebitda,
+        netIncome,
+        netMargin,
+        dscr,
+        opEx,
+        rentExpense,
+        officersComp,
+        depreciation,
+        amortization,
+        interest,
+        taxes,
+        otherIncome,
+        otherExpenses,
+        addbacks,
+      };
+    };
+    
+    const fullYearMetrics = calcBusinessMetrics(1) || calcBusinessMetrics(0); // Most recent full year
+    const interimMetrics = calcBusinessMetrics(2); // Interim period
+    
+    // Use latest business period for overall business metrics
     const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
     const businessRevenue = parseFloat(latestBusinessPeriod?.revenue) || 0;
     const businessCOGS = parseFloat(latestBusinessPeriod?.cogs) || 0;
     const businessOpEx = parseFloat(latestBusinessPeriod?.operatingExpenses) || 0;
+    const businessRentExpense = parseFloat(latestBusinessPeriod?.rentExpense) || 0;
+    const businessOfficersComp = parseFloat(latestBusinessPeriod?.officersComp) || 0;
     const businessInterest = parseFloat(latestBusinessPeriod?.interest) || 0;
     const businessDepreciation = parseFloat(latestBusinessPeriod?.depreciation) || 0;
     const businessAmortization = parseFloat(latestBusinessPeriod?.amortization) || 0;
     const businessTaxes = parseFloat(latestBusinessPeriod?.taxes) || 0;
+    const businessOtherIncome = parseFloat(latestBusinessPeriod?.otherIncome) || 0;
+    const businessOtherExpenses = parseFloat(latestBusinessPeriod?.otherExpenses) || 0;
+    const businessAddbacks = parseFloat(latestBusinessPeriod?.addbacks) || 0;
     
     const businessGrossProfit = businessRevenue - businessCOGS;
     const businessGrossMargin = businessRevenue > 0 ? (businessGrossProfit / businessRevenue) * 100 : 0;
-    const businessEBITDA = businessRevenue - businessCOGS - businessOpEx + businessDepreciation + businessAmortization;
+    const businessEBITDA = (businessRevenue + businessOtherIncome) - businessCOGS - businessOpEx - businessRentExpense - businessOfficersComp - businessOtherExpenses + businessAddbacks;
     const businessEBIT = businessEBITDA - businessDepreciation - businessAmortization;
     const businessNetIncome = businessEBIT - businessInterest - businessTaxes;
     const businessNetMargin = businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0;
@@ -178,8 +242,9 @@ export const FinancialAnalysis = () => {
     const globalLiquidityRatio = globalTotalLiabilities > 0 ? (liquidAssets + businessCash) / globalTotalLiabilities : 0;
     const globalCurrentRatio = globalTotalLiabilities > 0 ? globalTotalAssets / globalTotalLiabilities : 0;
     const globalSavingsRate = globalTotalIncome > 0 ? ((globalTotalIncome - globalTotalExpenses) / globalTotalIncome) * 100 : 0;
-    const globalDebtServiceCoverage = monthlyDebtPayment > 0 ? 
-      ((globalTotalIncome / 12) - (globalTotalExpenses / 12)) / monthlyDebtPayment : 0;
+    
+    // Global DSCR using combined EBITDA
+    const globalDSCR = annualDebtService > 0 ? businessEBITDA / annualDebtService : 0;
     
     return {
       personal: {
@@ -191,6 +256,7 @@ export const FinancialAnalysis = () => {
         totalExpenses: personalExpenses,
         monthlyIncome: monthlyPersonalIncome,
         monthlyDebtPayment,
+        annualDebtService,
         debtToIncome: personalDebtToIncome,
         debtToAssets: personalDebtToAssets,
         savingsRate: personalSavingsRate,
@@ -218,6 +284,22 @@ export const FinancialAnalysis = () => {
         roa: businessROA,
         roe: businessROE,
         assetTurnover: businessAssetTurnover,
+        // Detailed business components for tooltips
+        opEx: businessOpEx,
+        rentExpense: businessRentExpense,
+        officersComp: businessOfficersComp,
+        depreciation: businessDepreciation,
+        amortization: businessAmortization,
+        interest: businessInterest,
+        taxes: businessTaxes,
+        otherIncome: businessOtherIncome,
+        otherExpenses: businessOtherExpenses,
+        addbacks: businessAddbacks,
+      },
+      dscr: {
+        fullYear: fullYearMetrics,
+        interim: interimMetrics,
+        annualDebtService,
       },
       global: {
         totalAssets: globalTotalAssets,
@@ -229,7 +311,7 @@ export const FinancialAnalysis = () => {
         liquidityRatio: globalLiquidityRatio,
         currentRatio: globalCurrentRatio,
         savingsRate: globalSavingsRate,
-        debtServiceCoverage: globalDebtServiceCoverage,
+        dscr: globalDSCR,
       }
     };
   };
@@ -981,8 +1063,8 @@ export const FinancialAnalysis = () => {
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
                         <p className="text-sm text-muted-foreground">Global DSCR</p>
-                        <p className={`text-xl font-bold ${ratios.global.debtServiceCoverage < 1.25 ? 'text-destructive' : ratios.global.debtServiceCoverage < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.debtServiceCoverage.toFixed(2)}
+                        <p className={`text-xl font-bold ${ratios.global.dscr < 1.25 ? 'text-destructive' : ratios.global.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                          {ratios.global.dscr.toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground">Target: &gt;1.5</p>
                       </div>
@@ -990,12 +1072,92 @@ export const FinancialAnalysis = () => {
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-semibold">Debt Service Coverage Ratio:</p>
-                        <p>Combined Net Operating Income</p>
-                        <p>Monthly Debt Payment: ${ratios.personal.monthlyDebtPayment.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">DSCR = Net Income / Total Debt Payments</p>
+                        <p>Combined EBITDA: ${ratios.business.ebitda.toLocaleString()}</p>
+                        <p>Annual Debt Service: ${ratios.personal.annualDebtService.toLocaleString()}</p>
+                        <p className="border-t pt-1 mt-1">DSCR = EBITDA / Annual Debt Payments</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
+                </div>
+              </div>
+              
+              {/* DSCR ANALYSIS - Full Year vs Interim */}
+              <div className="pt-6 border-t">
+                <h3 className="text-lg font-semibold mb-4 text-primary">Debt Service Coverage Ratio (DSCR) Analysis</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {ratios.dscr.fullYear && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="space-y-1 cursor-help p-4 border rounded-lg">
+                          <p className="text-sm text-muted-foreground">Full Year DSCR</p>
+                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.dscr < 1.25 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {ratios.dscr.fullYear.dscr.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.5 | Period: {businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        <div className="space-y-2">
+                          <p className="font-semibold">Full Year DSCR Calculation:</p>
+                          <div className="space-y-1 text-sm">
+                            <p className="font-medium">EBITDA Components:</p>
+                            <p>Revenue: ${ratios.dscr.fullYear.revenue.toLocaleString()}</p>
+                            <p>+ Other Income: ${ratios.dscr.fullYear.otherIncome.toLocaleString()}</p>
+                            <p>- COGS: ${ratios.dscr.fullYear.cogs.toLocaleString()}</p>
+                            <p>- Operating Expenses: ${ratios.dscr.fullYear.opEx.toLocaleString()}</p>
+                            <p>- Rent: ${ratios.dscr.fullYear.rentExpense.toLocaleString()}</p>
+                            <p>- Officers Comp: ${ratios.dscr.fullYear.officersComp.toLocaleString()}</p>
+                            <p>- Other Expenses: ${ratios.dscr.fullYear.otherExpenses.toLocaleString()}</p>
+                            <p>+ Addbacks: ${ratios.dscr.fullYear.addbacks.toLocaleString()}</p>
+                            <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.fullYear.ebitda.toLocaleString()}</p>
+                          </div>
+                          <div className="space-y-1 text-sm border-t pt-2">
+                            <p className="font-medium">Annual Debt Service:</p>
+                            <p>Monthly Debt: ${ratios.personal.monthlyDebtPayment.toLocaleString()}</p>
+                            <p className="font-semibold">Annual Total: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                          </div>
+                          <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.fullYear.dscr.toFixed(2)}</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  
+                  {ratios.dscr.interim && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="space-y-1 cursor-help p-4 border rounded-lg">
+                          <p className="text-sm text-muted-foreground">Interim Period DSCR</p>
+                          <p className={`text-2xl font-bold ${ratios.dscr.interim.dscr < 1.25 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {ratios.dscr.interim.dscr.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.5 | Period: {businessPeriodLabels[2]}</p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        <div className="space-y-2">
+                          <p className="font-semibold">Interim DSCR Calculation:</p>
+                          <div className="space-y-1 text-sm">
+                            <p className="font-medium">EBITDA Components:</p>
+                            <p>Revenue: ${ratios.dscr.interim.revenue.toLocaleString()}</p>
+                            <p>+ Other Income: ${ratios.dscr.interim.otherIncome.toLocaleString()}</p>
+                            <p>- COGS: ${ratios.dscr.interim.cogs.toLocaleString()}</p>
+                            <p>- Operating Expenses: ${ratios.dscr.interim.opEx.toLocaleString()}</p>
+                            <p>- Rent: ${ratios.dscr.interim.rentExpense.toLocaleString()}</p>
+                            <p>- Officers Comp: ${ratios.dscr.interim.officersComp.toLocaleString()}</p>
+                            <p>- Other Expenses: ${ratios.dscr.interim.otherExpenses.toLocaleString()}</p>
+                            <p>+ Addbacks: ${ratios.dscr.interim.addbacks.toLocaleString()}</p>
+                            <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.interim.ebitda.toLocaleString()}</p>
+                          </div>
+                          <div className="space-y-1 text-sm border-t pt-2">
+                            <p className="font-medium">Annual Debt Service:</p>
+                            <p>Monthly Debt: ${ratios.personal.monthlyDebtPayment.toLocaleString()}</p>
+                            <p className="font-semibold">Annual Total: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                          </div>
+                          <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.interim.dscr.toFixed(2)}</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </div>
             </TooltipProvider>
