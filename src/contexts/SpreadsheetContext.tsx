@@ -42,6 +42,8 @@ export interface BusinessPeriodData {
   m1FedTaxExpense: string;
   m1ExcessDepr: string;
   m1Other: string;
+  periodDate: string;
+  periodMonths: string;
 }
 
 interface SpreadsheetContextType {
@@ -127,30 +129,34 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
-      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0"
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: "", periodMonths: "12"
     },
     { 
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
-      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0"
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: "", periodMonths: "12"
     },
     { 
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
-      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0"
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: "", periodMonths: "12"
     },
     { 
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
-      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0"
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: "", periodMonths: "12"
     }
   ]);
   const [businessPeriodLabels, setBusinessPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
-  // Interim period settings
+  // Interim period settings (kept for backward compatibility but now handled per-period)
   const [interimPeriodDate, setInterimPeriodDate] = useState("");
   const [interimPeriodMonths, setInterimPeriodMonths] = useState("12");
 

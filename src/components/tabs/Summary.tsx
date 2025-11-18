@@ -61,7 +61,8 @@ export const Summary = () => {
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
     
-    const annualizationFactor = businessPeriodIndex === 3 ? (12 / (parseFloat(interimPeriodMonths) || 12)) : 1;
+    const months = parseFloat(businessPeriod.periodMonths) || 12;
+    const annualizationFactor = 12 / months;
     
     const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
     const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
