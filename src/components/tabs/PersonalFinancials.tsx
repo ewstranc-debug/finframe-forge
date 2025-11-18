@@ -95,6 +95,19 @@ export const PersonalFinancials = () => {
     return totalIncome > 0 ? (totalExpenses / totalIncome) * 100 : 0;
   };
 
+  const calculateDebtToIncomeRatio = (periodIndex: number) => {
+    const totalIncome = calculateTotalIncome(periodIndex);
+    const period = personalPeriods[periodIndex];
+    const monthlyDebt = (parseFloat(period.costOfLiving) || 0) * 0.3; // Estimate 30% as debt
+    return totalIncome > 0 ? (monthlyDebt * 12 / totalIncome) * 100 : 0;
+  };
+
+  const calculateLiquidityRatio = (periodIndex: number) => {
+    const netCashFlow = calculateNetCashFlow(periodIndex);
+    const totalExpenses = calculateTotalExpenses(periodIndex);
+    return totalExpenses > 0 ? netCashFlow / totalExpenses : 0;
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
@@ -398,6 +411,22 @@ export const PersonalFinancials = () => {
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
                       {calculateExpenseRatio(i).toFixed(2)}%
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Debt-to-Income Ratio</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      {calculateDebtToIncomeRatio(i).toFixed(2)}%
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Liquidity Ratio</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      {calculateLiquidityRatio(i).toFixed(2)}x
                     </td>
                   ))}
                 </tr>
