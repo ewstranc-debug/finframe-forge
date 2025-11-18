@@ -1172,17 +1172,155 @@ export const FinancialAnalysis = () => {
               {/* DSCR ANALYSIS - Full Year vs Interim */}
               <div className="pt-6 border-t">
                 <h3 className="text-lg font-semibold mb-4 text-primary">Debt Service Coverage Ratio (DSCR) Analysis</h3>
+                
+                {/* DSCR Trend Chart */}
+                <Card className="mb-6 print-chart">
+                  <CardHeader>
+                    <CardTitle>DSCR Trend Over Time</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={[
+                        ratios.dscr.fullYear ? { 
+                          name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year 1',
+                          dscr: ratios.dscr.fullYear.dscr,
+                          ebitda: ratios.dscr.fullYear.ebitda,
+                          debtService: ratios.dscr.annualDebtService
+                        } : null,
+                        ratios.dscr.interim ? {
+                          name: businessPeriodLabels[2] || 'Interim',
+                          dscr: ratios.dscr.interim.dscr,
+                          ebitda: ratios.dscr.interim.ebitda,
+                          debtService: ratios.dscr.annualDebtService
+                        } : null
+                      ].filter(Boolean)}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <RechartsTooltip 
+                          formatter={(value: number) => value.toFixed(2)}
+                          labelFormatter={(label) => `Period: ${label}`}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="dscr" 
+                          stroke="#8b5cf6" 
+                          strokeWidth={3}
+                          name="DSCR"
+                          dot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-semibold mb-2">Trend Analysis:</p>
+                      {ratios.dscr.fullYear && ratios.dscr.interim && (
+                        <p className="text-sm text-muted-foreground">
+                          DSCR {ratios.dscr.interim.dscr > ratios.dscr.fullYear.dscr ? 'improved' : 'declined'} from{' '}
+                          <span className="font-semibold">{ratios.dscr.fullYear.dscr.toFixed(2)}</span> to{' '}
+                          <span className="font-semibold">{ratios.dscr.interim.dscr.toFixed(2)}</span>
+                          {' '}({((ratios.dscr.interim.dscr - ratios.dscr.fullYear.dscr) / ratios.dscr.fullYear.dscr * 100).toFixed(1)}% change).
+                          {ratios.dscr.interim.dscr < 1.15 && ' ⚠️ Below target threshold of 1.15.'}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* EBITDA Component Analysis */}
+                {(ratios.dscr.fullYear || ratios.dscr.interim) && (
+                  <Card className="mb-6 print-chart">
+                    <CardHeader>
+                      <CardTitle>EBITDA Component Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={350}>
+                        <BarChart data={[
+                          ratios.dscr.fullYear ? {
+                            name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year',
+                            Revenue: ratios.dscr.fullYear.revenue,
+                            'Other Income': ratios.dscr.fullYear.otherIncome,
+                            'COGS': -ratios.dscr.fullYear.cogs,
+                            'Operating Exp': -ratios.dscr.fullYear.opEx,
+                            'Rent': -ratios.dscr.fullYear.rentExpense,
+                            'Officers Comp': -ratios.dscr.fullYear.officersComp,
+                            'Other Exp': -ratios.dscr.fullYear.otherExpenses,
+                            'Addbacks': ratios.dscr.fullYear.addbacks,
+                            'EBITDA': ratios.dscr.fullYear.ebitda,
+                          } : null,
+                          ratios.dscr.interim ? {
+                            name: businessPeriodLabels[2] || 'Interim',
+                            Revenue: ratios.dscr.interim.revenue,
+                            'Other Income': ratios.dscr.interim.otherIncome,
+                            'COGS': -ratios.dscr.interim.cogs,
+                            'Operating Exp': -ratios.dscr.interim.opEx,
+                            'Rent': -ratios.dscr.interim.rentExpense,
+                            'Officers Comp': -ratios.dscr.interim.officersComp,
+                            'Other Exp': -ratios.dscr.interim.otherExpenses,
+                            'Addbacks': ratios.dscr.interim.addbacks,
+                            'EBITDA': ratios.dscr.interim.ebitda,
+                          } : null
+                        ].filter(Boolean)}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                          <Legend />
+                          <Bar dataKey="Revenue" fill="#10b981" />
+                          <Bar dataKey="Other Income" fill="#34d399" />
+                          <Bar dataKey="COGS" fill="#ef4444" />
+                          <Bar dataKey="Operating Exp" fill="#f87171" />
+                          <Bar dataKey="Rent" fill="#fb923c" />
+                          <Bar dataKey="Officers Comp" fill="#fbbf24" />
+                          <Bar dataKey="Other Exp" fill="#dc2626" />
+                          <Bar dataKey="Addbacks" fill="#3b82f6" />
+                          <Bar dataKey="EBITDA" fill="#8b5cf6" strokeWidth={2} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Period Comparison Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {ratios.dscr.fullYear && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="space-y-1 cursor-help p-4 border rounded-lg">
-                          <p className="text-sm text-muted-foreground">Full Year DSCR</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.dscr < 1.0 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                            {ratios.dscr.fullYear.dscr.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | Period: {businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
-                        </div>
+                        <Card className="cursor-help">
+                          <CardHeader>
+                            <CardTitle className="text-lg">Full Year DSCR Analysis</CardTitle>
+                            <p className="text-sm text-muted-foreground">{businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <div>
+                                <p className="text-sm text-muted-foreground mb-1">DSCR</p>
+                                <p className={`text-3xl font-bold ${ratios.dscr.fullYear.dscr < 1.0 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                  {ratios.dscr.fullYear.dscr.toFixed(2)}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">Target: &gt;1.15</p>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">EBITDA</p>
+                                  <p className="text-lg font-semibold">${ratios.dscr.fullYear.ebitda.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Debt Service</p>
+                                  <p className="text-lg font-semibold">${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Revenue</p>
+                                  <p className="text-sm">${ratios.dscr.fullYear.revenue.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Net Margin</p>
+                                  <p className="text-sm">{ratios.dscr.fullYear.netMargin.toFixed(1)}%</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
                         <div className="space-y-2">
@@ -1200,9 +1338,7 @@ export const FinancialAnalysis = () => {
                             <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.fullYear.ebitda.toLocaleString()}</p>
                           </div>
                           <div className="space-y-1 text-sm border-t pt-2">
-                            <p className="font-medium">Annual Debt Service:</p>
-                            <p>Monthly Debt: ${ratios.personal.monthlyDebtPayment.toLocaleString()}</p>
-                            <p className="font-semibold">Annual Total: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                            <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
                           </div>
                           <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.fullYear.dscr.toFixed(2)}</p>
                         </div>
@@ -1213,13 +1349,41 @@ export const FinancialAnalysis = () => {
                   {ratios.dscr.interim && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="space-y-1 cursor-help p-4 border rounded-lg">
-                          <p className="text-sm text-muted-foreground">Interim Period DSCR</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.interim.dscr < 1.0 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                            {ratios.dscr.interim.dscr.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | Period: {businessPeriodLabels[2]}</p>
-                        </div>
+                        <Card className="cursor-help">
+                          <CardHeader>
+                            <CardTitle className="text-lg">Interim Period DSCR Analysis</CardTitle>
+                            <p className="text-sm text-muted-foreground">{businessPeriodLabels[2]}</p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <div>
+                                <p className="text-sm text-muted-foreground mb-1">DSCR</p>
+                                <p className={`text-3xl font-bold ${ratios.dscr.interim.dscr < 1.0 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                  {ratios.dscr.interim.dscr.toFixed(2)}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">Target: &gt;1.15</p>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">EBITDA</p>
+                                  <p className="text-lg font-semibold">${ratios.dscr.interim.ebitda.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Debt Service</p>
+                                  <p className="text-lg font-semibold">${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Revenue</p>
+                                  <p className="text-sm">${ratios.dscr.interim.revenue.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Net Margin</p>
+                                  <p className="text-sm">{ratios.dscr.interim.netMargin.toFixed(1)}%</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
                         <div className="space-y-2">
@@ -1237,9 +1401,7 @@ export const FinancialAnalysis = () => {
                             <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.interim.ebitda.toLocaleString()}</p>
                           </div>
                           <div className="space-y-1 text-sm border-t pt-2">
-                            <p className="font-medium">Annual Debt Service:</p>
-                            <p>Monthly Debt: ${ratios.personal.monthlyDebtPayment.toLocaleString()}</p>
-                            <p className="font-semibold">Annual Total: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                            <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
                           </div>
                           <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.interim.dscr.toFixed(2)}</p>
                         </div>
@@ -1247,6 +1409,53 @@ export const FinancialAnalysis = () => {
                     </Tooltip>
                   )}
                 </div>
+
+                {/* Key Insights */}
+                {ratios.dscr.fullYear && ratios.dscr.interim && (
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5" />
+                        Key DSCR Insights
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-2">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${ratios.dscr.interim.dscr >= 1.15 ? 'bg-green-600' : ratios.dscr.interim.dscr >= 1.0 ? 'bg-yellow-600' : 'bg-destructive'}`} />
+                          <div>
+                            <p className="text-sm font-medium">Current DSCR Status</p>
+                            <p className="text-sm text-muted-foreground">
+                              Latest DSCR of {ratios.dscr.interim.dscr.toFixed(2)} is{' '}
+                              {ratios.dscr.interim.dscr >= 1.15 ? 'above' : 'below'} the target threshold of 1.15.
+                              {ratios.dscr.interim.dscr < 1.0 && ' ⚠️ Critical: DSCR below 1.0 indicates insufficient cash flow to cover debt payments.'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${ratios.dscr.interim.ebitda > ratios.dscr.fullYear.ebitda ? 'bg-green-600' : 'bg-yellow-600'}`} />
+                          <div>
+                            <p className="text-sm font-medium">EBITDA Trend</p>
+                            <p className="text-sm text-muted-foreground">
+                              EBITDA {ratios.dscr.interim.ebitda > ratios.dscr.fullYear.ebitda ? 'increased' : 'decreased'} from ${ratios.dscr.fullYear.ebitda.toLocaleString()} to ${ratios.dscr.interim.ebitda.toLocaleString()}
+                              {' '}({((ratios.dscr.interim.ebitda - ratios.dscr.fullYear.ebitda) / ratios.dscr.fullYear.ebitda * 100).toFixed(1)}% change).
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <div className="w-2 h-2 rounded-full mt-2 bg-blue-600" />
+                          <div>
+                            <p className="text-sm font-medium">Coverage Buffer</p>
+                            <p className="text-sm text-muted-foreground">
+                              Current EBITDA provides ${(ratios.dscr.interim.ebitda - ratios.dscr.annualDebtService).toLocaleString()} 
+                              {' '}cushion {ratios.dscr.interim.ebitda > ratios.dscr.annualDebtService ? 'above' : 'below'} annual debt service requirements.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </TooltipProvider>
           </CardContent>
