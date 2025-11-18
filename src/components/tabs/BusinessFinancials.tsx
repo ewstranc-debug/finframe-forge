@@ -15,6 +15,10 @@ export const BusinessFinancials = () => {
     termMonths,
     guaranteePercent,
     uses,
+    interimPeriodDate,
+    setInterimPeriodDate,
+    interimPeriodMonths,
+    setInterimPeriodMonths,
   } = useSpreadsheet();
 
   const updateField = (periodIndex: number, field: keyof BusinessPeriodData, value: string) => {
@@ -49,19 +53,39 @@ export const BusinessFinancials = () => {
                      (parseFloat(period.rentExpense) || 0) +
                      (parseFloat(period.officersComp) || 0) +
                      (parseFloat(period.otherExpenses) || 0);
-    return revenue - expenses;
+    const result = revenue - expenses;
+    // Annualize if it's the interim period (index 3)
+    if (periodIndex === 3) {
+      const months = parseFloat(interimPeriodMonths) || 12;
+      return result * (12 / months);
+    }
+    return result;
   };
 
   const calculateEBIT = (periodIndex: number) => {
     const ebitda = calculateEBITDA(periodIndex);
     const period = businessPeriods[periodIndex];
-    return ebitda - (parseFloat(period.depreciation) || 0) - (parseFloat(period.amortization) || 0);
+    const depr = parseFloat(period.depreciation) || 0;
+    const amort = parseFloat(period.amortization) || 0;
+    // Annualize if it's the interim period
+    if (periodIndex === 3) {
+      const months = parseFloat(interimPeriodMonths) || 12;
+      return ebitda - (depr * (12 / months)) - (amort * (12 / months));
+    }
+    return ebitda - depr - amort;
   };
 
   const calculateNetIncome = (periodIndex: number) => {
     const ebit = calculateEBIT(periodIndex);
     const period = businessPeriods[periodIndex];
-    return ebit - (parseFloat(period.interest) || 0) - (parseFloat(period.taxes) || 0);
+    const interest = parseFloat(period.interest) || 0;
+    const taxes = parseFloat(period.taxes) || 0;
+    // Annualize if it's the interim period
+    if (periodIndex === 3) {
+      const months = parseFloat(interimPeriodMonths) || 12;
+      return ebit - (interest * (12 / months)) - (taxes * (12 / months));
+    }
+    return ebit - interest - taxes;
   };
 
   const calculateCashFlow = (periodIndex: number) => {
@@ -72,6 +96,11 @@ export const BusinessFinancials = () => {
                           (parseFloat(period.section179) || 0) +
                           (parseFloat(period.interest) || 0) +
                           (parseFloat(period.addbacks) || 0);
+    // Annualize if it's the interim period
+    if (periodIndex === 3) {
+      const months = parseFloat(interimPeriodMonths) || 12;
+      return netIncome + (addbacksTotal * (12 / months));
+    }
     return netIncome + addbacksTotal;
   };
 
@@ -140,18 +169,20 @@ export const BusinessFinancials = () => {
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
     
+    const annualizationFactor = businessPeriodIndex === 3 ? (12 / (parseFloat(interimPeriodMonths) || 12)) : 1;
+    
     const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
     const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
                             (parseFloat(businessPeriod.operatingExpenses) || 0) +
                             (parseFloat(businessPeriod.rentExpense) || 0) +
                             (parseFloat(businessPeriod.otherExpenses) || 0);
-    const businessEBITDA = businessRevenue - businessExpenses;
+    const businessEBITDA = (businessRevenue - businessExpenses) * annualizationFactor;
     
-    const officersComp = parseFloat(businessPeriod.officersComp) || 0;
-    const depreciationAddback = parseFloat(businessPeriod.depreciation) || 0;
-    const amortizationAddback = parseFloat(businessPeriod.amortization) || 0;
-    const section179Addback = parseFloat(businessPeriod.section179) || 0;
-    const otherAddbacks = parseFloat(businessPeriod.addbacks) || 0;
+    const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
+    const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
+    const amortizationAddback = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
+    const section179Addback = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
+    const otherAddbacks = (parseFloat(businessPeriod.addbacks) || 0) * annualizationFactor;
     
     const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
     
@@ -183,23 +214,25 @@ export const BusinessFinancials = () => {
 
   // Calculate DSCR with Rent addback
   const calculateDSCRWithRent = (businessPeriodIndex: number) => {
-    const rentExpense = parseFloat(businessPeriods[businessPeriodIndex].rentExpense) || 0;
     const personalPeriodIndex = businessPeriodIndex < 3 ? businessPeriodIndex : 2;
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
+    
+    const annualizationFactor = businessPeriodIndex === 3 ? (12 / (parseFloat(interimPeriodMonths) || 12)) : 1;
+    const rentExpense = (parseFloat(businessPeriods[businessPeriodIndex].rentExpense) || 0) * annualizationFactor;
     
     const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
     const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
                             (parseFloat(businessPeriod.operatingExpenses) || 0) +
                             (parseFloat(businessPeriod.rentExpense) || 0) +
                             (parseFloat(businessPeriod.otherExpenses) || 0);
-    const businessEBITDA = businessRevenue - businessExpenses;
+    const businessEBITDA = (businessRevenue - businessExpenses) * annualizationFactor;
     
-    const officersComp = parseFloat(businessPeriod.officersComp) || 0;
-    const depreciationAddback = parseFloat(businessPeriod.depreciation) || 0;
-    const amortizationAddback = parseFloat(businessPeriod.amortization) || 0;
-    const section179Addback = parseFloat(businessPeriod.section179) || 0;
-    const otherAddbacks = parseFloat(businessPeriod.addbacks) || 0;
+    const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
+    const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
+    const amortizationAddback = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
+    const section179Addback = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
+    const otherAddbacks = (parseFloat(businessPeriod.addbacks) || 0) * annualizationFactor;
     
     const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
     
@@ -243,23 +276,60 @@ export const BusinessFinancials = () => {
                   <th className="border border-border p-3 text-left font-semibold sticky left-0 bg-muted z-10">Item</th>
                   {businessPeriodLabels.map((label, i) => (
                     <th key={i} className="border border-border p-3 text-center min-w-[180px]">
-                      <div className="space-y-2">
-                        <EditableCell
-                          value={label}
-                          onChange={(val) => updatePeriodLabel(i, val)}
-                          type="text"
-                          className="text-center font-semibold"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => clearColumn(i)}
-                          className="w-full text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-3 h-3 mr-1" />
-                          Clear Column
-                        </Button>
-                      </div>
+                      {i === 3 ? (
+                        <div className="space-y-2">
+                          <EditableCell
+                            value={label}
+                            onChange={(val) => updatePeriodLabel(i, val)}
+                            type="text"
+                            className="text-center font-semibold"
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            <EditableCell
+                              value={interimPeriodDate}
+                              onChange={setInterimPeriodDate}
+                              type="text"
+                              className="text-center text-xs"
+                            />
+                          </div>
+                          <div className="flex items-center justify-center gap-2 text-xs">
+                            <span>Months:</span>
+                            <EditableCell
+                              value={interimPeriodMonths}
+                              onChange={setInterimPeriodMonths}
+                              type="number"
+                              className="text-center text-xs w-16"
+                            />
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => clearColumn(i)}
+                            className="w-full text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Clear Column
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <EditableCell
+                            value={label}
+                            onChange={(val) => updatePeriodLabel(i, val)}
+                            type="text"
+                            className="text-center font-semibold"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => clearColumn(i)}
+                            className="w-full text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Clear Column
+                          </Button>
+                        </div>
+                      )}
                     </th>
                   ))}
                 </tr>

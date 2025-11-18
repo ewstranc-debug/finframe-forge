@@ -70,6 +70,12 @@ interface SpreadsheetContextType {
   setBusinessPeriods: (periods: BusinessPeriodData[]) => void;
   businessPeriodLabels: string[];
   setBusinessPeriodLabels: (labels: string[]) => void;
+  
+  // Interim period settings
+  interimPeriodDate: string;
+  setInterimPeriodDate: (val: string) => void;
+  interimPeriodMonths: string;
+  setInterimPeriodMonths: (val: string) => void;
 }
 
 const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(undefined);
@@ -144,6 +150,10 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   ]);
   const [businessPeriodLabels, setBusinessPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
+  // Interim period settings
+  const [interimPeriodDate, setInterimPeriodDate] = useState("");
+  const [interimPeriodMonths, setInterimPeriodMonths] = useState("12");
+
   return (
     <SpreadsheetContext.Provider value={{
       interestRate, setInterestRate,
@@ -156,6 +166,8 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       personalPeriodLabels, setPersonalPeriodLabels,
       businessPeriods, setBusinessPeriods,
       businessPeriodLabels, setBusinessPeriodLabels,
+      interimPeriodDate, setInterimPeriodDate,
+      interimPeriodMonths, setInterimPeriodMonths,
     }}>
       {children}
     </SpreadsheetContext.Provider>
