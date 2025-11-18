@@ -71,10 +71,8 @@ export const BusinessFinancials = () => {
 
   const calculateGrossProfit = (periodIndex: number) => {
     const period = businessPeriods[periodIndex];
-    const months = parseFloat(period.periodMonths) || 12;
-    const annualizationFactor = 12 / months;
-    const revenue = (parseFloat(period.revenue) || 0) * annualizationFactor;
-    const cogs = (parseFloat(period.cogs) || 0) * annualizationFactor;
+    const revenue = parseFloat(period.revenue) || 0;
+    const cogs = parseFloat(period.cogs) || 0;
     return revenue - cogs;
   };
 
@@ -86,10 +84,7 @@ export const BusinessFinancials = () => {
                      (parseFloat(period.rentExpense) || 0) +
                      (parseFloat(period.officersComp) || 0) +
                      (parseFloat(period.otherExpenses) || 0);
-    const result = revenue - expenses;
-    // Annualize based on period months
-    const months = parseFloat(period.periodMonths) || 12;
-    return result * (12 / months);
+    return revenue - expenses;
   };
 
   const calculateEBIT = (periodIndex: number) => {
@@ -97,9 +92,7 @@ export const BusinessFinancials = () => {
     const period = businessPeriods[periodIndex];
     const depr = parseFloat(period.depreciation) || 0;
     const amort = parseFloat(period.amortization) || 0;
-    // Annualize based on period months
-    const months = parseFloat(period.periodMonths) || 12;
-    return ebitda - (depr * (12 / months)) - (amort * (12 / months));
+    return ebitda - depr - amort;
   };
 
   const calculateNetIncome = (periodIndex: number) => {
@@ -107,9 +100,7 @@ export const BusinessFinancials = () => {
     const period = businessPeriods[periodIndex];
     const interest = parseFloat(period.interest) || 0;
     const taxes = parseFloat(period.taxes) || 0;
-    // Annualize based on period months
-    const months = parseFloat(period.periodMonths) || 12;
-    return ebit - (interest * (12 / months)) - (taxes * (12 / months));
+    return ebit - interest - taxes;
   };
 
   const calculateCashFlow = (periodIndex: number) => {
@@ -120,19 +111,15 @@ export const BusinessFinancials = () => {
                           (parseFloat(period.section179) || 0) +
                           (parseFloat(period.interest) || 0) +
                           (parseFloat(period.addbacks) || 0);
-    // Annualize based on period months
-    const months = parseFloat(period.periodMonths) || 12;
-    return netIncome + (addbacksTotal * (12 / months));
+    return netIncome + addbacksTotal;
   };
 
   const calculateEBT = (periodIndex: number) => {
-    const period = businessPeriods[periodIndex];
-    const months = parseFloat(period.periodMonths) || 12;
-    const annualizationFactor = 12 / months;
     const ebit = calculateEBIT(periodIndex);
-    const otherIncome = (parseFloat(period.otherIncome) || 0) * annualizationFactor;
-    const otherExpenses = (parseFloat(period.otherExpenses) || 0) * annualizationFactor;
-    const interest = (parseFloat(period.interest) || 0) * annualizationFactor;
+    const period = businessPeriods[periodIndex];
+    const otherIncome = parseFloat(period.otherIncome) || 0;
+    const otherExpenses = parseFloat(period.otherExpenses) || 0;
+    const interest = parseFloat(period.interest) || 0;
     return ebit + otherIncome - otherExpenses - interest;
   };
 
@@ -425,9 +412,7 @@ export const BusinessFinancials = () => {
                 <tr className="bg-secondary/30 font-semibold">
                   <td className="border border-border p-2 sticky left-0 bg-secondary/30">5. Total Income (Line 3 plus Line 4)</td>
                   {businessPeriods.map((_, i) => {
-                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
-                    const factor = 12 / months;
-                    const totalIncome = calculateGrossProfit(i) + ((parseFloat(businessPeriods[i].otherIncome) || 0) * factor);
+                    const totalIncome = calculateGrossProfit(i) + (parseFloat(businessPeriods[i].otherIncome) || 0);
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4">
                         ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -563,8 +548,6 @@ export const BusinessFinancials = () => {
                 <tr className="bg-secondary/30 font-semibold">
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/30">14. Total Deductions (Lines 6-13)</td>
                   {businessPeriods.map((_, i) => {
-                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
-                    const factor = 12 / months;
                     const totalDeductions = (
                       (parseFloat(businessPeriods[i].officersComp) || 0) +
                       (parseFloat(businessPeriods[i].rentExpense) || 0) +
@@ -574,7 +557,7 @@ export const BusinessFinancials = () => {
                       (parseFloat(businessPeriods[i].section179) || 0) +
                       (parseFloat(businessPeriods[i].operatingExpenses) || 0) +
                       (parseFloat(businessPeriods[i].otherExpenses) || 0)
-                    ) * factor;
+                    );
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4">
                         ${totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -621,11 +604,10 @@ export const BusinessFinancials = () => {
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Depreciation</td>
                   {businessPeriods.map((_, i) => {
-                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
-                    const annualized = (parseFloat(businessPeriods[i].depreciation) || 0) * (12 / months);
+                    const amount = parseFloat(businessPeriods[i].depreciation) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                     );
                   })}
@@ -633,11 +615,10 @@ export const BusinessFinancials = () => {
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Amortization</td>
                   {businessPeriods.map((_, i) => {
-                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
-                    const annualized = (parseFloat(businessPeriods[i].amortization) || 0) * (12 / months);
+                    const amount = parseFloat(businessPeriods[i].amortization) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                     );
                   })}
@@ -645,11 +626,10 @@ export const BusinessFinancials = () => {
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Section 179</td>
                   {businessPeriods.map((_, i) => {
-                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
-                    const annualized = (parseFloat(businessPeriods[i].section179) || 0) * (12 / months);
+                    const amount = parseFloat(businessPeriods[i].section179) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                     );
                   })}
@@ -657,11 +637,10 @@ export const BusinessFinancials = () => {
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Interest Expense</td>
                   {businessPeriods.map((_, i) => {
-                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
-                    const annualized = (parseFloat(businessPeriods[i].interest) || 0) * (12 / months);
+                    const amount = parseFloat(businessPeriods[i].interest) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${annualized.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                     );
                   })}
