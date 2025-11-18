@@ -189,7 +189,7 @@ export const PersonalFinancials = () => {
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Total W2 Income</td>
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateW2Income(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateW2Income(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -238,7 +238,7 @@ export const PersonalFinancials = () => {
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Schedule C Net Income</td>
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateSchedCNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateSchedCNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -299,7 +299,7 @@ export const PersonalFinancials = () => {
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Schedule C Cash Flow</td>
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateSchedCCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateSchedCCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -338,7 +338,7 @@ export const PersonalFinancials = () => {
                   <td className="border border-border p-2 sticky left-0 bg-primary/20">Total Income</td>
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateTotalIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateTotalIncome(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -346,7 +346,7 @@ export const PersonalFinancials = () => {
                   <td className="border border-border p-2 sticky left-0 bg-primary/20">Total Expenses</td>
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateTotalExpenses(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateTotalExpenses(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -354,7 +354,7 @@ export const PersonalFinancials = () => {
                   <td className="border border-border p-2 sticky left-0 bg-accent/20">Net Cash Flow</td>
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateNetCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateNetCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
