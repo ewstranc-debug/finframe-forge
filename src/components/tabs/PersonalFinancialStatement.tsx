@@ -1,45 +1,16 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
-
-interface AssetData {
-  liquidAssets: string;
-  realEstate: string;
-  vehicles: string;
-  accountsReceivable: string;
-  otherAssets: string;
-}
-
-interface LiabilityData {
-  creditCards: string;
-  creditCardsMonthly: string;
-  mortgages: string;
-  mortgagesMonthly: string;
-  vehicleLoans: string;
-  vehicleLoansMonthly: string;
-  otherLiabilities: string;
-  otherLiabilitiesMonthly: string;
-}
+import { useSpreadsheet, AssetData, LiabilityData } from "@/contexts/SpreadsheetContext";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 export const PersonalFinancialStatement = () => {
-  const [assets, setAssets] = useState<AssetData>({
-    liquidAssets: "0",
-    realEstate: "0",
-    vehicles: "0",
-    accountsReceivable: "0",
-    otherAssets: "0"
-  });
-
-  const [liabilities, setLiabilities] = useState<LiabilityData>({
-    creditCards: "0",
-    creditCardsMonthly: "0",
-    mortgages: "0",
-    mortgagesMonthly: "0",
-    vehicleLoans: "0",
-    vehicleLoansMonthly: "0",
-    otherLiabilities: "0",
-    otherLiabilitiesMonthly: "0"
-  });
+  const { 
+    personalAssets: assets, 
+    setPersonalAssets: setAssets,
+    personalLiabilities: liabilities,
+    setPersonalLiabilities: setLiabilities
+  } = useSpreadsheet();
 
   const updateAsset = (field: keyof AssetData, value: string) => {
     setAssets({ ...assets, [field]: value });
@@ -47,6 +18,26 @@ export const PersonalFinancialStatement = () => {
 
   const updateLiability = (field: keyof LiabilityData, value: string) => {
     setLiabilities({ ...liabilities, [field]: value });
+  };
+
+  const clearAllData = () => {
+    setAssets({
+      liquidAssets: "0",
+      realEstate: "0",
+      vehicles: "0",
+      accountsReceivable: "0",
+      otherAssets: "0"
+    });
+    setLiabilities({
+      creditCards: "0",
+      creditCardsMonthly: "0",
+      mortgages: "0",
+      mortgagesMonthly: "0",
+      vehicleLoans: "0",
+      vehicleLoansMonthly: "0",
+      otherLiabilities: "0",
+      otherLiabilitiesMonthly: "0"
+    });
   };
 
   const calculateTotalAssets = () => {
@@ -73,6 +64,18 @@ export const PersonalFinancialStatement = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Personal Financial Statement</h2>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={clearAllData}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Clear All
+        </Button>
+      </div>
+      
       <Card>
         <CardHeader>
           <CardTitle>Assets</CardTitle>

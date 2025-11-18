@@ -12,6 +12,16 @@ export const PersonalFinancials = () => {
     setPersonalPeriodLabels,
   } = useSpreadsheet();
 
+  const clearAllData = () => {
+    const clearedPeriod: PersonalPeriodData = {
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      costOfLiving: "0", personalTaxes: "0",
+      schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0",
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+    };
+    setPersonalPeriods(personalPeriods.map(() => ({ ...clearedPeriod })));
+  };
+
   const updateField = (periodIndex: number, field: keyof PersonalPeriodData, value: string) => {
     const newPeriods = [...personalPeriods];
     newPeriods[periodIndex] = { ...newPeriods[periodIndex], [field]: value };
@@ -87,9 +97,21 @@ export const PersonalFinancials = () => {
 
   return (
     <div className="p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Personal Income Statement</h2>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={clearAllData}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Clear All
+        </Button>
+      </div>
+      
       <Card>
         <CardHeader>
-          <CardTitle>Personal Income Statement</CardTitle>
+          <CardTitle>Income & Expenses</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
