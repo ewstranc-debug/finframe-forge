@@ -6,9 +6,11 @@ interface EditableCellProps {
   onChange: (value: string) => void;
   type?: "text" | "number" | "currency";
   className?: string;
+  onEnter?: () => void;
+  onTab?: () => void;
 }
 
-export const EditableCell = ({ value, onChange, type = "text", className = "" }: EditableCellProps) => {
+export const EditableCell = ({ value, onChange, type = "text", className = "", onEnter, onTab }: EditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value.toString());
 
@@ -36,6 +38,20 @@ export const EditableCell = ({ value, onChange, type = "text", className = "" }:
     setIsEditing(true);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleBlur();
+      if (onEnter) onEnter();
+    } else if (e.key === "Tab" && !e.shiftKey) {
+      handleBlur();
+      if (onTab) {
+        e.preventDefault();
+        onTab();
+      }
+    }
+  };
+
   if (isEditing) {
     return (
       <Input
@@ -43,7 +59,7 @@ export const EditableCell = ({ value, onChange, type = "text", className = "" }:
         value={tempValue}
         onChange={(e) => setTempValue(e.target.value)}
         onBlur={handleBlur}
-        onKeyDown={(e) => e.key === "Enter" && handleBlur()}
+        onKeyDown={handleKeyDown}
         autoFocus
         className={`h-9 border-primary ${className}`}
       />

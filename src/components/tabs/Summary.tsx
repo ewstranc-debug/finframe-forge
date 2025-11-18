@@ -111,15 +111,12 @@ export const Summary = () => {
   };
 
   const calculateGlobalDSCR = () => {
-    // Calculate DSCR for all periods
-    const period1 = calculateDSCRForPeriod(0, 0);
-    const period2 = calculateDSCRForPeriod(1, 1);
+    // Calculate DSCR for only last full year and interim period
     const period3 = calculateDSCRForPeriod(2, 2); // Last full year
     const interim = calculateDSCRForPeriod(3, 2); // Interim uses last personal period
     
-    // Average all DSCRs
-    const allDSCRs = [period1.dscr, period2.dscr, period3.dscr, interim.dscr];
-    const avgDSCR = allDSCRs.reduce((sum, dscr) => sum + dscr, 0) / allDSCRs.length;
+    // Average only last full year and interim
+    const avgDSCR = (period3.dscr + interim.dscr) / 2;
     
     return avgDSCR;
   };

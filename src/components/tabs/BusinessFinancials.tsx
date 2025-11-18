@@ -10,6 +10,11 @@ export const BusinessFinancials = () => {
     setBusinessPeriods,
     businessPeriodLabels,
     setBusinessPeriodLabels,
+    personalPeriods,
+    interestRate,
+    termMonths,
+    guaranteePercent,
+    uses,
   } = useSpreadsheet();
 
   const updateField = (periodIndex: number, field: keyof BusinessPeriodData, value: string) => {
@@ -98,6 +103,130 @@ export const BusinessFinancials = () => {
     const excessDepr = parseFloat(period.m1ExcessDepr) || 0;
     const other = parseFloat(period.m1Other) || 0;
     return bookIncome + fedTaxExpense - excessDepr + other;
+  };
+
+  // Calculate annual debt service for DSCR
+  const calculateAnnualDebtService = () => {
+    const primaryRequest = uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
+    const guaranteePct = parseFloat(guaranteePercent) || 75;
+    const guaranteedAmount = primaryRequest * (guaranteePct / 100);
+    
+    let upfrontFee = 0;
+    if (primaryRequest <= 150000) {
+      upfrontFee = 0;
+    } else if (primaryRequest <= 700000) {
+      upfrontFee = (primaryRequest - 150000) * 0.03;
+    } else {
+      upfrontFee = (550000 * 0.03) + ((primaryRequest - 700000) * 0.035);
+    }
+    
+    const finalLoanAmount = primaryRequest + upfrontFee;
+    const rate = (parseFloat(interestRate) || 0) / 100 / 12;
+    const term = parseFloat(termMonths) || 1;
+    
+    let monthlyPayment;
+    if (rate === 0) {
+      monthlyPayment = finalLoanAmount / term;
+    } else {
+      monthlyPayment = finalLoanAmount * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
+    }
+    
+    return monthlyPayment * 12;
+  };
+
+  // Calculate DSCR for each business period
+  const calculateDSCR = (businessPeriodIndex: number) => {
+    const personalPeriodIndex = businessPeriodIndex < 3 ? businessPeriodIndex : 2;
+    const businessPeriod = businessPeriods[businessPeriodIndex];
+    const personalPeriod = personalPeriods[personalPeriodIndex];
+    
+    const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
+    const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
+                            (parseFloat(businessPeriod.operatingExpenses) || 0) +
+                            (parseFloat(businessPeriod.rentExpense) || 0) +
+                            (parseFloat(businessPeriod.otherExpenses) || 0);
+    const businessEBITDA = businessRevenue - businessExpenses;
+    
+    const officersComp = parseFloat(businessPeriod.officersComp) || 0;
+    const depreciationAddback = parseFloat(businessPeriod.depreciation) || 0;
+    const amortizationAddback = parseFloat(businessPeriod.amortization) || 0;
+    const section179Addback = parseFloat(businessPeriod.section179) || 0;
+    const otherAddbacks = parseFloat(businessPeriod.addbacks) || 0;
+    
+    const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
+    
+    const personalW2Income = (parseFloat(personalPeriod.salary) || 0) + 
+                            (parseFloat(personalPeriod.bonuses) || 0) +
+                            (parseFloat(personalPeriod.investments) || 0) +
+                            (parseFloat(personalPeriod.rentalIncome) || 0) +
+                            (parseFloat(personalPeriod.otherIncome) || 0);
+    
+    const schedCRevenue = parseFloat(personalPeriod.schedCRevenue) || 0;
+    const schedCExpenses = (parseFloat(personalPeriod.schedCCOGS) || 0) + (parseFloat(personalPeriod.schedCExpenses) || 0);
+    const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) + 
+                          (parseFloat(personalPeriod.schedCDepreciation) || 0) + 
+                          (parseFloat(personalPeriod.schedCAmortization) || 0) +
+                          (parseFloat(personalPeriod.schedCOther) || 0);
+    const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
+    
+    const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow;
+    
+    const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
+    const estimatedTaxOnOfficersComp = officersComp * 0.30;
+    
+    const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp;
+    
+    const annualDebtService = calculateAnnualDebtService();
+    
+    return annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
+  };
+
+  // Calculate DSCR with Rent addback
+  const calculateDSCRWithRent = (businessPeriodIndex: number) => {
+    const rentExpense = parseFloat(businessPeriods[businessPeriodIndex].rentExpense) || 0;
+    const personalPeriodIndex = businessPeriodIndex < 3 ? businessPeriodIndex : 2;
+    const businessPeriod = businessPeriods[businessPeriodIndex];
+    const personalPeriod = personalPeriods[personalPeriodIndex];
+    
+    const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
+    const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
+                            (parseFloat(businessPeriod.operatingExpenses) || 0) +
+                            (parseFloat(businessPeriod.rentExpense) || 0) +
+                            (parseFloat(businessPeriod.otherExpenses) || 0);
+    const businessEBITDA = businessRevenue - businessExpenses;
+    
+    const officersComp = parseFloat(businessPeriod.officersComp) || 0;
+    const depreciationAddback = parseFloat(businessPeriod.depreciation) || 0;
+    const amortizationAddback = parseFloat(businessPeriod.amortization) || 0;
+    const section179Addback = parseFloat(businessPeriod.section179) || 0;
+    const otherAddbacks = parseFloat(businessPeriod.addbacks) || 0;
+    
+    const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
+    
+    const personalW2Income = (parseFloat(personalPeriod.salary) || 0) + 
+                            (parseFloat(personalPeriod.bonuses) || 0) +
+                            (parseFloat(personalPeriod.investments) || 0) +
+                            (parseFloat(personalPeriod.rentalIncome) || 0) +
+                            (parseFloat(personalPeriod.otherIncome) || 0);
+    
+    const schedCRevenue = parseFloat(personalPeriod.schedCRevenue) || 0;
+    const schedCExpenses = (parseFloat(personalPeriod.schedCCOGS) || 0) + (parseFloat(personalPeriod.schedCExpenses) || 0);
+    const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) + 
+                          (parseFloat(personalPeriod.schedCDepreciation) || 0) + 
+                          (parseFloat(personalPeriod.schedCAmortization) || 0) +
+                          (parseFloat(personalPeriod.schedCOther) || 0);
+    const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
+    
+    const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow;
+    
+    const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
+    const estimatedTaxOnOfficersComp = officersComp * 0.30;
+    
+    const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp + rentExpense;
+    
+    const annualDebtService = calculateAnnualDebtService();
+    
+    return annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
   };
 
   return (
@@ -392,6 +521,32 @@ export const BusinessFinancials = () => {
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
                       ${calculateM1TaxableIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* DSCR Calculations */}
+                <tr className="bg-accent/20">
+                  <td className="border border-border p-2 font-semibold sticky left-0 bg-accent/20">DSCR</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className={`border border-border p-2 text-center font-semibold ${
+                      calculateDSCR(i) >= 1.25 ? 'text-green-600' : 
+                      calculateDSCR(i) >= 1.0 ? 'text-yellow-600' : 
+                      'text-red-600'
+                    }`}>
+                      {calculateDSCR(i).toFixed(2)}x
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-accent/20">
+                  <td className="border border-border p-2 font-semibold sticky left-0 bg-accent/20">DSCR with Rent</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className={`border border-border p-2 text-center font-semibold ${
+                      calculateDSCRWithRent(i) >= 1.25 ? 'text-green-600' : 
+                      calculateDSCRWithRent(i) >= 1.0 ? 'text-yellow-600' : 
+                      'text-red-600'
+                    }`}>
+                      {calculateDSCRWithRent(i).toFixed(2)}x
                     </td>
                   ))}
                 </tr>
