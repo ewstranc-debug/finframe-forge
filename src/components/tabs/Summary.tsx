@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, TrendingDown, PieChart } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, PieChart, Info } from "lucide-react";
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const Summary = () => {
   const {
@@ -308,8 +309,20 @@ export const Summary = () => {
                 <Card className="border-2 border-primary/30">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Income</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">Total Income</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Total Income Calculation:</p>
+                              <p className="text-sm">Business Cash Flow + Personal W-2 Income + Schedule C Net Income + Officer's Compensation</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials tab + Personal Financials tab</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className="text-2xl font-bold mt-1">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-green-600" />
@@ -319,8 +332,20 @@ export const Summary = () => {
                 <Card className="border-2 border-primary/30">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Debt Service</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">Debt Service</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Debt Service Calculation:</p>
+                              <p className="text-sm">Annual Payment (Loan) + Existing Debt Annual Payments + Personal Debt Annual Payments</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary tab (loan terms) + Existing Debts tab + Personal Financial Statement tab</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className="text-2xl font-bold mt-1">${lastFullYear.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <PieChart className="h-8 w-8 text-blue-600" />
@@ -330,8 +355,20 @@ export const Summary = () => {
                 <Card className="border-2 border-primary/30">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Net Cash Flow</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">Net Cash Flow</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Net Cash Flow Calculation:</p>
+                              <p className="text-sm">Total Income - Total Debt Service - Personal Expenses</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Total Income & Debt Service (above) + Personal Financials tab</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className="text-2xl font-bold mt-1">${lastFullYear.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <DollarSign className="h-8 w-8 text-primary" />
@@ -341,8 +378,21 @@ export const Summary = () => {
                 <Card className="border-2 border-primary/30">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">DSCR</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">DSCR</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">DSCR Calculation:</p>
+                              <p className="text-sm">Total Income ÷ Total Debt Service</p>
+                              <p className="text-xs mt-2">A ratio showing ability to cover debt obligations. &gt;1.25 is strong, 1.0-1.25 is acceptable, &lt;1.0 is weak.</p>
+                              <p className="text-xs mt-1 text-muted-foreground">Sources: Total Income & Debt Service (above)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className={`text-2xl font-bold mt-1 ${lastFullYear.dscr >= 1.25 ? 'text-green-600' : lastFullYear.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
                           {lastFullYear.dscr.toFixed(2)}x
                         </p>
@@ -360,8 +410,20 @@ export const Summary = () => {
                 <Card className="border-2">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Income</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">Total Income</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Total Income Calculation:</p>
+                              <p className="text-sm">Business Cash Flow (annualized) + Personal W-2 Income + Schedule C Net Income + Officer's Compensation</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials tab (interim period) + Personal Financials tab</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className="text-2xl font-bold mt-1">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-green-600" />
@@ -371,8 +433,20 @@ export const Summary = () => {
                 <Card className="border-2">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Debt Service</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">Debt Service</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Debt Service Calculation:</p>
+                              <p className="text-sm">Annual Payment (Loan) + Existing Debt Annual Payments + Personal Debt Annual Payments</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary tab (loan terms) + Existing Debts tab + Personal Financial Statement tab</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className="text-2xl font-bold mt-1">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <PieChart className="h-8 w-8 text-blue-600" />
@@ -382,8 +456,20 @@ export const Summary = () => {
                 <Card className="border-2">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Net Cash Flow</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">Net Cash Flow</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Net Cash Flow Calculation:</p>
+                              <p className="text-sm">Total Income - Total Debt Service - Personal Expenses</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Sources: Total Income & Debt Service (above) + Personal Financials tab</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className="text-2xl font-bold mt-1">${interimPeriod.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <DollarSign className="h-8 w-8 text-primary" />
@@ -393,8 +479,21 @@ export const Summary = () => {
                 <Card className="border-2">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">DSCR</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">DSCR</p>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">DSCR Calculation:</p>
+                              <p className="text-sm">Total Income ÷ Total Debt Service</p>
+                              <p className="text-xs mt-2">A ratio showing ability to cover debt obligations. &gt;1.25 is strong, 1.0-1.25 is acceptable, &lt;1.0 is weak.</p>
+                              <p className="text-xs mt-1 text-muted-foreground">Sources: Total Income & Debt Service (above)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                         <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
                           {interimPeriod.dscr.toFixed(2)}x
                         </p>
