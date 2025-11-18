@@ -12,6 +12,8 @@ interface IncomeData {
   amortization: string;
   interest: string;
   taxes: string;
+  periodDate: string;
+  periodMonths: string;
 }
 
 interface BalanceSheetData {
@@ -39,10 +41,10 @@ export const AffiliateFinancials = () => {
       id: "1", 
       name: "Affiliate 1", 
       incomePeriods: [
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" }
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" }
       ],
       balancePeriods: [
         { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
@@ -59,10 +61,10 @@ export const AffiliateFinancials = () => {
       id: newId, 
       name: `Affiliate ${newId}`, 
       incomePeriods: [
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0" }
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
+        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" }
       ],
       balancePeriods: [
         { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
@@ -113,13 +115,16 @@ export const AffiliateFinancials = () => {
 
   const calculateNetIncome = (entity: AffiliateEntity, periodIndex: number) => {
     const period = entity.incomePeriods[periodIndex];
-    const revenue = parseFloat(period.revenue) || 0;
-    const expenses = (parseFloat(period.cogs) || 0) + 
+    const months = parseFloat(period.periodMonths) || 12;
+    const annualizationFactor = 12 / months;
+    
+    const revenue = (parseFloat(period.revenue) || 0) * annualizationFactor;
+    const expenses = ((parseFloat(period.cogs) || 0) +
                      (parseFloat(period.operatingExpenses) || 0) +
                      (parseFloat(period.depreciation) || 0) +
                      (parseFloat(period.amortization) || 0) +
                      (parseFloat(period.interest) || 0) +
-                     (parseFloat(period.taxes) || 0);
+                     (parseFloat(period.taxes) || 0)) * annualizationFactor;
     return revenue - expenses;
   };
 
@@ -182,12 +187,59 @@ export const AffiliateFinancials = () => {
                     <div className="grid grid-cols-5 bg-muted font-medium text-sm min-w-[800px]">
                       <div className="p-3 border-r border-border">Line Item</div>
                       {periodLabels.map((label, i) => (
-                        <div key={i} className="border-r border-border last:border-r-0">
-                          <EditableCell
-                            value={label}
-                            onChange={(val) => updatePeriodLabel(i, val)}
-                            type="text"
-                          />
+                        <div key={i} className="border-r border-border last:border-r-0 p-2">
+                          <div className="space-y-1">
+                            <EditableCell
+                              value={label}
+                              onChange={(val) => updatePeriodLabel(i, val)}
+                              type="text"
+                              className="text-center font-semibold"
+                            />
+                            <div className="text-xs text-muted-foreground">
+                              <EditableCell
+                                value={entity.incomePeriods[i].periodDate}
+                                onChange={(val) => {
+                                  setEntities(entities.map(e => {
+                                    if (e.id === entity.id) {
+                                      const newPeriods = [...e.incomePeriods];
+                                      newPeriods[i] = { ...newPeriods[i], periodDate: val };
+                                      // Auto-calculate months if we have a previous date
+                                      if (val && i > 0 && e.incomePeriods[i-1].periodDate) {
+                                        const prevDate = new Date(e.incomePeriods[i-1].periodDate);
+                                        const currDate = new Date(val);
+                                        const monthsDiff = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+                                        if (monthsDiff > 0) {
+                                          newPeriods[i] = { ...newPeriods[i], periodMonths: monthsDiff.toString() };
+                                        }
+                                      }
+                                      return { ...e, incomePeriods: newPeriods };
+                                    }
+                                    return e;
+                                  }));
+                                }}
+                                type="text"
+                                className="text-center text-xs"
+                              />
+                            </div>
+                            <div className="flex items-center justify-center gap-1 text-xs">
+                              <span>Months:</span>
+                              <EditableCell
+                                value={entity.incomePeriods[i].periodMonths}
+                                onChange={(val) => {
+                                  setEntities(entities.map(e => {
+                                    if (e.id === entity.id) {
+                                      const newPeriods = [...e.incomePeriods];
+                                      newPeriods[i] = { ...newPeriods[i], periodMonths: val };
+                                      return { ...e, incomePeriods: newPeriods };
+                                    }
+                                    return e;
+                                  }));
+                                }}
+                                type="number"
+                                className="text-center text-xs w-12"
+                              />
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>

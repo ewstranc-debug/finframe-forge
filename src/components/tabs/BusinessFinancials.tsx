@@ -38,7 +38,9 @@ export const BusinessFinancials = () => {
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
-      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0"
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: businessPeriods[periodIndex].periodDate,
+      periodMonths: businessPeriods[periodIndex].periodMonths
     };
     const newPeriods = [...businessPeriods];
     newPeriods[periodIndex] = clearedPeriod;
@@ -54,12 +56,9 @@ export const BusinessFinancials = () => {
                      (parseFloat(period.officersComp) || 0) +
                      (parseFloat(period.otherExpenses) || 0);
     const result = revenue - expenses;
-    // Annualize if it's the interim period (index 3)
-    if (periodIndex === 3) {
-      const months = parseFloat(interimPeriodMonths) || 12;
-      return result * (12 / months);
-    }
-    return result;
+    // Annualize based on period months
+    const months = parseFloat(period.periodMonths) || 12;
+    return result * (12 / months);
   };
 
   const calculateEBIT = (periodIndex: number) => {
@@ -67,12 +66,9 @@ export const BusinessFinancials = () => {
     const period = businessPeriods[periodIndex];
     const depr = parseFloat(period.depreciation) || 0;
     const amort = parseFloat(period.amortization) || 0;
-    // Annualize if it's the interim period
-    if (periodIndex === 3) {
-      const months = parseFloat(interimPeriodMonths) || 12;
-      return ebitda - (depr * (12 / months)) - (amort * (12 / months));
-    }
-    return ebitda - depr - amort;
+    // Annualize based on period months
+    const months = parseFloat(period.periodMonths) || 12;
+    return ebitda - (depr * (12 / months)) - (amort * (12 / months));
   };
 
   const calculateNetIncome = (periodIndex: number) => {
@@ -80,12 +76,9 @@ export const BusinessFinancials = () => {
     const period = businessPeriods[periodIndex];
     const interest = parseFloat(period.interest) || 0;
     const taxes = parseFloat(period.taxes) || 0;
-    // Annualize if it's the interim period
-    if (periodIndex === 3) {
-      const months = parseFloat(interimPeriodMonths) || 12;
-      return ebit - (interest * (12 / months)) - (taxes * (12 / months));
-    }
-    return ebit - interest - taxes;
+    // Annualize based on period months
+    const months = parseFloat(period.periodMonths) || 12;
+    return ebit - (interest * (12 / months)) - (taxes * (12 / months));
   };
 
   const calculateCashFlow = (periodIndex: number) => {
@@ -96,12 +89,9 @@ export const BusinessFinancials = () => {
                           (parseFloat(period.section179) || 0) +
                           (parseFloat(period.interest) || 0) +
                           (parseFloat(period.addbacks) || 0);
-    // Annualize if it's the interim period
-    if (periodIndex === 3) {
-      const months = parseFloat(interimPeriodMonths) || 12;
-      return netIncome + (addbacksTotal * (12 / months));
-    }
-    return netIncome + addbacksTotal;
+    // Annualize based on period months
+    const months = parseFloat(period.periodMonths) || 12;
+    return netIncome + (addbacksTotal * (12 / months));
   };
 
   const calculateGrossMargin = (periodIndex: number) => {
@@ -163,13 +153,13 @@ export const BusinessFinancials = () => {
     return monthlyPayment * 12;
   };
 
-  // Calculate DSCR for each business period
   const calculateDSCR = (businessPeriodIndex: number) => {
     const personalPeriodIndex = businessPeriodIndex < 3 ? businessPeriodIndex : 2;
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
     
-    const annualizationFactor = businessPeriodIndex === 3 ? (12 / (parseFloat(interimPeriodMonths) || 12)) : 1;
+    const months = parseFloat(businessPeriod.periodMonths) || 12;
+    const annualizationFactor = 12 / months;
     
     const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
     const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
@@ -218,7 +208,8 @@ export const BusinessFinancials = () => {
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
     
-    const annualizationFactor = businessPeriodIndex === 3 ? (12 / (parseFloat(interimPeriodMonths) || 12)) : 1;
+    const months = parseFloat(businessPeriod.periodMonths) || 12;
+    const annualizationFactor = 12 / months;
     const rentExpense = (parseFloat(businessPeriods[businessPeriodIndex].rentExpense) || 0) * annualizationFactor;
     
     const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
@@ -276,60 +267,57 @@ export const BusinessFinancials = () => {
                   <th className="border border-border p-3 text-left font-semibold sticky left-0 bg-muted z-10">Item</th>
                   {businessPeriodLabels.map((label, i) => (
                     <th key={i} className="border border-border p-3 text-center min-w-[180px]">
-                      {i === 3 ? (
-                        <div className="space-y-2">
+                      <div className="space-y-2">
+                        <EditableCell
+                          value={label}
+                          onChange={(val) => updatePeriodLabel(i, val)}
+                          type="text"
+                          className="text-center font-semibold"
+                        />
+                        <div className="text-xs text-muted-foreground">
                           <EditableCell
-                            value={label}
-                            onChange={(val) => updatePeriodLabel(i, val)}
+                            value={businessPeriods[i].periodDate}
+                            onChange={(val) => {
+                              const newPeriods = [...businessPeriods];
+                              newPeriods[i] = { ...newPeriods[i], periodDate: val };
+                              // Auto-calculate months if we have a previous date
+                              if (val && i > 0 && businessPeriods[i-1].periodDate) {
+                                const prevDate = new Date(businessPeriods[i-1].periodDate);
+                                const currDate = new Date(val);
+                                const monthsDiff = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+                                if (monthsDiff > 0) {
+                                  newPeriods[i] = { ...newPeriods[i], periodMonths: monthsDiff.toString() };
+                                }
+                              }
+                              setBusinessPeriods(newPeriods);
+                            }}
                             type="text"
-                            className="text-center font-semibold"
+                            className="text-center text-xs"
                           />
-                          <div className="text-xs text-muted-foreground">
-                            <EditableCell
-                              value={interimPeriodDate}
-                              onChange={setInterimPeriodDate}
-                              type="text"
-                              className="text-center text-xs"
-                            />
-                          </div>
-                          <div className="flex items-center justify-center gap-2 text-xs">
-                            <span>Months:</span>
-                            <EditableCell
-                              value={interimPeriodMonths}
-                              onChange={setInterimPeriodMonths}
-                              type="number"
-                              className="text-center text-xs w-16"
-                            />
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => clearColumn(i)}
-                            className="w-full text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Clear Column
-                          </Button>
                         </div>
-                      ) : (
-                        <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2 text-xs">
+                          <span>Months:</span>
                           <EditableCell
-                            value={label}
-                            onChange={(val) => updatePeriodLabel(i, val)}
-                            type="text"
-                            className="text-center font-semibold"
+                            value={businessPeriods[i].periodMonths}
+                            onChange={(val) => {
+                              const newPeriods = [...businessPeriods];
+                              newPeriods[i] = { ...newPeriods[i], periodMonths: val };
+                              setBusinessPeriods(newPeriods);
+                            }}
+                            type="number"
+                            className="text-center text-xs w-16"
                           />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => clearColumn(i)}
-                            className="w-full text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Clear Column
-                          </Button>
                         </div>
-                      )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => clearColumn(i)}
+                          className="w-full text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Clear Column
+                        </Button>
+                      </div>
                     </th>
                   ))}
                 </tr>
