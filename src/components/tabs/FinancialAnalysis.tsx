@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, AlertCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 
@@ -94,6 +94,51 @@ export const FinancialAnalysis = () => {
     ];
   };
 
+  // Calculate comprehensive financial ratios
+  const calculateFinancialRatios = () => {
+    const totalAssets = Object.values(personalAssets).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+    const totalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) + 
+                            (parseFloat(personalLiabilities.mortgages) || 0) +
+                            (parseFloat(personalLiabilities.vehicleLoans) || 0) +
+                            (parseFloat(personalLiabilities.otherLiabilities) || 0) +
+                            debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
+    const liquidAssets = parseFloat(personalAssets.liquidAssets) || 0;
+    const netWorth = totalAssets - totalLiabilities;
+    
+    const latestPeriod = personalPeriods[2] || personalPeriods[1] || personalPeriods[0];
+    const totalIncome = (parseFloat(latestPeriod?.salary) || 0) + (parseFloat(latestPeriod?.bonuses) || 0) + 
+                       (parseFloat(latestPeriod?.schedCRevenue) || 0) + (parseFloat(latestPeriod?.investments) || 0);
+    const totalExpenses = (parseFloat(latestPeriod?.costOfLiving) || 0) + (parseFloat(latestPeriod?.personalTaxes) || 0);
+    const monthlyDebtPayment = (parseFloat(personalLiabilities.creditCardsMonthly) || 0) +
+                               (parseFloat(personalLiabilities.mortgagesMonthly) || 0) +
+                               (parseFloat(personalLiabilities.vehicleLoansMonthly) || 0) +
+                               (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0) +
+                               debts.reduce((sum, debt) => sum + (parseFloat(debt.payment) || 0), 0);
+    
+    const monthlyIncome = totalIncome / 12;
+    const debtToIncome = monthlyIncome > 0 ? (monthlyDebtPayment / monthlyIncome) * 100 : 0;
+    const debtToAssets = totalAssets > 0 ? (totalLiabilities / totalAssets) * 100 : 0;
+    const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+    const liquidityRatio = totalLiabilities > 0 ? liquidAssets / totalLiabilities : 0;
+    const currentRatio = totalLiabilities > 0 ? totalAssets / totalLiabilities : 0;
+    const debtServiceCoverage = monthlyDebtPayment > 0 ? (monthlyIncome - (totalExpenses / 12)) / monthlyDebtPayment : 0;
+    
+    return {
+      netWorth,
+      totalAssets,
+      totalLiabilities,
+      totalIncome,
+      monthlyIncome,
+      monthlyDebtPayment,
+      debtToIncome,
+      debtToAssets,
+      savingsRate,
+      liquidityRatio,
+      currentRatio,
+      debtServiceCoverage,
+    };
+  };
+
   const generateAnalysis = async () => {
     setIsLoading(true);
     
@@ -132,28 +177,152 @@ export const FinancialAnalysis = () => {
     }
   };
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Financial Analysis & Insights</h2>
-        <Button 
-          onClick={generateAnalysis}
-          disabled={isLoading}
-          className="gap-2"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            "Generate AI Analysis"
-          )}
-        </Button>
-      </div>
+  const handlePrint = () => {
+    window.print();
+  };
 
-      {/* Key Metrics Overview */}
-      <Card>
+  const ratios = calculateFinancialRatios();
+
+  return (
+    <>
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-content, .print-content * {
+            visibility: visible;
+          }
+          .print-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .page-break {
+            page-break-before: always;
+          }
+          .print-chart {
+            max-height: 300px;
+            page-break-inside: avoid;
+          }
+          @page {
+            margin: 0.75in;
+            size: letter;
+          }
+        }
+      `}</style>
+      
+      <div className="p-6 space-y-6 print-content">
+        <div className="flex justify-between items-center mb-4 no-print">
+          <h2 className="text-2xl font-bold">Financial Analysis & Insights</h2>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handlePrint}
+              variant="outline"
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Print Report
+            </Button>
+            <Button 
+              onClick={generateAnalysis}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate AI Analysis"
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="print:block hidden">
+          <h1 className="text-3xl font-bold mb-2">Financial Analysis Report</h1>
+          <p className="text-muted-foreground mb-6">Generated on {new Date().toLocaleDateString()}</p>
+        </div>
+
+        {/* Financial Ratios Summary */}
+        <Card className="print-chart">
+          <CardHeader>
+            <CardTitle>Financial Ratios & Key Metrics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Net Worth</p>
+                <p className="text-2xl font-bold text-foreground">
+                  ${ratios.netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Total Assets</p>
+                <p className="text-2xl font-bold text-foreground">
+                  ${ratios.totalAssets.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Total Liabilities</p>
+                <p className="text-2xl font-bold text-foreground">
+                  ${ratios.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Debt-to-Income Ratio</p>
+                <p className={`text-2xl font-bold ${ratios.debtToIncome > 43 ? 'text-destructive' : ratios.debtToIncome > 36 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {ratios.debtToIncome.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground">Target: &lt;36%</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Debt-to-Assets Ratio</p>
+                <p className={`text-2xl font-bold ${ratios.debtToAssets > 50 ? 'text-destructive' : ratios.debtToAssets > 40 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {ratios.debtToAssets.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground">Target: &lt;40%</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Savings Rate</p>
+                <p className={`text-2xl font-bold ${ratios.savingsRate < 10 ? 'text-destructive' : ratios.savingsRate < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {ratios.savingsRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground">Target: &gt;20%</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Liquidity Ratio</p>
+                <p className={`text-2xl font-bold ${ratios.liquidityRatio < 0.5 ? 'text-destructive' : ratios.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {ratios.liquidityRatio.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Current Ratio</p>
+                <p className={`text-2xl font-bold ${ratios.currentRatio < 1 ? 'text-destructive' : ratios.currentRatio < 2 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {ratios.currentRatio.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">Target: &gt;2.0</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">DSCR</p>
+                <p className={`text-2xl font-bold ${ratios.debtServiceCoverage < 1.25 ? 'text-destructive' : ratios.debtServiceCoverage < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {ratios.debtServiceCoverage.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">Target: &gt;1.5</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Key Metrics Overview */}
+        <Card className="print-chart page-break">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -178,7 +347,7 @@ export const FinancialAnalysis = () => {
       </Card>
 
       {/* Income Trends */}
-      <Card>
+      <Card className="print-chart page-break">
         <CardHeader>
           <CardTitle>Income Trends Over Time</CardTitle>
         </CardHeader>
@@ -199,7 +368,7 @@ export const FinancialAnalysis = () => {
       </Card>
 
       {/* Cash Flow Analysis */}
-      <Card>
+      <Card className="print-chart page-break">
         <CardHeader>
           <CardTitle>Cash Flow Analysis</CardTitle>
         </CardHeader>
@@ -220,8 +389,8 @@ export const FinancialAnalysis = () => {
       </Card>
 
       {/* Asset & Debt Distribution */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 page-break">
+        <Card className="print-chart">
           <CardHeader>
             <CardTitle>Asset Allocation</CardTitle>
           </CardHeader>
@@ -248,7 +417,7 @@ export const FinancialAnalysis = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="print-chart">
           <CardHeader>
             <CardTitle>Debt Breakdown</CardTitle>
           </CardHeader>
@@ -278,7 +447,7 @@ export const FinancialAnalysis = () => {
 
       {/* AI-Generated Analysis Narrative */}
       {financialAnalysis && (
-        <Card className="border-primary/20 bg-card">
+        <Card className="border-primary/20 bg-card page-break">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-primary" />
@@ -320,6 +489,7 @@ export const FinancialAnalysis = () => {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </>
   );
 };
