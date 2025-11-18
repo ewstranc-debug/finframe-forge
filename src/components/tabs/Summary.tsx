@@ -182,15 +182,15 @@ export const Summary = () => {
                 ))}
                 <div className="grid grid-cols-2 font-semibold bg-primary/10">
                   <div className="p-3 border-r border-border">Primary Request</div>
-                  <div className="p-3">${primaryRequest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="p-3">${primaryRequest.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
                 <div className="grid grid-cols-2">
                   <div className="p-3 border-r border-border">SBA Guarantee Fee (Upfront)</div>
-                  <div className="p-3">${fees.upfrontFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="p-3">${fees.upfrontFee.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
                 <div className="grid grid-cols-2 font-bold bg-primary/20">
                   <div className="p-3 border-r border-border">Total Uses</div>
-                  <div className="p-3">${totalUses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="p-3">${totalUses.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
               </div>
             </div>
@@ -204,7 +204,7 @@ export const Summary = () => {
                 </div>
                 <div className="grid grid-cols-2 border-b border-border">
                   <div className="p-3 border-r border-border bg-secondary/30">SBA 7(a) Loan</div>
-                  <div className="p-3">${finalLoanAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="p-3">${finalLoanAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
                 <div className="grid grid-cols-2 border-b border-border">
                   <div className="p-3 border-r border-border bg-secondary/30">Equity Injection</div>
@@ -229,7 +229,7 @@ export const Summary = () => {
                 </div>
                 <div className="grid grid-cols-2 font-bold bg-primary/20">
                   <div className="p-3 border-r border-border">Total Sources</div>
-                  <div className="p-3">${totalSources.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="p-3">${totalSources.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
               </div>
             </div>
@@ -270,7 +270,7 @@ export const Summary = () => {
             <div>
               <label className="text-sm font-medium mb-2 block">SBA Annual Fee</label>
               <div className="h-9 px-3 py-2 bg-muted rounded-md flex items-center">
-                ${fees.annualFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${fees.annualFee.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </div>
             </div>
           </div>
@@ -280,7 +280,7 @@ export const Summary = () => {
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">Annual Payment</div>
                 <div className="text-2xl font-bold text-primary">
-                  ${annualPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${annualPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
               </CardContent>
             </Card>
@@ -288,7 +288,7 @@ export const Summary = () => {
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">Monthly Payment</div>
                 <div className="text-2xl font-bold text-primary">
-                  ${monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
               </CardContent>
             </Card>

@@ -390,7 +390,7 @@ export const BusinessFinancials = () => {
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/30">3. Gross Profit (Line 1 less Line 2)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateGrossProfit(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateGrossProfit(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -415,7 +415,7 @@ export const BusinessFinancials = () => {
                     const totalIncome = calculateGrossProfit(i) + (parseFloat(businessPeriods[i].otherIncome) || 0);
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4">
-                        ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                     );
                   })}
@@ -560,7 +560,7 @@ export const BusinessFinancials = () => {
                     );
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4">
-                        ${totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                     );
                   })}
@@ -569,7 +569,7 @@ export const BusinessFinancials = () => {
                   <td className="border border-border p-2 sticky left-0 bg-secondary/30">15. Income Before Taxes (Line 5 less Line 14)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateEBT(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateEBT(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -592,7 +592,7 @@ export const BusinessFinancials = () => {
                   <td className="border border-border p-2 sticky left-0 bg-primary/20">17. Net Income (Line 15 less Line 16)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4 font-bold">
-                      ${calculateNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -607,7 +607,7 @@ export const BusinessFinancials = () => {
                     const amount = parseFloat(businessPeriods[i].depreciation) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                     );
                   })}
@@ -618,7 +618,7 @@ export const BusinessFinancials = () => {
                     const amount = parseFloat(businessPeriods[i].amortization) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                     );
                   })}
@@ -629,7 +629,7 @@ export const BusinessFinancials = () => {
                     const amount = parseFloat(businessPeriods[i].section179) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                     );
                   })}
@@ -640,7 +640,7 @@ export const BusinessFinancials = () => {
                     const amount = parseFloat(businessPeriods[i].interest) || 0;
                     return (
                       <td key={i} className="border border-border p-2 text-right pr-4 text-muted-foreground">
-                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </td>
                     );
                   })}
@@ -664,7 +664,7 @@ export const BusinessFinancials = () => {
                   <td className="border border-border p-2 sticky left-0 bg-primary/20">18. Cash Flow (for DSCR)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4 font-bold">
-                      ${calculateCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>
@@ -737,7 +737,7 @@ export const BusinessFinancials = () => {
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Taxable Income</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateM1TaxableIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${calculateM1TaxableIncome(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>

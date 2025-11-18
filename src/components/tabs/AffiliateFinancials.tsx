@@ -380,7 +380,7 @@ export const AffiliateFinancials = () => {
                       <div className="p-3 border-r border-border font-bold">Net Income</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateNetIncome(entity, i))}
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateNetIncome(entity, i))}
                         </div>
                       ))}
                     </div>
@@ -489,7 +489,7 @@ export const AffiliateFinancials = () => {
                       <div className="p-3 border-r border-border font-bold">Total Assets</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalAssets(entity, i))}
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalAssets(entity, i))}
                         </div>
                       ))}
                     </div>
@@ -534,7 +534,7 @@ export const AffiliateFinancials = () => {
                       <div className="p-3 border-r border-border font-bold">Total Liabilities</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalLiabilities(entity, i))}
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalLiabilities(entity, i))}
                         </div>
                       ))}
                     </div>
@@ -543,7 +543,7 @@ export const AffiliateFinancials = () => {
                       <div className="p-3 border-r border-border font-bold">Equity</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateEquity(entity, i))}
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateEquity(entity, i))}
                         </div>
                       ))}
                     </div>

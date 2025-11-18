@@ -18,7 +18,7 @@ export const EditableCell = ({ value, onChange, type = "text", className = "", o
   const formatValue = (val: string | number) => {
     if (type === "currency") {
       const num = typeof val === "string" ? parseFloat(val) || 0 : val;
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
     }
     return val;
   };
