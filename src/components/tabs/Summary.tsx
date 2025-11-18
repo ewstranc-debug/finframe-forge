@@ -56,42 +56,42 @@ export const Summary = () => {
     return monthlyPayment * 12;
   };
 
-  const calculateGlobalDSCR = () => {
-    const latestBusinessPeriod = businessPeriods[2];
+  const calculateDSCRForPeriod = (businessPeriodIndex: number, personalPeriodIndex: number) => {
+    const businessPeriod = businessPeriods[businessPeriodIndex];
+    const personalPeriod = personalPeriods[personalPeriodIndex];
     
-    const businessRevenue = (parseFloat(latestBusinessPeriod.revenue) || 0) + (parseFloat(latestBusinessPeriod.otherIncome) || 0);
-    const businessExpenses = (parseFloat(latestBusinessPeriod.cogs) || 0) + 
-                            (parseFloat(latestBusinessPeriod.operatingExpenses) || 0) +
-                            (parseFloat(latestBusinessPeriod.rentExpense) || 0) +
-                            (parseFloat(latestBusinessPeriod.otherExpenses) || 0);
+    const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
+    const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
+                            (parseFloat(businessPeriod.operatingExpenses) || 0) +
+                            (parseFloat(businessPeriod.rentExpense) || 0) +
+                            (parseFloat(businessPeriod.otherExpenses) || 0);
     const businessEBITDA = businessRevenue - businessExpenses;
     
-    const officersComp = parseFloat(latestBusinessPeriod.officersComp) || 0;
-    const depreciationAddback = parseFloat(latestBusinessPeriod.depreciation) || 0;
-    const amortizationAddback = parseFloat(latestBusinessPeriod.amortization) || 0;
-    const section179Addback = parseFloat(latestBusinessPeriod.section179) || 0;
-    const otherAddbacks = parseFloat(latestBusinessPeriod.addbacks) || 0;
+    const officersComp = parseFloat(businessPeriod.officersComp) || 0;
+    const depreciationAddback = parseFloat(businessPeriod.depreciation) || 0;
+    const amortizationAddback = parseFloat(businessPeriod.amortization) || 0;
+    const section179Addback = parseFloat(businessPeriod.section179) || 0;
+    const otherAddbacks = parseFloat(businessPeriod.addbacks) || 0;
     
     const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
     
-    const latestPersonalPeriod = personalPeriods[2];
-    const personalW2Income = (parseFloat(latestPersonalPeriod.salary) || 0) + 
-                            (parseFloat(latestPersonalPeriod.bonuses) || 0) +
-                            (parseFloat(latestPersonalPeriod.investments) || 0) +
-                            (parseFloat(latestPersonalPeriod.rentalIncome) || 0) +
-                            (parseFloat(latestPersonalPeriod.otherIncome) || 0);
+    const personalW2Income = (parseFloat(personalPeriod.salary) || 0) + 
+                            (parseFloat(personalPeriod.bonuses) || 0) +
+                            (parseFloat(personalPeriod.investments) || 0) +
+                            (parseFloat(personalPeriod.rentalIncome) || 0) +
+                            (parseFloat(personalPeriod.otherIncome) || 0);
     
-    const schedCRevenue = parseFloat(latestPersonalPeriod.schedCRevenue) || 0;
-    const schedCExpenses = (parseFloat(latestPersonalPeriod.schedCCOGS) || 0) + (parseFloat(latestPersonalPeriod.schedCExpenses) || 0);
-    const schedCAddbacks = (parseFloat(latestPersonalPeriod.schedCInterest) || 0) + 
-                          (parseFloat(latestPersonalPeriod.schedCDepreciation) || 0) + 
-                          (parseFloat(latestPersonalPeriod.schedCAmortization) || 0) +
-                          (parseFloat(latestPersonalPeriod.schedCOther) || 0);
+    const schedCRevenue = parseFloat(personalPeriod.schedCRevenue) || 0;
+    const schedCExpenses = (parseFloat(personalPeriod.schedCCOGS) || 0) + (parseFloat(personalPeriod.schedCExpenses) || 0);
+    const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) + 
+                          (parseFloat(personalPeriod.schedCDepreciation) || 0) + 
+                          (parseFloat(personalPeriod.schedCAmortization) || 0) +
+                          (parseFloat(personalPeriod.schedCOther) || 0);
     const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
     
     const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow;
     
-    const personalExpenses = (parseFloat(latestPersonalPeriod.costOfLiving) || 0) + (parseFloat(latestPersonalPeriod.personalTaxes) || 0);
+    const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
     const estimatedTaxOnOfficersComp = officersComp * 0.30;
     
     const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp;
@@ -102,7 +102,26 @@ export const Summary = () => {
     const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
     const annualDebtService = monthlyPayment * 12;
     
-    return annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
+    return {
+      dscr: annualDebtService > 0 ? netCashAvailable / annualDebtService : 0,
+      totalIncome: totalIncomeAvailable,
+      netCashFlow: netCashAvailable,
+      debtService: annualDebtService
+    };
+  };
+
+  const calculateGlobalDSCR = () => {
+    // Calculate DSCR for all periods
+    const period1 = calculateDSCRForPeriod(0, 0);
+    const period2 = calculateDSCRForPeriod(1, 1);
+    const period3 = calculateDSCRForPeriod(2, 2); // Last full year
+    const interim = calculateDSCRForPeriod(3, 2); // Interim uses last personal period
+    
+    // Average all DSCRs
+    const allDSCRs = [period1.dscr, period2.dscr, period3.dscr, interim.dscr];
+    const avgDSCR = allDSCRs.reduce((sum, dscr) => sum + dscr, 0) / allDSCRs.length;
+    
+    return avgDSCR;
   };
 
   const handleEquityPercentageChange = (value: string) => {
@@ -122,6 +141,10 @@ export const Summary = () => {
   const totalSources = finalLoanAmount + parseFloat(injectionEquity);
   const totalUses = primaryRequest + fees.upfrontFee;
   const globalDSCR = calculateGlobalDSCR();
+  
+  // Calculate metrics for last full year and interim for Financial Overview
+  const lastFullYear = calculateDSCRForPeriod(2, 2);
+  const interimPeriod = calculateDSCRForPeriod(3, 2);
 
   return (
     <div className="p-6 space-y-6">
@@ -285,51 +308,110 @@ export const Summary = () => {
           <CardTitle>Financial Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-2">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Income</p>
-                    <p className="text-2xl font-bold mt-1">$0</p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-green-600" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-2">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Debts</p>
-                    <p className="text-2xl font-bold mt-1">$0</p>
-                  </div>
-                  <TrendingDown className="h-8 w-8 text-red-600" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-2">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Net Cash Flow</p>
-                    <p className="text-2xl font-bold mt-1">$0</p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-2">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Debt Service</p>
-                    <p className="text-2xl font-bold mt-1">${annualPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
-                  </div>
-                  <PieChart className="h-8 w-8 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Last Full Year</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-2 border-primary/30">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Income</p>
+                        <p className="text-2xl font-bold mt-1">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-primary/30">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Debt Service</p>
+                        <p className="text-2xl font-bold mt-1">${lastFullYear.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                      </div>
+                      <PieChart className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-primary/30">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Net Cash Flow</p>
+                        <p className="text-2xl font-bold mt-1">${lastFullYear.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-2 border-primary/30">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">DSCR</p>
+                        <p className={`text-2xl font-bold mt-1 ${lastFullYear.dscr >= 1.25 ? 'text-green-600' : lastFullYear.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {lastFullYear.dscr.toFixed(2)}x
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Interim Period</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-2">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Income</p>
+                        <p className="text-2xl font-bold mt-1">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-2">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Debt Service</p>
+                        <p className="text-2xl font-bold mt-1">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                      </div>
+                      <PieChart className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-2">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Net Cash Flow</p>
+                        <p className="text-2xl font-bold mt-1">${interimPeriod.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-2">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">DSCR</p>
+                        <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {interimPeriod.dscr.toFixed(2)}x
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-primary" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
