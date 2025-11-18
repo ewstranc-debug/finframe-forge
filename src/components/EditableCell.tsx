@@ -8,9 +8,10 @@ interface EditableCellProps {
   className?: string;
   onEnter?: () => void;
   onTab?: () => void;
+  dataField?: string;
 }
 
-export const EditableCell = ({ value, onChange, type = "text", className = "", onEnter, onTab }: EditableCellProps) => {
+export const EditableCell = ({ value, onChange, type = "text", className = "", onEnter, onTab, dataField }: EditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value.toString());
 
@@ -62,6 +63,7 @@ export const EditableCell = ({ value, onChange, type = "text", className = "", o
         onKeyDown={handleKeyDown}
         autoFocus
         className={`h-9 border-primary ${className}`}
+        data-field={dataField}
       />
     );
   }

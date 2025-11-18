@@ -33,6 +33,28 @@ export const BusinessFinancials = () => {
     setBusinessPeriodLabels(newLabels);
   };
 
+  const focusNextCell = (currentRow: string, currentCol: number) => {
+    const fields = [
+      'revenue', 'cogs', 'operatingExpenses', 'rentExpense', 'officersComp', 
+      'depreciation', 'amortization', 'section179', 'interest', 'taxes',
+      'otherIncome', 'otherExpenses', 'addbacks',
+      'm1BookIncome', 'm1FedTaxExpense', 'm1ExcessDepr', 'm1Other'
+    ];
+    const currentIndex = fields.indexOf(currentRow);
+    if (currentIndex < fields.length - 1) {
+      const nextField = fields[currentIndex + 1];
+      const nextInput = document.querySelector(`input[data-field="${nextField}-${currentCol}"]`) as HTMLInputElement;
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const focusRightCell = (currentRow: string, currentCol: number) => {
+    if (currentCol < businessPeriods.length - 1) {
+      const nextInput = document.querySelector(`input[data-field="${currentRow}-${currentCol + 1}"]`) as HTMLInputElement;
+      if (nextInput) nextInput.focus();
+    }
+  };
+
   const clearColumn = (periodIndex: number) => {
     const clearedPeriod: BusinessPeriodData = {
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
@@ -343,199 +365,241 @@ export const BusinessFinancials = () => {
                 </tr>
               </thead>
               <tbody>
-                {/* Revenue */}
+                {/* Income Section */}
+                <tr className="bg-muted/50">
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Income</td>
+                </tr>
                 <tr>
-                  <td className="border border-border p-2 font-semibold sticky left-0 bg-background">Revenue</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">1. Gross Receipts or Sales</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
                         value={businessPeriods[i].revenue}
                         onChange={(val) => updateField(i, "revenue", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('revenue', i)}
+                        onTab={() => focusRightCell('revenue', i)}
+                        dataField={`revenue-${i}`}
                       />
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Less: Cost of Goods Sold</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">2. Cost of Goods Sold</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
                         value={businessPeriods[i].cogs}
                         onChange={(val) => updateField(i, "cogs", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('cogs', i)}
+                        onTab={() => focusRightCell('cogs', i)}
+                        dataField={`cogs-${i}`}
                       />
                     </td>
                   ))}
                 </tr>
                 <tr className="bg-secondary/30 font-semibold">
-                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">Gross Profit</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/30">3. Gross Profit (Line 1 less Line 2)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
                       ${calculateGrossProfit(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
                   ))}
                 </tr>
-
-                {/* Operating Expenses */}
-                <tr className="bg-muted/50">
-                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Operating Expenses</td>
-                </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Operating Expenses</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].operatingExpenses}
-                        onChange={(val) => updateField(i, "operatingExpenses", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Rent Expense</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].rentExpense}
-                        onChange={(val) => updateField(i, "rentExpense", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Officers Compensation</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].officersComp}
-                        onChange={(val) => updateField(i, "officersComp", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
-                </tr>
-                <tr className="bg-secondary/30 font-semibold">
-                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">EBITDA</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateEBITDA(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Non-Cash Expenses */}
-                <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Depreciation</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].depreciation}
-                        onChange={(val) => updateField(i, "depreciation", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Amortization</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].amortization}
-                        onChange={(val) => updateField(i, "amortization", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Section 179</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border">
-                      <EditableCell
-                        value={businessPeriods[i].section179}
-                        onChange={(val) => updateField(i, "section179", val)}
-                        type="currency"
-                      />
-                    </td>
-                  ))}
-                </tr>
-                <tr className="bg-secondary/30 font-semibold">
-                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">EBIT</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className="border border-border p-2 text-right pr-4">
-                      ${calculateEBIT(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                  ))}
-                </tr>
-
-                {/* Other Income/Expenses */}
-                <tr className="bg-muted/50">
-                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Other Income & Expenses</td>
-                </tr>
-                <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Other Income</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">4. Other Income</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
                         value={businessPeriods[i].otherIncome}
                         onChange={(val) => updateField(i, "otherIncome", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('otherIncome', i)}
+                        onTab={() => focusRightCell('otherIncome', i)}
+                        dataField={`otherIncome-${i}`}
                       />
                     </td>
                   ))}
                 </tr>
+                <tr className="bg-secondary/30 font-semibold">
+                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">5. Total Income (Line 3 plus Line 4)</td>
+                  {businessPeriods.map((_, i) => {
+                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
+                    const factor = 12 / months;
+                    const totalIncome = calculateGrossProfit(i) + ((parseFloat(businessPeriods[i].otherIncome) || 0) * factor);
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4">
+                        ${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* Deductions Section */}
+                <tr className="bg-muted/50">
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Deductions</td>
+                </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Other Expenses</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">6. Compensation of Officers</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
-                        value={businessPeriods[i].otherExpenses}
-                        onChange={(val) => updateField(i, "otherExpenses", val)}
+                        value={businessPeriods[i].officersComp}
+                        onChange={(val) => updateField(i, "officersComp", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('officersComp', i)}
+                        onTab={() => focusRightCell('officersComp', i)}
+                        dataField={`officersComp-${i}`}
                       />
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Interest Expense</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">7. Rents</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].rentExpense}
+                        onChange={(val) => updateField(i, "rentExpense", val)}
+                        type="currency"
+                        onEnter={() => focusNextCell('rentExpense', i)}
+                        onTab={() => focusRightCell('rentExpense', i)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">8. Interest Expense</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
                         value={businessPeriods[i].interest}
                         onChange={(val) => updateField(i, "interest", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('interest', i)}
+                        onTab={() => focusRightCell('interest', i)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">9. Depreciation</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].depreciation}
+                        onChange={(val) => updateField(i, "depreciation", val)}
+                        type="currency"
+                        onEnter={() => focusNextCell('depreciation', i)}
+                        onTab={() => focusRightCell('depreciation', i)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">10. Amortization</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].amortization}
+                        onChange={(val) => updateField(i, "amortization", val)}
+                        type="currency"
+                        onEnter={() => focusNextCell('amortization', i)}
+                        onTab={() => focusRightCell('amortization', i)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">11. Section 179 Deduction</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].section179}
+                        onChange={(val) => updateField(i, "section179", val)}
+                        type="currency"
+                        onEnter={() => focusNextCell('section179', i)}
+                        onTab={() => focusRightCell('section179', i)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">12. Other Operating Expenses</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].operatingExpenses}
+                        onChange={(val) => updateField(i, "operatingExpenses", val)}
+                        type="currency"
+                        onEnter={() => focusNextCell('operatingExpenses', i)}
+                        onTab={() => focusRightCell('operatingExpenses', i)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">13. Other Deductions</td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].otherExpenses}
+                        onChange={(val) => updateField(i, "otherExpenses", val)}
+                        type="currency"
+                        onEnter={() => focusNextCell('otherExpenses', i)}
+                        onTab={() => focusRightCell('otherExpenses', i)}
                       />
                     </td>
                   ))}
                 </tr>
                 <tr className="bg-secondary/30 font-semibold">
-                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">Earnings Before Tax (EBT)</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/30">14. Total Deductions (Lines 6-13)</td>
+                  {businessPeriods.map((_, i) => {
+                    const months = parseFloat(businessPeriods[i].periodMonths) || 12;
+                    const factor = 12 / months;
+                    const totalDeductions = (
+                      (parseFloat(businessPeriods[i].officersComp) || 0) +
+                      (parseFloat(businessPeriods[i].rentExpense) || 0) +
+                      (parseFloat(businessPeriods[i].interest) || 0) +
+                      (parseFloat(businessPeriods[i].depreciation) || 0) +
+                      (parseFloat(businessPeriods[i].amortization) || 0) +
+                      (parseFloat(businessPeriods[i].section179) || 0) +
+                      (parseFloat(businessPeriods[i].operatingExpenses) || 0) +
+                      (parseFloat(businessPeriods[i].otherExpenses) || 0)
+                    ) * factor;
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4">
+                        ${totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr className="bg-secondary/30 font-semibold">
+                  <td className="border border-border p-2 sticky left-0 bg-secondary/30">15. Income Before Taxes (Line 5 less Line 14)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
                       ${calculateEBT(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
                   ))}
                 </tr>
-
-                {/* Taxes */}
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Taxes</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">16. Taxes</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
                         value={businessPeriods[i].taxes}
                         onChange={(val) => updateField(i, "taxes", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('taxes', i)}
+                        onTab={() => focusRightCell('taxes', i)}
+                        dataField={`taxes-${i}`}
                       />
                     </td>
                   ))}
                 </tr>
                 <tr className="bg-primary/20 font-bold">
-                  <td className="border border-border p-2 sticky left-0 bg-primary/20">Net Income</td>
+                  <td className="border border-border p-2 sticky left-0 bg-primary/20">17. Net Income (Line 15 less Line 16)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4 font-bold">
                       ${calculateNetIncome(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -543,12 +607,12 @@ export const BusinessFinancials = () => {
                   ))}
                 </tr>
 
-                {/* Cash Flow Addbacks */}
+                {/* Cash Flow Analysis Section */}
                 <tr className="bg-muted/50">
-                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Cash Flow Addbacks</td>
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Cash Flow Analysis (for DSCR)</td>
                 </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Depreciation</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Depreciation</td>
                   {businessPeriods.map((_, i) => {
                     const months = parseFloat(businessPeriods[i].periodMonths) || 12;
                     const annualized = (parseFloat(businessPeriods[i].depreciation) || 0) * (12 / months);
@@ -560,7 +624,7 @@ export const BusinessFinancials = () => {
                   })}
                 </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Amortization</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Amortization</td>
                   {businessPeriods.map((_, i) => {
                     const months = parseFloat(businessPeriods[i].periodMonths) || 12;
                     const annualized = (parseFloat(businessPeriods[i].amortization) || 0) * (12 / months);
@@ -572,7 +636,7 @@ export const BusinessFinancials = () => {
                   })}
                 </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Section 179</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Section 179</td>
                   {businessPeriods.map((_, i) => {
                     const months = parseFloat(businessPeriods[i].periodMonths) || 12;
                     const annualized = (parseFloat(businessPeriods[i].section179) || 0) * (12 / months);
@@ -584,7 +648,7 @@ export const BusinessFinancials = () => {
                   })}
                 </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Interest Expense</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Add Back: Interest Expense</td>
                   {businessPeriods.map((_, i) => {
                     const months = parseFloat(businessPeriods[i].periodMonths) || 12;
                     const annualized = (parseFloat(businessPeriods[i].interest) || 0) * (12 / months);
@@ -603,12 +667,15 @@ export const BusinessFinancials = () => {
                         value={businessPeriods[i].addbacks}
                         onChange={(val) => updateField(i, "addbacks", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('addbacks', i)}
+                        onTab={() => focusRightCell('addbacks', i)}
+                        dataField={`addbacks-${i}`}
                       />
                     </td>
                   ))}
                 </tr>
                 <tr className="bg-primary/20 font-bold">
-                  <td className="border border-border p-2 sticky left-0 bg-primary/20">Cash Flow</td>
+                  <td className="border border-border p-2 sticky left-0 bg-primary/20">18. Cash Flow (for DSCR)</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4 font-bold">
                       ${calculateCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -618,7 +685,7 @@ export const BusinessFinancials = () => {
 
                 {/* M1 Reconciliation */}
                 <tr className="bg-muted/50">
-                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">M1 Reconciliation (Tax Return)</td>
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Schedule M-1: Reconciliation of Income</td>
                 </tr>
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Book Income (Per Return)</td>
@@ -628,18 +695,24 @@ export const BusinessFinancials = () => {
                         value={businessPeriods[i].m1BookIncome}
                         onChange={(val) => updateField(i, "m1BookIncome", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('m1BookIncome', i)}
+                        onTab={() => focusRightCell('m1BookIncome', i)}
+                        dataField={`m1BookIncome-${i}`}
                       />
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Fed Tax Expense</td>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Federal Tax Expense</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
                         value={businessPeriods[i].m1FedTaxExpense}
                         onChange={(val) => updateField(i, "m1FedTaxExpense", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('m1FedTaxExpense', i)}
+                        onTab={() => focusRightCell('m1FedTaxExpense', i)}
+                        dataField={`m1FedTaxExpense-${i}`}
                       />
                     </td>
                   ))}
@@ -652,6 +725,9 @@ export const BusinessFinancials = () => {
                         value={businessPeriods[i].m1ExcessDepr}
                         onChange={(val) => updateField(i, "m1ExcessDepr", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('m1ExcessDepr', i)}
+                        onTab={() => focusRightCell('m1ExcessDepr', i)}
+                        dataField={`m1ExcessDepr-${i}`}
                       />
                     </td>
                   ))}
@@ -664,6 +740,9 @@ export const BusinessFinancials = () => {
                         value={businessPeriods[i].m1Other}
                         onChange={(val) => updateField(i, "m1Other", val)}
                         type="currency"
+                        onEnter={() => focusNextCell('m1Other', i)}
+                        onTab={() => focusRightCell('m1Other', i)}
+                        dataField={`m1Other-${i}`}
                       />
                     </td>
                   ))}
@@ -677,7 +756,10 @@ export const BusinessFinancials = () => {
                   ))}
                 </tr>
 
-                {/* DSCR Calculations */}
+                {/* DSCR Analysis */}
+                <tr className="bg-muted/50">
+                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Debt Service Coverage Ratio (DSCR)</td>
+                </tr>
                 <tr className="bg-accent/20">
                   <td className="border border-border p-2 font-semibold sticky left-0 bg-accent/20">DSCR</td>
                   {businessPeriods.map((_, i) => (
@@ -691,7 +773,7 @@ export const BusinessFinancials = () => {
                   ))}
                 </tr>
                 <tr className="bg-accent/20">
-                  <td className="border border-border p-2 font-semibold sticky left-0 bg-accent/20">DSCR with Rent</td>
+                  <td className="border border-border p-2 font-semibold sticky left-0 bg-accent/20">DSCR with Rent Addback</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className={`border border-border p-2 text-center font-semibold ${
                       calculateDSCRWithRent(i) >= 1.25 ? 'text-green-600' : 
