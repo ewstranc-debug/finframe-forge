@@ -222,6 +222,11 @@ export const FinancialAnalysis = () => {
     
     const interimMetrics = interimPeriodIndices.map(idx => calcBusinessMetrics(idx)).filter(Boolean);
     
+    console.log('Business Periods:', businessPeriods.map((p, i) => ({ index: i, months: p.periodMonths, label: businessPeriodLabels[i] })));
+    console.log('Last FYE Index:', lastFYEIndex);
+    console.log('Interim Period Indices:', interimPeriodIndices);
+    console.log('Interim Metrics:', interimMetrics);
+    
     // Use latest business period for overall business metrics
     const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
     const businessRevenue = parseFloat(latestBusinessPeriod?.revenue) || 0;
