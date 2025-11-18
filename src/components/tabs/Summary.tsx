@@ -13,6 +13,7 @@ export const Summary = () => {
     uses, setUses,
     businessPeriods,
     personalPeriods,
+    interimPeriodMonths,
   } = useSpreadsheet();
 
   const updateUse = (id: string, field: "description" | "amount", value: string) => {
@@ -60,18 +61,20 @@ export const Summary = () => {
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
     
+    const annualizationFactor = businessPeriodIndex === 3 ? (12 / (parseFloat(interimPeriodMonths) || 12)) : 1;
+    
     const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
     const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
                             (parseFloat(businessPeriod.operatingExpenses) || 0) +
                             (parseFloat(businessPeriod.rentExpense) || 0) +
                             (parseFloat(businessPeriod.otherExpenses) || 0);
-    const businessEBITDA = businessRevenue - businessExpenses;
+    const businessEBITDA = (businessRevenue - businessExpenses) * annualizationFactor;
     
-    const officersComp = parseFloat(businessPeriod.officersComp) || 0;
-    const depreciationAddback = parseFloat(businessPeriod.depreciation) || 0;
-    const amortizationAddback = parseFloat(businessPeriod.amortization) || 0;
-    const section179Addback = parseFloat(businessPeriod.section179) || 0;
-    const otherAddbacks = parseFloat(businessPeriod.addbacks) || 0;
+    const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
+    const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
+    const amortizationAddback = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
+    const section179Addback = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
+    const otherAddbacks = (parseFloat(businessPeriod.addbacks) || 0) * annualizationFactor;
     
     const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
     
