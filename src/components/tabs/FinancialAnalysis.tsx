@@ -2,11 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, TrendingUp, AlertCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const FinancialAnalysis = () => {
   const {
@@ -256,68 +257,176 @@ export const FinancialAnalysis = () => {
             <CardTitle>Financial Ratios & Key Metrics</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Net Worth</p>
-                <p className="text-2xl font-bold text-foreground">
-                  ${ratios.netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </p>
+            <TooltipProvider>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Net Worth</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        ${ratios.netWorth.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Calculation:</p>
+                      <p>Assets: ${ratios.totalAssets.toLocaleString()}</p>
+                      <p>Liabilities: ${ratios.totalLiabilities.toLocaleString()}</p>
+                      <p className="border-t pt-1 mt-1">Net Worth = Assets - Liabilities</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Total Assets</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        ${ratios.totalAssets.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Sum of all liquid assets, real estate, vehicles, and other assets</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Total Liabilities</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        ${ratios.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Sum of all credit cards, mortgages, vehicle loans, and other debts</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Debt-to-Income Ratio</p>
+                      <p className={`text-2xl font-bold ${ratios.debtToIncome > 43 ? 'text-destructive' : ratios.debtToIncome > 36 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {ratios.debtToIncome.toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Target: &lt;36%</p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Calculation:</p>
+                      <p>Monthly Debt: ${ratios.monthlyDebtPayment.toLocaleString()}</p>
+                      <p>Monthly Income: ${ratios.monthlyIncome.toLocaleString()}</p>
+                      <p className="border-t pt-1 mt-1">DTI = (Monthly Debt / Monthly Income) × 100</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Debt-to-Assets Ratio</p>
+                      <p className={`text-2xl font-bold ${ratios.debtToAssets > 50 ? 'text-destructive' : ratios.debtToAssets > 40 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {ratios.debtToAssets.toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Target: &lt;40%</p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Calculation:</p>
+                      <p>Total Liabilities: ${ratios.totalLiabilities.toLocaleString()}</p>
+                      <p>Total Assets: ${ratios.totalAssets.toLocaleString()}</p>
+                      <p className="border-t pt-1 mt-1">DTA = (Liabilities / Assets) × 100</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Savings Rate</p>
+                      <p className={`text-2xl font-bold ${ratios.savingsRate < 10 ? 'text-destructive' : ratios.savingsRate < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {ratios.savingsRate.toFixed(1)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Target: &gt;20%</p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Calculation:</p>
+                      <p>Annual Income: ${ratios.totalIncome.toLocaleString()}</p>
+                      <p>Expenses: ${(ratios.totalIncome * (1 - ratios.savingsRate / 100)).toLocaleString()}</p>
+                      <p className="border-t pt-1 mt-1">Savings = ((Income - Expenses) / Income) × 100</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Liquidity Ratio</p>
+                      <p className={`text-2xl font-bold ${ratios.liquidityRatio < 0.5 ? 'text-destructive' : ratios.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {ratios.liquidityRatio.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Calculation:</p>
+                      <p>Liquid Assets: ${(ratios.liquidityRatio * ratios.totalLiabilities).toLocaleString()}</p>
+                      <p>Total Liabilities: ${ratios.totalLiabilities.toLocaleString()}</p>
+                      <p className="border-t pt-1 mt-1">Liquidity = Liquid Assets / Total Liabilities</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">Current Ratio</p>
+                      <p className={`text-2xl font-bold ${ratios.currentRatio < 1 ? 'text-destructive' : ratios.currentRatio < 2 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {ratios.currentRatio.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Target: &gt;2.0</p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Calculation:</p>
+                      <p>Total Assets: ${ratios.totalAssets.toLocaleString()}</p>
+                      <p>Total Liabilities: ${ratios.totalLiabilities.toLocaleString()}</p>
+                      <p className="border-t pt-1 mt-1">Current Ratio = Assets / Liabilities</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-1 cursor-help">
+                      <p className="text-sm text-muted-foreground">DSCR</p>
+                      <p className={`text-2xl font-bold ${ratios.debtServiceCoverage < 1.25 ? 'text-destructive' : ratios.debtServiceCoverage < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        {ratios.debtServiceCoverage.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Target: &gt;1.5</p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">Debt Service Coverage Ratio:</p>
+                      <p>Net Operating Income: ${((ratios.monthlyIncome - (ratios.totalIncome / 12)) * 12).toLocaleString()}</p>
+                      <p>Monthly Debt: ${ratios.monthlyDebtPayment.toLocaleString()}</p>
+                      <p className="border-t pt-1 mt-1">DSCR = Net Income / Debt Payment</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total Assets</p>
-                <p className="text-2xl font-bold text-foreground">
-                  ${ratios.totalAssets.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Total Liabilities</p>
-                <p className="text-2xl font-bold text-foreground">
-                  ${ratios.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Debt-to-Income Ratio</p>
-                <p className={`text-2xl font-bold ${ratios.debtToIncome > 43 ? 'text-destructive' : ratios.debtToIncome > 36 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {ratios.debtToIncome.toFixed(1)}%
-                </p>
-                <p className="text-xs text-muted-foreground">Target: &lt;36%</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Debt-to-Assets Ratio</p>
-                <p className={`text-2xl font-bold ${ratios.debtToAssets > 50 ? 'text-destructive' : ratios.debtToAssets > 40 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {ratios.debtToAssets.toFixed(1)}%
-                </p>
-                <p className="text-xs text-muted-foreground">Target: &lt;40%</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Savings Rate</p>
-                <p className={`text-2xl font-bold ${ratios.savingsRate < 10 ? 'text-destructive' : ratios.savingsRate < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {ratios.savingsRate.toFixed(1)}%
-                </p>
-                <p className="text-xs text-muted-foreground">Target: &gt;20%</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Liquidity Ratio</p>
-                <p className={`text-2xl font-bold ${ratios.liquidityRatio < 0.5 ? 'text-destructive' : ratios.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {ratios.liquidityRatio.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Current Ratio</p>
-                <p className={`text-2xl font-bold ${ratios.currentRatio < 1 ? 'text-destructive' : ratios.currentRatio < 2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {ratios.currentRatio.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">Target: &gt;2.0</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">DSCR</p>
-                <p className={`text-2xl font-bold ${ratios.debtServiceCoverage < 1.25 ? 'text-destructive' : ratios.debtServiceCoverage < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {ratios.debtServiceCoverage.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">Target: &gt;1.5</p>
-              </div>
-            </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
 
@@ -335,7 +444,7 @@ export const FinancialAnalysis = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               <Bar dataKey="value" fill="#8884d8">
                 {calculateMetrics().map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -357,7 +466,7 @@ export const FinancialAnalysis = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+              <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
               <Legend />
               <Line type="monotone" dataKey="w2Income" stroke="#3b82f6" name="W2 Income" strokeWidth={2} />
               <Line type="monotone" dataKey="businessIncome" stroke="#10b981" name="Business Income" strokeWidth={2} />
@@ -378,7 +487,7 @@ export const FinancialAnalysis = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+              <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
               <Legend />
               <Bar dataKey="income" fill="#10b981" name="Income" />
               <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
@@ -411,7 +520,7 @@ export const FinancialAnalysis = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -438,7 +547,7 @@ export const FinancialAnalysis = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
