@@ -465,6 +465,7 @@ export const BusinessFinancials = () => {
                         type="currency"
                         onEnter={() => focusNextCell('rentExpense', i)}
                         onTab={() => focusRightCell('rentExpense', i)}
+                        dataField={`rentExpense-${i}`}
                       />
                     </td>
                   ))}
@@ -479,6 +480,7 @@ export const BusinessFinancials = () => {
                         type="currency"
                         onEnter={() => focusNextCell('interest', i)}
                         onTab={() => focusRightCell('interest', i)}
+                        dataField={`interest-${i}`}
                       />
                     </td>
                   ))}
@@ -493,6 +495,7 @@ export const BusinessFinancials = () => {
                         type="currency"
                         onEnter={() => focusNextCell('depreciation', i)}
                         onTab={() => focusRightCell('depreciation', i)}
+                        dataField={`depreciation-${i}`}
                       />
                     </td>
                   ))}
@@ -507,6 +510,7 @@ export const BusinessFinancials = () => {
                         type="currency"
                         onEnter={() => focusNextCell('amortization', i)}
                         onTab={() => focusRightCell('amortization', i)}
+                        dataField={`amortization-${i}`}
                       />
                     </td>
                   ))}
@@ -521,6 +525,7 @@ export const BusinessFinancials = () => {
                         type="currency"
                         onEnter={() => focusNextCell('section179', i)}
                         onTab={() => focusRightCell('section179', i)}
+                        dataField={`section179-${i}`}
                       />
                     </td>
                   ))}
@@ -535,6 +540,7 @@ export const BusinessFinancials = () => {
                         type="currency"
                         onEnter={() => focusNextCell('operatingExpenses', i)}
                         onTab={() => focusRightCell('operatingExpenses', i)}
+                        dataField={`operatingExpenses-${i}`}
                       />
                     </td>
                   ))}
@@ -549,6 +555,7 @@ export const BusinessFinancials = () => {
                         type="currency"
                         onEnter={() => focusNextCell('otherExpenses', i)}
                         onTab={() => focusRightCell('otherExpenses', i)}
+                        dataField={`otherExpenses-${i}`}
                       />
                     </td>
                   ))}
