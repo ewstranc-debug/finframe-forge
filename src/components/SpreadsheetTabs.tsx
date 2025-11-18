@@ -1,11 +1,11 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Summary } from "./tabs/Summary";
 import { PersonalFinancials } from "./tabs/PersonalFinancials";
+import { PersonalFinancialStatement } from "./tabs/PersonalFinancialStatement";
 import { BusinessFinancials } from "./tabs/BusinessFinancials";
 import { AffiliateFinancials } from "./tabs/AffiliateFinancials";
 import { ExistingDebts } from "./tabs/ExistingDebts";
 import { ProposedDebts } from "./tabs/ProposedDebts";
-import { LoanDetails } from "./tabs/LoanDetails";
-import { Summary } from "./tabs/Summary";
 
 export const SpreadsheetTabs = () => {
   return (
@@ -21,7 +21,13 @@ export const SpreadsheetTabs = () => {
           value="personal" 
           className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
         >
-          Personal
+          Personal Income
+        </TabsTrigger>
+        <TabsTrigger 
+          value="pfs" 
+          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+        >
+          Personal Statement
         </TabsTrigger>
         <TabsTrigger 
           value="business" 
@@ -47,12 +53,6 @@ export const SpreadsheetTabs = () => {
         >
           Proposed Debts
         </TabsTrigger>
-        <TabsTrigger 
-          value="loan" 
-          className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
-        >
-          Loan Details
-        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="summary" className="mt-0">
@@ -60,6 +60,9 @@ export const SpreadsheetTabs = () => {
       </TabsContent>
       <TabsContent value="personal" className="mt-0">
         <PersonalFinancials />
+      </TabsContent>
+      <TabsContent value="pfs" className="mt-0">
+        <PersonalFinancialStatement />
       </TabsContent>
       <TabsContent value="business" className="mt-0">
         <BusinessFinancials />
@@ -72,10 +75,6 @@ export const SpreadsheetTabs = () => {
       </TabsContent>
       <TabsContent value="proposed" className="mt-0">
         <ProposedDebts />
-      </TabsContent>
-
-      <TabsContent value="loan" className="mt-0">
-        <LoanDetails />
       </TabsContent>
     </Tabs>
   );

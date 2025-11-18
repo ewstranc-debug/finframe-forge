@@ -19,7 +19,7 @@ export const BusinessFinancials = () => {
     { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", interest: "0", taxes: "0" }
   ]);
 
-  const [periodLabels, setPeriodLabels] = useState(["Year 1", "Year 2", "Year 3", "Interim"]);
+  const [periodLabels, setPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
   const updateField = (periodIndex: number, field: keyof PeriodData, value: string) => {
     const newPeriods = [...periods];

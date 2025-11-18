@@ -14,11 +14,10 @@ export const PersonalFinancials = () => {
   const [periods, setPeriods] = useState<PeriodData[]>([
     { salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0" },
     { salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0" },
-    { salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0" },
     { salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0" }
   ]);
 
-  const [periodLabels, setPeriodLabels] = useState(["Year 1", "Year 2", "Year 3", "Interim"]);
+  const [periodLabels, setPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025"]);
 
   const updateField = (periodIndex: number, field: keyof PeriodData, value: string) => {
     const newPeriods = [...periods];
@@ -44,7 +43,7 @@ export const PersonalFinancials = () => {
         </CardHeader>
         <CardContent>
           <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
-            <div className="grid grid-cols-5 bg-muted font-medium text-sm min-w-[800px]">
+            <div className="grid grid-cols-4 bg-muted font-medium text-sm min-w-[600px]">
               <div className="p-3 border-r border-border">Income Source</div>
               {periodLabels.map((label, i) => (
                 <div key={i} className="border-r border-border last:border-r-0">
@@ -57,7 +56,7 @@ export const PersonalFinancials = () => {
               ))}
             </div>
 
-            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
               <div className="p-3 border-r border-border bg-secondary/30 font-medium">Salary/Wages</div>
               {periods.map((period, i) => (
                 <div key={i} className="border-r border-border last:border-r-0">
@@ -70,7 +69,7 @@ export const PersonalFinancials = () => {
               ))}
             </div>
 
-            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
               <div className="p-3 border-r border-border bg-secondary/30 font-medium">Bonuses/Commission</div>
               {periods.map((period, i) => (
                 <div key={i} className="border-r border-border last:border-r-0">
@@ -83,7 +82,7 @@ export const PersonalFinancials = () => {
               ))}
             </div>
 
-            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
               <div className="p-3 border-r border-border bg-secondary/30 font-medium">Investment Income</div>
               {periods.map((period, i) => (
                 <div key={i} className="border-r border-border last:border-r-0">
@@ -96,7 +95,7 @@ export const PersonalFinancials = () => {
               ))}
             </div>
 
-            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
               <div className="p-3 border-r border-border bg-secondary/30 font-medium">Rental Income</div>
               {periods.map((period, i) => (
                 <div key={i} className="border-r border-border last:border-r-0">
@@ -109,7 +108,7 @@ export const PersonalFinancials = () => {
               ))}
             </div>
 
-            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+            <div className="grid grid-cols-4 border-b border-border min-w-[600px]">
               <div className="p-3 border-r border-border bg-secondary/30 font-medium">Other Income</div>
               {periods.map((period, i) => (
                 <div key={i} className="border-r border-border last:border-r-0">
@@ -122,7 +121,7 @@ export const PersonalFinancials = () => {
               ))}
             </div>
 
-            <div className="grid grid-cols-5 bg-primary/10 min-w-[800px]">
+            <div className="grid grid-cols-4 bg-primary/10 min-w-[600px]">
               <div className="p-3 border-r border-border font-bold">Total Income</div>
               {periods.map((_, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">

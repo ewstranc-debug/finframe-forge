@@ -4,16 +4,31 @@ import { EditableCell } from "../EditableCell";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 
-interface AffiliateEntity {
-  id: string;
-  name: string;
+interface PeriodData {
   revenue: string;
   expenses: string;
 }
 
+interface AffiliateEntity {
+  id: string;
+  name: string;
+  periods: PeriodData[];
+}
+
 export const AffiliateFinancials = () => {
+  const [periodLabels, setPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+  
   const [entities, setEntities] = useState<AffiliateEntity[]>([
-    { id: "1", name: "Affiliate 1", revenue: "0", expenses: "0" }
+    { 
+      id: "1", 
+      name: "Affiliate 1", 
+      periods: [
+        { revenue: "0", expenses: "0" },
+        { revenue: "0", expenses: "0" },
+        { revenue: "0", expenses: "0" },
+        { revenue: "0", expenses: "0" }
+      ]
+    }
   ]);
 
   const addEntity = () => {
@@ -21,8 +36,12 @@ export const AffiliateFinancials = () => {
     setEntities([...entities, { 
       id: newId, 
       name: `Affiliate ${newId}`, 
-      revenue: "0", 
-      expenses: "0" 
+      periods: [
+        { revenue: "0", expenses: "0" },
+        { revenue: "0", expenses: "0" },
+        { revenue: "0", expenses: "0" },
+        { revenue: "0", expenses: "0" }
+      ]
     }]);
   };
 
@@ -30,17 +49,37 @@ export const AffiliateFinancials = () => {
     setEntities(entities.filter(e => e.id !== id));
   };
 
-  const updateEntity = (id: string, field: keyof AffiliateEntity, value: string) => {
+  const updateEntityName = (id: string, value: string) => {
     setEntities(entities.map(e => 
-      e.id === id ? { ...e, [field]: value } : e
+      e.id === id ? { ...e, name: value } : e
     ));
   };
 
-  const calculateTotalNet = () => {
+  const updateEntityPeriod = (id: string, periodIndex: number, field: keyof PeriodData, value: string) => {
+    setEntities(entities.map(e => {
+      if (e.id === id) {
+        const newPeriods = [...e.periods];
+        newPeriods[periodIndex] = { ...newPeriods[periodIndex], [field]: value };
+        return { ...e, periods: newPeriods };
+      }
+      return e;
+    }));
+  };
+
+  const updatePeriodLabel = (index: number, value: string) => {
+    const newLabels = [...periodLabels];
+    newLabels[index] = value;
+    setPeriodLabels(newLabels);
+  };
+
+  const calculateEntityNet = (entity: AffiliateEntity, periodIndex: number) => {
+    const period = entity.periods[periodIndex];
+    return (parseFloat(period.revenue) || 0) - (parseFloat(period.expenses) || 0);
+  };
+
+  const calculateTotalNet = (periodIndex: number) => {
     return entities.reduce((sum, entity) => {
-      const revenue = parseFloat(entity.revenue) || 0;
-      const expenses = parseFloat(entity.expenses) || 0;
-      return sum + (revenue - expenses);
+      return sum + calculateEntityNet(entity, periodIndex);
     }, 0);
   };
 
@@ -60,7 +99,7 @@ export const AffiliateFinancials = () => {
               <div className="bg-muted p-3 flex justify-between items-center">
                 <EditableCell
                   value={entity.name}
-                  onChange={(val) => updateEntity(entity.id, "name", val)}
+                  onChange={(val) => updateEntityName(entity.id, val)}
                   type="text"
                   className="font-medium"
                 />
@@ -76,65 +115,66 @@ export const AffiliateFinancials = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-3 bg-secondary/20 font-medium text-sm">
-                <div className="p-3 border-r border-border">Line Item</div>
-                <div className="p-3 border-r border-border">Annual Amount</div>
-                <div className="p-3">Monthly Amount</div>
-              </div>
+              <div className="overflow-x-auto">
+                <div className="grid grid-cols-5 bg-secondary/20 font-medium text-sm min-w-[800px]">
+                  <div className="p-3 border-r border-border">Line Item</div>
+                  {periodLabels.map((label, i) => (
+                    <div key={i} className="border-r border-border last:border-r-0">
+                      <EditableCell
+                        value={label}
+                        onChange={(val) => updatePeriodLabel(i, val)}
+                        type="text"
+                      />
+                    </div>
+                  ))}
+                </div>
 
-              <div className="grid grid-cols-3 border-b border-border">
-                <div className="p-3 border-r border-border font-medium">Revenue</div>
-                <div className="border-r border-border">
-                  <EditableCell
-                    value={entity.revenue}
-                    onChange={(val) => updateEntity(entity.id, "revenue", val)}
-                    type="currency"
-                  />
+                <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                  <div className="p-3 border-r border-border font-medium bg-success/10">Revenue</div>
+                  {entity.periods.map((period, i) => (
+                    <div key={i} className="border-r border-border last:border-r-0">
+                      <EditableCell
+                        value={period.revenue}
+                        onChange={(val) => updateEntityPeriod(entity.id, i, "revenue", val)}
+                        type="currency"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <div className="p-3 text-muted-foreground">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((parseFloat(entity.revenue) || 0) / 12)}
-                </div>
-              </div>
 
-              <div className="grid grid-cols-3 border-b border-border">
-                <div className="p-3 border-r border-border font-medium">Expenses</div>
-                <div className="border-r border-border">
-                  <EditableCell
-                    value={entity.expenses}
-                    onChange={(val) => updateEntity(entity.id, "expenses", val)}
-                    type="currency"
-                  />
+                <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                  <div className="p-3 border-r border-border font-medium bg-destructive/10">Expenses</div>
+                  {entity.periods.map((period, i) => (
+                    <div key={i} className="border-r border-border last:border-r-0">
+                      <EditableCell
+                        value={period.expenses}
+                        onChange={(val) => updateEntityPeriod(entity.id, i, "expenses", val)}
+                        type="currency"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <div className="p-3 text-muted-foreground">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((parseFloat(entity.expenses) || 0) / 12)}
-                </div>
-              </div>
 
-              <div className="grid grid-cols-3 bg-accent/10">
-                <div className="p-3 border-r border-border font-bold">Net Income</div>
-                <div className="p-3 border-r border-border font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                    (parseFloat(entity.revenue) || 0) - (parseFloat(entity.expenses) || 0)
-                  )}
-                </div>
-                <div className="p-3 font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
-                    ((parseFloat(entity.revenue) || 0) - (parseFloat(entity.expenses) || 0)) / 12
-                  )}
+                <div className="grid grid-cols-5 bg-accent/10 min-w-[800px]">
+                  <div className="p-3 border-r border-border font-bold">Net Income</div>
+                  {entity.periods.map((_, i) => (
+                    <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateEntityNet(entity, i))}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           ))}
 
-          <div className="border-t-2 border-primary pt-4">
-            <div className="grid grid-cols-3 bg-primary/20 rounded-lg">
+          <div className="border-t-2 border-primary pt-4 overflow-x-auto">
+            <div className="grid grid-cols-5 bg-primary/20 rounded-lg min-w-[800px]">
               <div className="p-3 font-bold text-lg">Combined Net Income</div>
-              <div className="p-3 font-bold text-lg">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalNet())}
-              </div>
-              <div className="p-3 font-bold text-lg">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalNet() / 12)}
-              </div>
+              {periodLabels.map((_, i) => (
+                <div key={i} className="p-3 font-bold text-lg">
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalNet(i))}
+                </div>
+              ))}
             </div>
           </div>
         </CardContent>
