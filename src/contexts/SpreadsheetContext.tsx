@@ -46,6 +46,25 @@ export interface BusinessPeriodData {
   periodMonths: string;
 }
 
+export interface AssetData {
+  liquidAssets: string;
+  realEstate: string;
+  vehicles: string;
+  accountsReceivable: string;
+  otherAssets: string;
+}
+
+export interface LiabilityData {
+  creditCards: string;
+  creditCardsMonthly: string;
+  mortgages: string;
+  mortgagesMonthly: string;
+  vehicleLoans: string;
+  vehicleLoansMonthly: string;
+  otherLiabilities: string;
+  otherLiabilitiesMonthly: string;
+}
+
 interface SpreadsheetContextType {
   // Summary state
   interestRate: string;
@@ -78,6 +97,12 @@ interface SpreadsheetContextType {
   setInterimPeriodDate: (val: string) => void;
   interimPeriodMonths: string;
   setInterimPeriodMonths: (val: string) => void;
+  
+  // Personal Financial Statement state
+  personalAssets: AssetData;
+  setPersonalAssets: (assets: AssetData) => void;
+  personalLiabilities: LiabilityData;
+  setPersonalLiabilities: (liabilities: LiabilityData) => void;
 }
 
 const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(undefined);
@@ -160,6 +185,26 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   const [interimPeriodDate, setInterimPeriodDate] = useState("");
   const [interimPeriodMonths, setInterimPeriodMonths] = useState("12");
 
+  // Personal Financial Statement state
+  const [personalAssets, setPersonalAssets] = useState<AssetData>({
+    liquidAssets: "0",
+    realEstate: "0",
+    vehicles: "0",
+    accountsReceivable: "0",
+    otherAssets: "0"
+  });
+
+  const [personalLiabilities, setPersonalLiabilities] = useState<LiabilityData>({
+    creditCards: "0",
+    creditCardsMonthly: "0",
+    mortgages: "0",
+    mortgagesMonthly: "0",
+    vehicleLoans: "0",
+    vehicleLoansMonthly: "0",
+    otherLiabilities: "0",
+    otherLiabilitiesMonthly: "0"
+  });
+
   return (
     <SpreadsheetContext.Provider value={{
       interestRate, setInterestRate,
@@ -174,6 +219,8 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       businessPeriodLabels, setBusinessPeriodLabels,
       interimPeriodDate, setInterimPeriodDate,
       interimPeriodMonths, setInterimPeriodMonths,
+      personalAssets, setPersonalAssets,
+      personalLiabilities, setPersonalLiabilities,
     }}>
       {children}
     </SpreadsheetContext.Provider>
