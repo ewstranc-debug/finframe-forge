@@ -152,7 +152,6 @@ export const FinancialAnalysis = () => {
     const personalCurrentRatio = totalPersonalLiabilities > 0 ? totalPersonalAssets / totalPersonalLiabilities : 0;
     
     // BUSINESS METRICS - Calculate for each period
-    // Period 0: Full Year 1 (oldest)
     const calcBusinessMetrics = (periodIndex: number) => {
       const period = businessPeriods[periodIndex];
       if (!period) return null;
@@ -204,11 +203,24 @@ export const FinancialAnalysis = () => {
         otherIncome,
         otherExpenses,
         addbacks,
+        periodLabel: businessPeriodLabels[periodIndex] || `Period ${periodIndex + 1}`,
+        periodMonths: period.periodMonths,
       };
     };
     
-    const fullYearMetrics = calcBusinessMetrics(1) || calcBusinessMetrics(0); // Most recent full year
-    const interimMetrics = calcBusinessMetrics(2); // Interim period
+    // Find the last full year-end period (12 months)
+    const lastFYEIndex = businessPeriods.map((p, i) => ({ index: i, months: parseFloat(p.periodMonths) || 0 }))
+      .filter(p => p.months === 12)
+      .sort((a, b) => b.index - a.index)[0]?.index;
+    
+    const fullYearMetrics = lastFYEIndex !== undefined ? calcBusinessMetrics(lastFYEIndex) : null;
+    
+    // Get all interim periods (not full 12 months)
+    const interimPeriodIndices = businessPeriods.map((p, i) => ({ index: i, months: parseFloat(p.periodMonths) || 0 }))
+      .filter(p => p.months > 0 && p.months < 12)
+      .map(p => p.index);
+    
+    const interimMetrics = interimPeriodIndices.map(idx => calcBusinessMetrics(idx)).filter(Boolean);
     
     // Use latest business period for overall business metrics
     const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
@@ -320,7 +332,8 @@ export const FinancialAnalysis = () => {
       },
       dscr: {
         fullYear: fullYearMetrics,
-        interim: interimMetrics,
+        interim: interimMetrics.length > 0 ? interimMetrics[interimMetrics.length - 1] : null, // Latest interim for backward compatibility
+        interimPeriods: interimMetrics,
         annualDebtService,
         proposedAnnualDebtService,
         totalProposedAnnualDebtService,
@@ -663,21 +676,21 @@ export const FinancialAnalysis = () => {
               <div className="mb-8 pt-6 border-t">
                 <h3 className="text-lg font-semibold mb-4 text-primary">Business Financial Metrics</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {/* FULL YEAR DSCR - PROMINENT */}
+                  {/* FULL YEAR END DSCR - PROMINENT */}
                   {ratios.dscr.fullYear && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="space-y-1 cursor-help col-span-2 md:col-span-2 bg-primary/5 p-3 rounded-lg border-2 border-primary/20">
-                          <p className="text-sm text-muted-foreground font-semibold">DSCR - Full Year</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.dscr < 1.0 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                            {ratios.dscr.fullYear.dscr.toFixed(2)}
+                          <p className="text-sm text-muted-foreground font-semibold">DSCR - Full Year End</p>
+                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.existingDSCR < 1.0 ? 'text-destructive' : ratios.dscr.fullYear.existingDSCR < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {ratios.dscr.fullYear.existingDSCR.toFixed(2)}
                           </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | {businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | {ratios.dscr.fullYear.periodLabel}</p>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
                         <div className="space-y-2">
-                          <p className="font-semibold">Full Year DSCR Calculation:</p>
+                          <p className="font-semibold">Full Year End DSCR ({ratios.dscr.fullYear.periodLabel}):</p>
                           <div className="space-y-1 text-sm">
                             <p className="font-medium">EBITDA Components:</p>
                             <p>Revenue: ${ratios.dscr.fullYear.revenue.toLocaleString()}</p>
