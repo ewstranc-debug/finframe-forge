@@ -645,10 +645,10 @@ export const FinancialAnalysis = () => {
                       <TooltipTrigger asChild>
                         <div className="space-y-1 cursor-help col-span-2 md:col-span-2 bg-primary/5 p-3 rounded-lg border-2 border-primary/20">
                           <p className="text-sm text-muted-foreground font-semibold">DSCR - Full Year</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.dscr < 1.25 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.dscr < 1.0 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
                             {ratios.dscr.fullYear.dscr.toFixed(2)}
                           </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.5 | {businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | {businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
@@ -681,10 +681,10 @@ export const FinancialAnalysis = () => {
                       <TooltipTrigger asChild>
                         <div className="space-y-1 cursor-help col-span-2 md:col-span-2 bg-primary/5 p-3 rounded-lg border-2 border-primary/20">
                           <p className="text-sm text-muted-foreground font-semibold">DSCR - Interim</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.interim.dscr < 1.25 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                          <p className={`text-2xl font-bold ${ratios.dscr.interim.dscr < 1.0 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
                             {ratios.dscr.interim.dscr.toFixed(2)}
                           </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.5 | {businessPeriodLabels[2]}</p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | {businessPeriodLabels[2]}</p>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
@@ -1135,18 +1135,34 @@ export const FinancialAnalysis = () => {
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
                         <p className="text-sm text-muted-foreground">Global DSCR</p>
-                        <p className={`text-xl font-bold ${ratios.global.dscr < 1.25 ? 'text-destructive' : ratios.global.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                        <p className={`text-xl font-bold ${ratios.global.dscr < 1.0 ? 'text-destructive' : ratios.global.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
                           {ratios.global.dscr.toFixed(2)}
                         </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.5</p>
+                        <p className="text-xs text-muted-foreground">Target: &gt;1.15</p>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
-                        <p className="font-semibold">Debt Service Coverage Ratio:</p>
-                        <p>Combined EBITDA: ${ratios.business.ebitda.toLocaleString()}</p>
-                        <p>Annual Debt Service: ${ratios.personal.annualDebtService.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">DSCR = EBITDA / Annual Debt Payments</p>
+                        <p className="font-semibold">Global Debt Service Coverage Ratio:</p>
+                        <div className="border-b pb-2 mb-2">
+                          <p className="font-medium text-sm">Business EBITDA:</p>
+                          <p className="text-sm">EBITDA: ${ratios.business.ebitda.toLocaleString()}</p>
+                        </div>
+                        <div className="border-b pb-2 mb-2">
+                          <p className="font-medium text-sm">Personal Cash Flow:</p>
+                          <p className="text-sm">Annual Income: ${ratios.personal.totalIncome.toLocaleString()}</p>
+                          <p className="text-sm">Annual Expenses: ${ratios.personal.totalExpenses.toLocaleString()}</p>
+                          <p className="text-sm">Net Personal Cash Flow: ${(ratios.personal.totalIncome - ratios.personal.totalExpenses).toLocaleString()}</p>
+                        </div>
+                        <div className="border-b pb-2 mb-2">
+                          <p className="font-medium text-sm">Total Available for Debt Service:</p>
+                          <p className="text-sm font-semibold">${(ratios.business.ebitda + (ratios.personal.totalIncome - ratios.personal.totalExpenses)).toLocaleString()}</p>
+                        </div>
+                        <div className="pb-2 mb-2">
+                          <p className="font-medium text-sm">Annual Debt Service:</p>
+                          <p className="text-sm">${ratios.personal.annualDebtService.toLocaleString()}</p>
+                        </div>
+                        <p className="border-t pt-1 mt-1 font-semibold">Global DSCR = Total Available / Annual Debt Service = {ratios.global.dscr.toFixed(2)}</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -1162,10 +1178,10 @@ export const FinancialAnalysis = () => {
                       <TooltipTrigger asChild>
                         <div className="space-y-1 cursor-help p-4 border rounded-lg">
                           <p className="text-sm text-muted-foreground">Full Year DSCR</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.dscr < 1.25 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                          <p className={`text-2xl font-bold ${ratios.dscr.fullYear.dscr < 1.0 ? 'text-destructive' : ratios.dscr.fullYear.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
                             {ratios.dscr.fullYear.dscr.toFixed(2)}
                           </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.5 | Period: {businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | Period: {businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
@@ -1199,10 +1215,10 @@ export const FinancialAnalysis = () => {
                       <TooltipTrigger asChild>
                         <div className="space-y-1 cursor-help p-4 border rounded-lg">
                           <p className="text-sm text-muted-foreground">Interim Period DSCR</p>
-                          <p className={`text-2xl font-bold ${ratios.dscr.interim.dscr < 1.25 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.5 ? 'text-yellow-600' : 'text-green-600'}`}>
+                          <p className={`text-2xl font-bold ${ratios.dscr.interim.dscr < 1.0 ? 'text-destructive' : ratios.dscr.interim.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
                             {ratios.dscr.interim.dscr.toFixed(2)}
                           </p>
-                          <p className="text-xs text-muted-foreground">Target: &gt;1.5 | Period: {businessPeriodLabels[2]}</p>
+                          <p className="text-xs text-muted-foreground">Target: &gt;1.15 | Period: {businessPeriodLabels[2]}</p>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm">
