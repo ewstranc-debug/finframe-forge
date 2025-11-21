@@ -1002,6 +1002,7 @@ export const FinancialAnalysis = () => {
                   )}
                 </div>
 
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
