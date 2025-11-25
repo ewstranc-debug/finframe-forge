@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, AlertCircle, Printer } from "lucide-react";
+import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
+import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
 
 export const FinancialAnalysis = () => {
   const {
@@ -29,6 +31,8 @@ export const FinancialAnalysis = () => {
   } = useSpreadsheet();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [dscrModalOpen, setDscrModalOpen] = useState(false);
+  const [selectedDscrData, setSelectedDscrData] = useState<any>(null);
 
   // Calculate income trends
   const incomeData = personalPeriods.map((period, index) => {
@@ -565,6 +569,16 @@ export const FinancialAnalysis = () => {
     window.print();
   };
 
+  const handleExportPDF = () => {
+    exportToPDF(ratios);
+    toast.success("PDF exported successfully");
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({ ratios, personalPeriods, businessPeriods, personalPeriodLabels, businessPeriodLabels, personalAssets, personalLiabilities });
+    toast.success("Excel file exported successfully");
+  };
+
   const ratios = calculateFinancialRatios();
 
   return (
@@ -604,19 +618,19 @@ export const FinancialAnalysis = () => {
         <div className="flex justify-between items-center mb-4 no-print">
           <h2 className="text-2xl font-bold">Financial Analysis & Insights</h2>
           <div className="flex gap-2">
-            <Button 
-              onClick={handlePrint}
-              variant="outline"
-              className="gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              Print Report
+            <Button onClick={handleExportPDF} variant="outline" className="gap-2">
+              <FileDown className="h-4 w-4" />
+              Export PDF
             </Button>
-            <Button 
-              onClick={generateAnalysis}
-              disabled={isLoading}
-              className="gap-2"
-            >
+            <Button onClick={handleExportExcel} variant="outline" className="gap-2">
+              <FileSpreadsheet className="h-4 w-4" />
+              Export Excel
+            </Button>
+            <Button onClick={handlePrint} variant="outline" className="gap-2">
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+            <Button onClick={generateAnalysis} disabled={isLoading} className="gap-2">
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -916,7 +930,15 @@ export const FinancialAnalysis = () => {
                   {/* GLOBAL DSCR - FULL YEAR END */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help bg-primary/5 p-3 rounded-lg border-2 border-primary/30">
+                      <div 
+                        className="space-y-1 cursor-pointer bg-primary/5 p-3 rounded-lg border-2 border-primary/30 hover:bg-primary/10 transition-colors"
+                        onClick={() => {
+                          if (ratios.dscr.globalFullYear && ratios.dscr.globalFullYear.dscr > 0) {
+                            setSelectedDscrData(ratios.dscr.globalFullYear);
+                            setDscrModalOpen(true);
+                          }
+                        }}
+                      >
                         <p className="text-sm text-muted-foreground font-semibold">Global DSCR - FYE</p>
                         <p
                           className={`text-2xl font-bold ${
@@ -958,7 +980,15 @@ export const FinancialAnalysis = () => {
                   {/* GLOBAL DSCR - INTERIM PERIOD */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help bg-accent/5 p-3 rounded-lg border border-accent/30">
+                      <div 
+                        className="space-y-1 cursor-pointer bg-accent/5 p-3 rounded-lg border border-accent/30 hover:bg-accent/10 transition-colors"
+                        onClick={() => {
+                          if (ratios.dscr.globalInterim && ratios.dscr.globalInterim.dscr > 0) {
+                            setSelectedDscrData(ratios.dscr.globalInterim);
+                            setDscrModalOpen(true);
+                          }
+                        }}
+                      >
                         <p className="text-sm text-muted-foreground font-semibold">Global DSCR - Interim</p>
                         <p
                           className={`text-2xl font-bold ${

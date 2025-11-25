@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 // Types for all data structures
 export interface UseOfFunds {
@@ -172,18 +173,21 @@ interface SpreadsheetContextType {
   // Financial Analysis state
   financialAnalysis: string;
   setFinancialAnalysis: (analysis: string) => void;
+  
+  // Save status
+  saveStatus: 'saved' | 'saving' | 'error';
 }
 
 const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(undefined);
 
 export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
-  // Summary state
-  const [interestRate, setInterestRate] = useState("0");
-  const [termMonths, setTermMonths] = useState("120");
-  const [guaranteePercent, setGuaranteePercent] = useState("75");
-  const [injectionEquity, setInjectionEquity] = useState("0");
-  const [equityPercentage, setEquityPercentage] = useState("0");
-  const [uses, setUses] = useState<UseOfFunds[]>([
+  // Use localStorage for all state with auto-save
+  const [interestRate, setInterestRate, interestRateStatus] = useLocalStorage("financialTool_interestRate", "0");
+  const [termMonths, setTermMonths, termMonthsStatus] = useLocalStorage("financialTool_termMonths", "120");
+  const [guaranteePercent, setGuaranteePercent, guaranteePercentStatus] = useLocalStorage("financialTool_guaranteePercent", "75");
+  const [injectionEquity, setInjectionEquity, injectionEquityStatus] = useLocalStorage("financialTool_injectionEquity", "0");
+  const [equityPercentage, setEquityPercentage, equityPercentageStatus] = useLocalStorage("financialTool_equityPercentage", "0");
+  const [uses, setUses, usesStatus] = useLocalStorage<UseOfFunds[]>("financialTool_uses", [
     { id: "1", description: "RE Purchase", amount: "0" },
     { id: "2", description: "Refinance", amount: "0" },
     { id: "3", description: "Working Capital", amount: "0" },
@@ -195,7 +199,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   ]);
 
   // Personal Financials state
-  const [personalPeriods, setPersonalPeriods] = useState<PersonalPeriodData[]>([
+  const [personalPeriods, setPersonalPeriods, personalPeriodsStatus] = useLocalStorage<PersonalPeriodData[]>("financialTool_personalPeriods", [
     { 
       salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
       costOfLiving: "0", personalTaxes: "0",
@@ -215,10 +219,10 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
     }
   ]);
-  const [personalPeriodLabels, setPersonalPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025"]);
+  const [personalPeriodLabels, setPersonalPeriodLabels, personalPeriodLabelsStatus] = useLocalStorage("financialTool_personalPeriodLabels", ["12/31/2023", "12/31/2024", "12/31/2025"]);
 
   // Business Financials state
-  const [businessPeriods, setBusinessPeriods] = useState<BusinessPeriodData[]>([
+  const [businessPeriods, setBusinessPeriods, businessPeriodsStatus] = useLocalStorage<BusinessPeriodData[]>("financialTool_businessPeriods", [
     { 
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
@@ -248,14 +252,14 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       periodDate: "", periodMonths: "12"
     }
   ]);
-  const [businessPeriodLabels, setBusinessPeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+  const [businessPeriodLabels, setBusinessPeriodLabels, businessPeriodLabelsStatus] = useLocalStorage("financialTool_businessPeriodLabels", ["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
   // Interim period settings (kept for backward compatibility but now handled per-period)
-  const [interimPeriodDate, setInterimPeriodDate] = useState("");
-  const [interimPeriodMonths, setInterimPeriodMonths] = useState("12");
+  const [interimPeriodDate, setInterimPeriodDate, interimPeriodDateStatus] = useLocalStorage("financialTool_interimPeriodDate", "");
+  const [interimPeriodMonths, setInterimPeriodMonths, interimPeriodMonthsStatus] = useLocalStorage("financialTool_interimPeriodMonths", "12");
 
   // Personal Financial Statement state
-  const [personalAssets, setPersonalAssets] = useState<AssetData>({
+  const [personalAssets, setPersonalAssets, personalAssetsStatus] = useLocalStorage<AssetData>("financialTool_personalAssets", {
     liquidAssets: "0",
     realEstate: "0",
     vehicles: "0",
@@ -263,7 +267,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     otherAssets: "0"
   });
 
-  const [personalLiabilities, setPersonalLiabilities] = useState<LiabilityData>({
+  const [personalLiabilities, setPersonalLiabilities, personalLiabilitiesStatus] = useLocalStorage<LiabilityData>("financialTool_personalLiabilities", {
     creditCards: "0",
     creditCardsMonthly: "0",
     mortgages: "0",
@@ -275,12 +279,12 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   });
 
   // Existing Debts state
-  const [debts, setDebts] = useState<Debt[]>([
+  const [debts, setDebts, debtsStatus] = useLocalStorage<Debt[]>("financialTool_debts", [
     { id: "1", creditor: "Creditor 1", balance: "0", payment: "0", rate: "0", term: "0" }
   ]);
 
   // Affiliate Financials state
-  const [affiliateEntities, setAffiliateEntities] = useState<AffiliateEntity[]>([
+  const [affiliateEntities, setAffiliateEntities, affiliateEntitiesStatus] = useLocalStorage<AffiliateEntity[]>("financialTool_affiliateEntities", [
     { 
       id: "1", 
       name: "Affiliate 1", 
@@ -298,19 +302,33 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       ]
     }
   ]);
-  const [affiliatePeriodLabels, setAffiliatePeriodLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+  const [affiliatePeriodLabels, setAffiliatePeriodLabels, affiliatePeriodLabelsStatus] = useLocalStorage("financialTool_affiliatePeriodLabels", ["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
   // Business Balance Sheet state
-  const [businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods] = useState<BusinessBalanceSheetPeriodData[]>([
+  const [businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods, businessBalanceSheetPeriodsStatus] = useLocalStorage<BusinessBalanceSheetPeriodData[]>("financialTool_businessBalanceSheetPeriods", [
     { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
     { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
     { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
     { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" }
   ]);
-  const [businessBalanceSheetLabels, setBusinessBalanceSheetLabels] = useState(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+  const [businessBalanceSheetLabels, setBusinessBalanceSheetLabels, businessBalanceSheetLabelsStatus] = useLocalStorage("financialTool_businessBalanceSheetLabels", ["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
   // Financial Analysis state
-  const [financialAnalysis, setFinancialAnalysis] = useState("");
+  const [financialAnalysis, setFinancialAnalysis, financialAnalysisStatus] = useLocalStorage("financialTool_financialAnalysis", "");
+  
+  // Calculate overall save status
+  const allStatuses = [
+    interestRateStatus, termMonthsStatus, guaranteePercentStatus, injectionEquityStatus, 
+    equityPercentageStatus, usesStatus, personalPeriodsStatus, personalPeriodLabelsStatus,
+    businessPeriodsStatus, businessPeriodLabelsStatus, interimPeriodDateStatus, interimPeriodMonthsStatus,
+    personalAssetsStatus, personalLiabilitiesStatus, debtsStatus, affiliateEntitiesStatus,
+    affiliatePeriodLabelsStatus, businessBalanceSheetPeriodsStatus, businessBalanceSheetLabelsStatus,
+    financialAnalysisStatus
+  ];
+  
+  const saveStatus: 'saved' | 'saving' | 'error' = 
+    allStatuses.some(s => s === 'error') ? 'error' :
+    allStatuses.some(s => s === 'saving') ? 'saving' : 'saved';
 
   return (
     <SpreadsheetContext.Provider value={{
@@ -334,6 +352,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods,
       businessBalanceSheetLabels, setBusinessBalanceSheetLabels,
       financialAnalysis, setFinancialAnalysis,
+      saveStatus,
     }}>
       {children}
     </SpreadsheetContext.Provider>
