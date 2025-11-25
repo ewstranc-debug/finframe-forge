@@ -579,7 +579,18 @@ export const FinancialAnalysis = () => {
 
   const handleExportPDF = () => {
     try {
-      exportToPDF(ratios);
+      exportToPDF({ 
+        ratios, 
+        personalPeriods, 
+        businessPeriods, 
+        personalPeriodLabels, 
+        businessPeriodLabels, 
+        personalAssets, 
+        personalLiabilities,
+        debts,
+        uses,
+        financialAnalysis,
+      });
       toast.success("PDF exported successfully");
     } catch (error) {
       console.error("Export error:", error);
@@ -599,6 +610,7 @@ export const FinancialAnalysis = () => {
         personalLiabilities,
         debts,
         uses,
+        financialAnalysis,
       });
       toast.success("Excel file exported successfully");
     } catch (error) {
