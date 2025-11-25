@@ -323,13 +323,21 @@ export const FinancialAnalysis = () => {
     const loanAnnualDebtService = calculateLoanAnnualDebtService();
     
     const calculateGlobalDscrForPeriod = (businessPeriodIndex?: number) => {
-      if (businessPeriodIndex === undefined) return null;
+      if (businessPeriodIndex === undefined) {
+        return { dscr: 0, periodLabel: 'N/A', periodMonths: '0', annualDebtService: 0, netCashAvailable: 0 };
+      }
       
       const personalPeriodIndex = businessPeriodIndex < personalPeriods.length ? businessPeriodIndex : personalPeriods.length - 1;
       const businessPeriod = businessPeriods[businessPeriodIndex];
       const personalPeriod = personalPeriods[personalPeriodIndex];
       
-      if (!businessPeriod || !personalPeriod || loanAnnualDebtService <= 0) return null;
+      if (!businessPeriod || !personalPeriod) {
+        return { dscr: 0, periodLabel: businessPeriodLabels[businessPeriodIndex] || 'N/A', periodMonths: '0', annualDebtService: 0, netCashAvailable: 0 };
+      }
+      
+      if (loanAnnualDebtService <= 0) {
+        return { dscr: 0, periodLabel: businessPeriodLabels[businessPeriodIndex] || `Period ${businessPeriodIndex + 1}`, periodMonths: businessPeriod.periodMonths, annualDebtService: 0, netCashAvailable: 0 };
+      }
       
       const months = parseFloat(businessPeriod.periodMonths) || 12;
       const annualizationFactor = months > 0 ? 12 / months : 1;
@@ -789,220 +797,209 @@ export const FinancialAnalysis = () => {
               {/* BUSINESS METRICS */}
               <div className="mb-8 pt-6 border-t">
                 <h3 className="text-lg font-semibold mb-4 text-primary">Business Financial Metrics</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* DSCR Cards - 4 Card Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   {/* BUSINESS DSCR - FULL YEAR END */}
-                  {ratios.dscr.fullYear && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="space-y-1 cursor-help bg-primary/5 p-3 rounded-lg border-2 border-primary/20">
-                          <p className="text-sm text-muted-foreground font-semibold">Business DSCR - Full Year End</p>
-                          <p
-                            className={`text-2xl font-bold ${
-                              ratios.dscr.fullYear.existingDSCR < 1.0
-                                ? "text-destructive"
-                                : ratios.dscr.fullYear.existingDSCR < 1.15
-                                ? "text-yellow-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {ratios.dscr.fullYear.existingDSCR.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Target: &gt;1.15 | {ratios.dscr.fullYear.periodLabel}
-                          </p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
-                        <div className="space-y-2">
-                          <p className="font-semibold">
-                            Business DSCR ({ratios.dscr.fullYear.periodLabel}):
-                          </p>
-                          <div className="space-y-1 text-sm">
-                            <p className="font-medium">EBITDA Components:</p>
-                            <p>Revenue: ${ratios.dscr.fullYear.revenue.toLocaleString()}</p>
-                            <p>+ Other Income: ${ratios.dscr.fullYear.otherIncome.toLocaleString()}</p>
-                            <p>- COGS: ${ratios.dscr.fullYear.cogs.toLocaleString()}</p>
-                            <p>- Operating Expenses: ${ratios.dscr.fullYear.opEx.toLocaleString()}</p>
-                            <p>- Rent: ${ratios.dscr.fullYear.rentExpense.toLocaleString()}</p>
-                            <p>- Officers Comp: ${ratios.dscr.fullYear.officersComp.toLocaleString()}</p>
-                            <p>- Other Expenses: ${ratios.dscr.fullYear.otherExpenses.toLocaleString()}</p>
-                            <p>+ Addbacks: ${ratios.dscr.fullYear.addbacks.toLocaleString()}</p>
-                            <p className="font-semibold border-t pt-1 mt-1">
-                              = EBITDA: ${ratios.dscr.fullYear.ebitda.toLocaleString()}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="space-y-1 cursor-help bg-primary/5 p-3 rounded-lg border-2 border-primary/20">
+                        <p className="text-sm text-muted-foreground font-semibold">Business DSCR - FYE</p>
+                        <p
+                          className={`text-2xl font-bold ${
+                            !ratios.dscr.fullYear || ratios.dscr.fullYear.existingDSCR === 0
+                              ? "text-muted-foreground"
+                              : ratios.dscr.fullYear.existingDSCR < 1.0
+                              ? "text-destructive"
+                              : ratios.dscr.fullYear.existingDSCR < 1.15
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {ratios.dscr.fullYear ? ratios.dscr.fullYear.existingDSCR.toFixed(2) : "N/A"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Target: &gt;1.15 | {ratios.dscr.fullYear?.periodLabel || "No Data"}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <div className="space-y-2">
+                        {ratios.dscr.fullYear ? (
+                          <>
+                            <p className="font-semibold">Business DSCR ({ratios.dscr.fullYear.periodLabel}):</p>
+                            <div className="space-y-1 text-sm">
+                              <p className="font-medium">EBITDA Components:</p>
+                              <p>Revenue: ${ratios.dscr.fullYear.revenue.toLocaleString()}</p>
+                              <p>+ Other Income: ${ratios.dscr.fullYear.otherIncome.toLocaleString()}</p>
+                              <p>- COGS: ${ratios.dscr.fullYear.cogs.toLocaleString()}</p>
+                              <p>- Operating Expenses: ${ratios.dscr.fullYear.opEx.toLocaleString()}</p>
+                              <p>- Rent: ${ratios.dscr.fullYear.rentExpense.toLocaleString()}</p>
+                              <p>- Officers Comp: ${ratios.dscr.fullYear.officersComp.toLocaleString()}</p>
+                              <p>- Other Expenses: ${ratios.dscr.fullYear.otherExpenses.toLocaleString()}</p>
+                              <p>+ Addbacks: ${ratios.dscr.fullYear.addbacks.toLocaleString()}</p>
+                              <p className="font-semibold border-t pt-1 mt-1">
+                                = EBITDA: ${ratios.dscr.fullYear.ebitda.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="space-y-1 text-sm border-t pt-2">
+                              <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                            </div>
+                            <p className="font-semibold border-t pt-2 mt-2">
+                              DSCR = EBITDA / Annual Debt Service = {ratios.dscr.fullYear.dscr.toFixed(2)}
                             </p>
-                          </div>
-                          <div className="space-y-1 text-sm border-t pt-2">
-                            <p className="font-medium">
-                              Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}
-                            </p>
-                          </div>
-                          <p className="font-semibold border-t pt-2 mt-2">
-                            DSCR = EBITDA / Annual Debt Service = {" "}
-                            {ratios.dscr.fullYear.dscr.toFixed(2)}
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                          </>
+                        ) : (
+                          <p>Complete business financials to calculate Business DSCR for full year end.</p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
 
                   {/* BUSINESS DSCR - INTERIM PERIOD */}
-                  {ratios.dscr.interim && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="space-y-1 cursor-help bg-secondary/5 p-3 rounded-lg border border-secondary/20">
-                          <p className="text-sm text-muted-foreground font-semibold">
-                            Business DSCR - Interim Period
-                          </p>
-                          <p
-                            className={`text-2xl font-bold ${
-                              ratios.dscr.interim.existingDSCR < 1.0
-                                ? "text-destructive"
-                                : ratios.dscr.interim.existingDSCR < 1.15
-                                ? "text-yellow-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {ratios.dscr.interim.existingDSCR.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Target: &gt;1.15 | {ratios.dscr.interim.periodLabel} ({ratios.dscr.interim.periodMonths}mo)
-                          </p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
-                        <div className="space-y-2">
-                          <p className="font-semibold">
-                            Interim Business DSCR ({ratios.dscr.interim.periodLabel}):
-                          </p>
-                          <div className="space-y-1 text-sm">
-                            <p className="font-medium">EBITDA Components:</p>
-                            <p>Revenue: ${ratios.dscr.interim.revenue.toLocaleString()}</p>
-                            <p>+ Other Income: ${ratios.dscr.interim.otherIncome.toLocaleString()}</p>
-                            <p>- COGS: ${ratios.dscr.interim.cogs.toLocaleString()}</p>
-                            <p>- Operating Expenses: ${ratios.dscr.interim.opEx.toLocaleString()}</p>
-                            <p>- Rent: ${ratios.dscr.interim.rentExpense.toLocaleString()}</p>
-                            <p>- Officers Comp: ${ratios.dscr.interim.officersComp.toLocaleString()}</p>
-                            <p>- Other Expenses: ${ratios.dscr.interim.otherExpenses.toLocaleString()}</p>
-                            <p>+ Addbacks: ${ratios.dscr.interim.addbacks.toLocaleString()}</p>
-                            <p className="font-semibold border-t pt-1 mt-1">
-                              = EBITDA: ${ratios.dscr.interim.ebitda.toLocaleString()}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="space-y-1 cursor-help bg-accent/5 p-3 rounded-lg border border-accent/20">
+                        <p className="text-sm text-muted-foreground font-semibold">Business DSCR - Interim</p>
+                        <p
+                          className={`text-2xl font-bold ${
+                            !ratios.dscr.interim || ratios.dscr.interim.existingDSCR === 0
+                              ? "text-muted-foreground"
+                              : ratios.dscr.interim.existingDSCR < 1.0
+                              ? "text-destructive"
+                              : ratios.dscr.interim.existingDSCR < 1.15
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {ratios.dscr.interim ? ratios.dscr.interim.existingDSCR.toFixed(2) : "N/A"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Target: &gt;1.15 | {ratios.dscr.interim ? `${ratios.dscr.interim.periodLabel} (${ratios.dscr.interim.periodMonths}mo)` : "No Data"}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <div className="space-y-2">
+                        {ratios.dscr.interim ? (
+                          <>
+                            <p className="font-semibold">Interim Business DSCR ({ratios.dscr.interim.periodLabel}):</p>
+                            <div className="space-y-1 text-sm">
+                              <p className="font-medium">EBITDA Components:</p>
+                              <p>Revenue: ${ratios.dscr.interim.revenue.toLocaleString()}</p>
+                              <p>+ Other Income: ${ratios.dscr.interim.otherIncome.toLocaleString()}</p>
+                              <p>- COGS: ${ratios.dscr.interim.cogs.toLocaleString()}</p>
+                              <p>- Operating Expenses: ${ratios.dscr.interim.opEx.toLocaleString()}</p>
+                              <p>- Rent: ${ratios.dscr.interim.rentExpense.toLocaleString()}</p>
+                              <p>- Officers Comp: ${ratios.dscr.interim.officersComp.toLocaleString()}</p>
+                              <p>- Other Expenses: ${ratios.dscr.interim.otherExpenses.toLocaleString()}</p>
+                              <p>+ Addbacks: ${ratios.dscr.interim.addbacks.toLocaleString()}</p>
+                              <p className="font-semibold border-t pt-1 mt-1">
+                                = EBITDA: ${ratios.dscr.interim.ebitda.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="space-y-1 text-sm border-t pt-2">
+                              <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                            </div>
+                            <p className="font-semibold border-t pt-2 mt-2">
+                              DSCR = EBITDA / Annual Debt Service = {ratios.dscr.interim.existingDSCR.toFixed(2)}
                             </p>
-                          </div>
-                          <div className="space-y-1 text-sm border-t pt-2">
-                            <p className="font-medium">
-                              Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}
-                            </p>
-                          </div>
-                          <p className="font-semibold border-t pt-2 mt-2">
-                            DSCR = EBITDA / Annual Debt Service = {" "}
-                            {ratios.dscr.interim.existingDSCR.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Note: Interim period annualized for comparison
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                            <p className="text-xs text-muted-foreground mt-1">Note: Interim period annualized for comparison</p>
+                          </>
+                        ) : (
+                          <p>Enter interim period business financials to calculate interim Business DSCR.</p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
 
                   {/* GLOBAL DSCR - FULL YEAR END */}
-                  {ratios.dscr.globalFullYear && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="space-y-1 cursor-help bg-primary/5 p-3 rounded-lg border border-primary/30">
-                          <p className="text-sm text-muted-foreground font-semibold">
-                            Global DSCR - Full Year End
-                          </p>
-                          <p
-                            className={`text-2xl font-bold ${
-                              ratios.dscr.globalFullYear.dscr < 1.0
-                                ? "text-destructive"
-                                : ratios.dscr.globalFullYear.dscr < 1.15
-                                ? "text-yellow-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {ratios.dscr.globalFullYear.dscr.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Target: &gt;1.15 | {ratios.dscr.globalFullYear.periodLabel}
-                          </p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
-                        <div className="space-y-2 text-sm">
-                          <p className="font-semibold">
-                            Global DSCR ({ratios.dscr.globalFullYear.periodLabel})
-                          </p>
-                          <p>
-                            Combines business cash flow, officer compensation, and personal income to
-                            measure coverage of SBA debt service.
-                          </p>
-                          <p className="border-t pt-1 mt-1">
-                            Net Cash Available: ${ratios.dscr.globalFullYear.netCashAvailable.toLocaleString()}
-                          </p>
-                          <p>
-                            Annual Debt Service: ${ratios.dscr.globalFullYear.annualDebtService.toLocaleString()}
-                          </p>
-                          <p className="font-semibold border-t pt-2 mt-2">
-                            DSCR = Net Cash Available / Annual Debt Service = {" "}
-                            {ratios.dscr.globalFullYear.dscr.toFixed(2)}
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="space-y-1 cursor-help bg-primary/5 p-3 rounded-lg border-2 border-primary/30">
+                        <p className="text-sm text-muted-foreground font-semibold">Global DSCR - FYE</p>
+                        <p
+                          className={`text-2xl font-bold ${
+                            !ratios.dscr.globalFullYear || ratios.dscr.globalFullYear.dscr === 0
+                              ? "text-muted-foreground"
+                              : ratios.dscr.globalFullYear.dscr < 1.0
+                              ? "text-destructive"
+                              : ratios.dscr.globalFullYear.dscr < 1.15
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {ratios.dscr.globalFullYear && ratios.dscr.globalFullYear.dscr > 0 ? ratios.dscr.globalFullYear.dscr.toFixed(2) : "N/A"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Target: &gt;1.15 | {ratios.dscr.globalFullYear?.periodLabel || "No Data"}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <div className="space-y-2 text-sm">
+                        {ratios.dscr.globalFullYear && ratios.dscr.globalFullYear.dscr > 0 ? (
+                          <>
+                            <p className="font-semibold">Global DSCR ({ratios.dscr.globalFullYear.periodLabel})</p>
+                            <p>Combines business cash flow, officer compensation, and personal income to measure coverage of SBA debt service.</p>
+                            <p className="border-t pt-1 mt-1">Net Cash Available: ${ratios.dscr.globalFullYear.netCashAvailable.toLocaleString()}</p>
+                            <p>Annual Debt Service: ${ratios.dscr.globalFullYear.annualDebtService.toLocaleString()}</p>
+                            <p className="font-semibold border-t pt-2 mt-2">
+                              DSCR = Net Cash Available / Annual Debt Service = {ratios.dscr.globalFullYear.dscr.toFixed(2)}
+                            </p>
+                          </>
+                        ) : (
+                          <p>Enter SBA loan details in the Summary tab to calculate Global DSCR.</p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
 
                   {/* GLOBAL DSCR - INTERIM PERIOD */}
-                  {ratios.dscr.globalInterim && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="space-y-1 cursor-help bg-secondary/5 p-3 rounded-lg border border-secondary/30">
-                          <p className="text-sm text-muted-foreground font-semibold">
-                            Global DSCR - Interim Period
-                          </p>
-                          <p
-                            className={`text-2xl font-bold ${
-                              ratios.dscr.globalInterim.dscr < 1.0
-                                ? "text-destructive"
-                                : ratios.dscr.globalInterim.dscr < 1.15
-                                ? "text-yellow-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {ratios.dscr.globalInterim.dscr.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Target: &gt;1.15 | {ratios.dscr.globalInterim.periodLabel} ({ratios.dscr.globalInterim.periodMonths}mo)
-                          </p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
-                        <div className="space-y-2 text-sm">
-                          <p className="font-semibold">
-                            Interim Global DSCR ({ratios.dscr.globalInterim.periodLabel})
-                          </p>
-                          <p>
-                            Uses annualized business cash flow plus personal income to evaluate coverage
-                            of SBA debt service during the interim period.
-                          </p>
-                          <p className="border-t pt-1 mt-1">
-                            Net Cash Available: ${ratios.dscr.globalInterim.netCashAvailable.toLocaleString()}
-                          </p>
-                          <p>
-                            Annual Debt Service: ${ratios.dscr.globalInterim.annualDebtService.toLocaleString()}
-                          </p>
-                          <p className="font-semibold border-t pt-2 mt-2">
-                            DSCR = Net Cash Available / Annual Debt Service = {" "}
-                            {ratios.dscr.globalInterim.dscr.toFixed(2)}
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="space-y-1 cursor-help bg-accent/5 p-3 rounded-lg border border-accent/30">
+                        <p className="text-sm text-muted-foreground font-semibold">Global DSCR - Interim</p>
+                        <p
+                          className={`text-2xl font-bold ${
+                            !ratios.dscr.globalInterim || ratios.dscr.globalInterim.dscr === 0
+                              ? "text-muted-foreground"
+                              : ratios.dscr.globalInterim.dscr < 1.0
+                              ? "text-destructive"
+                              : ratios.dscr.globalInterim.dscr < 1.15
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          {ratios.dscr.globalInterim && ratios.dscr.globalInterim.dscr > 0 ? ratios.dscr.globalInterim.dscr.toFixed(2) : "N/A"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Target: &gt;1.15 | {ratios.dscr.globalInterim ? `${ratios.dscr.globalInterim.periodLabel} (${ratios.dscr.globalInterim.periodMonths}mo)` : "No Data"}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <div className="space-y-2 text-sm">
+                        {ratios.dscr.globalInterim && ratios.dscr.globalInterim.dscr > 0 ? (
+                          <>
+                            <p className="font-semibold">Interim Global DSCR ({ratios.dscr.globalInterim.periodLabel})</p>
+                            <p>Uses annualized business cash flow plus personal income to evaluate coverage of SBA debt service during the interim period.</p>
+                            <p className="border-t pt-1 mt-1">Net Cash Available: ${ratios.dscr.globalInterim.netCashAvailable.toLocaleString()}</p>
+                            <p>Annual Debt Service: ${ratios.dscr.globalInterim.annualDebtService.toLocaleString()}</p>
+                            <p className="font-semibold border-t pt-2 mt-2">
+                              DSCR = Net Cash Available / Annual Debt Service = {ratios.dscr.globalInterim.dscr.toFixed(2)}
+                            </p>
+                          </>
+                        ) : (
+                          <p>Enter SBA loan details and interim period data to calculate interim Global DSCR.</p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {/* Other Business Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
