@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { AlertCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface EditableCellProps {
   value: string | number;
@@ -9,11 +11,28 @@ interface EditableCellProps {
   onEnter?: () => void;
   onTab?: () => void;
   dataField?: string;
+  min?: number;
+  max?: number;
+  required?: boolean;
+  validateFn?: (value: string) => string | null;
 }
 
-export const EditableCell = ({ value, onChange, type = "text", className = "", onEnter, onTab, dataField }: EditableCellProps) => {
+export const EditableCell = ({ 
+  value, 
+  onChange, 
+  type = "text", 
+  className = "", 
+  onEnter, 
+  onTab, 
+  dataField,
+  min,
+  max,
+  required = false,
+  validateFn
+}: EditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value.toString());
+  const [error, setError] = useState<string | null>(null);
 
   const formatValue = (val: string | number) => {
     if (type === "currency") {
@@ -23,7 +42,34 @@ export const EditableCell = ({ value, onChange, type = "text", className = "", o
     return val;
   };
 
+  const validateValue = (val: string): string | null => {
+    if (required && !val) {
+      return "Required";
+    }
+    
+    if ((type === "number" || type === "currency") && val) {
+      const numValue = parseFloat(val);
+      if (isNaN(numValue)) {
+        return "Invalid number";
+      }
+      if (min !== undefined && numValue < min) {
+        return `Min: ${min}`;
+      }
+      if (max !== undefined && numValue > max) {
+        return `Max: ${max}`;
+      }
+    }
+    
+    if (validateFn) {
+      return validateFn(val);
+    }
+    
+    return null;
+  };
+
   const handleBlur = () => {
+    const validationError = validateValue(tempValue);
+    setError(validationError);
     setIsEditing(false);
     onChange(tempValue);
   };
@@ -55,25 +101,54 @@ export const EditableCell = ({ value, onChange, type = "text", className = "", o
 
   if (isEditing) {
     return (
-      <Input
-        type={type === "currency" || type === "number" ? "number" : "text"}
-        value={tempValue}
-        onChange={(e) => setTempValue(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        autoFocus
-        className={`h-9 border-primary ${className}`}
-        data-field={dataField}
-      />
+      <TooltipProvider>
+        <div className="relative">
+          <Input
+            type={type === "currency" || type === "number" ? "number" : "text"}
+            value={tempValue}
+            onChange={(e) => setTempValue(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            className={`h-9 ${error ? "border-destructive" : "border-primary"} ${className}`}
+            data-field={dataField}
+            aria-invalid={!!error}
+          />
+          {error && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertCircle className="h-3 w-3 text-destructive absolute right-2 top-1/2 -translate-y-1/2 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{error}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TooltipProvider>
     );
   }
 
   return (
-    <div
-      onClick={handleClick}
-      className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${className}`}
-    >
-      {formatValue(value)}
-    </div>
+    <TooltipProvider>
+      <div className="relative">
+        <div
+          onClick={handleClick}
+          className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
+        >
+          {formatValue(value)}
+        </div>
+        {error && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertCircle className="h-3 w-3 text-destructive absolute right-2 top-1/2 -translate-y-1/2 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{error}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </TooltipProvider>
   );
 };
