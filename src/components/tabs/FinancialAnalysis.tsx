@@ -1894,6 +1894,25 @@ export const FinancialAnalysis = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* DSCR Breakdown Modal */}
+      {selectedDscrData && (
+        <DSCRBreakdownModal
+          open={dscrModalOpen}
+          onOpenChange={setDscrModalOpen}
+          periodLabel={selectedDscrData.periodLabel || "N/A"}
+          businessEbitda={0}
+          officersComp={0}
+          personalW2Income={0}
+          schedCCashFlow={0}
+          personalExpenses={0}
+          estimatedTaxOnOfficersComp={0}
+          netCashAvailable={selectedDscrData.netCashAvailable || 0}
+          annualDebtService={selectedDscrData.annualDebtService || 0}
+          dscr={selectedDscrData.dscr || 0}
+          periodMonths={selectedDscrData.periodMonths}
+        />
+      )}
       </div>
     </>
   );
