@@ -29,6 +29,9 @@ interface DSCRBreakdownProps {
   amortization?: number;
   section179?: number;
   addbacks?: number;
+  existingDebtPayment?: number;
+  personalDebtPayment?: number;
+  proposedDebtPayment?: number;
 }
 
 export const DSCRBreakdownModal = ({
@@ -52,6 +55,9 @@ export const DSCRBreakdownModal = ({
   amortization = 0,
   section179 = 0,
   addbacks = 0,
+  existingDebtPayment = 0,
+  personalDebtPayment = 0,
+  proposedDebtPayment = 0,
 }: DSCRBreakdownProps) => {
   const months = parseFloat(periodMonths) || 12;
   const isPartialYear = months < 12;
@@ -217,16 +223,34 @@ export const DSCRBreakdownModal = ({
 
           {/* Annual Debt Service */}
           <div className="bg-muted p-4 rounded-lg">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-semibold text-lg">Annual Debt Service (Proposed)</p>
-                <p className="text-sm text-muted-foreground">
-                  Total annual loan payments
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <div>
+                  <p className="font-semibold text-lg">Total Annual Debt Service</p>
+                  <p className="text-sm text-muted-foreground">
+                    All debt obligations (existing + personal + proposed)
+                  </p>
+                </div>
+                <p className="text-2xl font-bold text-foreground">
+                  ${annualDebtService.toLocaleString()}
                 </p>
               </div>
-              <p className="text-2xl font-bold text-foreground">
-                ${annualDebtService.toLocaleString()}
-              </p>
+              
+              {/* Debt Service Breakdown */}
+              <div className="ml-6 space-y-2 text-sm border-t pt-3 mt-2">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Existing Business Debt Payments:</span>
+                  <span className="font-mono">${existingDebtPayment.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Personal Debt Payments:</span>
+                  <span className="font-mono">${personalDebtPayment.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Proposed SBA Loan Payment:</span>
+                  <span className="font-mono">${proposedDebtPayment.toLocaleString()}</span>
+                </div>
+              </div>
             </div>
           </div>
 
