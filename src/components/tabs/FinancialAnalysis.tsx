@@ -341,6 +341,9 @@ export const FinancialAnalysis = () => {
           schedCCashFlow: 0,
           personalExpenses: 0,
           estimatedTaxOnOfficersComp: 0,
+          existingDebtPayment: 0,
+          personalDebtPayment: 0,
+          proposedDebtPayment: 0,
         };
       }
       
@@ -361,82 +364,44 @@ export const FinancialAnalysis = () => {
           schedCCashFlow: 0,
           personalExpenses: 0,
           estimatedTaxOnOfficersComp: 0,
+          existingDebtPayment: 0,
+          personalDebtPayment: 0,
+          proposedDebtPayment: 0,
         };
       }
       
-      if (loanAnnualDebtService <= 0) {
-        return {
-          dscr: 0,
-          periodLabel: businessPeriodLabels[businessPeriodIndex] || `Period ${businessPeriodIndex + 1}`,
-          periodMonths: businessPeriod.periodMonths,
-          annualDebtService: 0,
-          netCashAvailable: 0,
-          businessEbitda: 0,
-          officersComp: 0,
-          personalW2Income: 0,
-          schedCCashFlow: 0,
-          personalExpenses: 0,
-          estimatedTaxOnOfficersComp: 0,
-        };
-      }
-      
-      const months = parseFloat(businessPeriod.periodMonths) || 12;
-      const annualizationFactor = months > 0 ? 12 / months : 1;
-      
-      const businessRevenueTotal = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
-      const businessExpensesTotal = (parseFloat(businessPeriod.cogs) || 0) +
-        (parseFloat(businessPeriod.operatingExpenses) || 0) +
-        (parseFloat(businessPeriod.rentExpense) || 0) +
-        (parseFloat(businessPeriod.otherExpenses) || 0);
-      
-      const businessEbitdaAnnualized = (businessRevenueTotal - businessExpensesTotal) * annualizationFactor;
-      
-      const officersCompAnnualized = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
-      const depreciationAnnualized = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
-      const amortizationAnnualized = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
-      const section179Annualized = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
-      const otherAddbacksAnnualized = (parseFloat(businessPeriod.addbacks) || 0) * annualizationFactor;
-      
-      const businessCashFlow = businessEbitdaAnnualized +
-        depreciationAnnualized +
-        amortizationAnnualized +
-        section179Annualized +
-        otherAddbacksAnnualized;
-      
-      const personalW2Income = (parseFloat(personalPeriod.salary) || 0) +
-        (parseFloat(personalPeriod.bonuses) || 0) +
-        (parseFloat(personalPeriod.investments) || 0) +
-        (parseFloat(personalPeriod.rentalIncome) || 0) +
-        (parseFloat(personalPeriod.otherIncome) || 0);
-      
-      const schedCRevenue = parseFloat(personalPeriod.schedCRevenue) || 0;
-      const schedCExpenses = (parseFloat(personalPeriod.schedCCOGS) || 0) + (parseFloat(personalPeriod.schedCExpenses) || 0);
-      const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) +
-        (parseFloat(personalPeriod.schedCDepreciation) || 0) +
-        (parseFloat(personalPeriod.schedCAmortization) || 0) +
-        (parseFloat(personalPeriod.schedCOther) || 0);
-      const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
-      
-      const totalIncomeAvailable = businessCashFlow + officersCompAnnualized + personalW2Income + schedCCashFlow;
-      
-      const personalExpensesTotal = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
-      const estimatedTaxOnOfficersComp = officersCompAnnualized * 0.30;
-      
-      const netCashAvailable = totalIncomeAvailable - personalExpensesTotal - estimatedTaxOnOfficersComp;
-      const dscr = loanAnnualDebtService > 0 ? netCashAvailable / loanAnnualDebtService : 0;
+      // Use centralized DSCR calculation to ensure consistency with Summary tab
+      const dscrResult = calculateDSCR({
+        businessPeriod,
+        personalPeriod,
+        debts,
+        personalLiabilitiesMonthly: {
+          creditCardsMonthly: personalLiabilities.creditCardsMonthly || '0',
+          mortgagesMonthly: personalLiabilities.mortgagesMonthly || '0',
+          vehicleLoansMonthly: personalLiabilities.vehicleLoansMonthly || '0',
+          otherLiabilitiesMonthly: personalLiabilities.otherLiabilitiesMonthly || '0',
+        },
+        uses,
+        interestRate,
+        termMonths,
+        guaranteePercent,
+      });
       
       return {
-        dscr,
+        dscr: dscrResult.dscr,
         periodLabel: businessPeriodLabels[businessPeriodIndex] || `Period ${businessPeriodIndex + 1}`,
         periodMonths: businessPeriod.periodMonths,
-        annualDebtService: loanAnnualDebtService,
-        netCashAvailable,
-        businessEbitda: businessEbitdaAnnualized,
-        officersComp: officersCompAnnualized,
-        personalW2Income,
-        schedCCashFlow,
-        personalExpenses: personalExpensesTotal,
-        estimatedTaxOnOfficersComp,
+        annualDebtService: dscrResult.annualDebtService,
+        netCashAvailable: dscrResult.netCashAvailable,
+        businessEbitda: dscrResult.businessEbitda,
+        officersComp: dscrResult.officersComp,
+        personalW2Income: dscrResult.personalW2Income,
+        schedCCashFlow: dscrResult.schedCCashFlow,
+        personalExpenses: dscrResult.personalExpenses,
+        estimatedTaxOnOfficersComp: dscrResult.estimatedTaxOnOfficersComp,
+        existingDebtPayment: dscrResult.existingDebtPayment,
+        personalDebtPayment: dscrResult.personalDebtPayment,
+        proposedDebtPayment: dscrResult.proposedDebtPayment,
       };
     };
     
@@ -1985,6 +1950,9 @@ export const FinancialAnalysis = () => {
           annualDebtService={selectedDscrData.annualDebtService || 0}
           dscr={selectedDscrData.dscr || 0}
           periodMonths={selectedDscrData.periodMonths}
+          existingDebtPayment={selectedDscrData.existingDebtPayment || 0}
+          personalDebtPayment={selectedDscrData.personalDebtPayment || 0}
+          proposedDebtPayment={selectedDscrData.proposedDebtPayment || 0}
         />
       )}
       </div>
