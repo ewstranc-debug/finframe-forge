@@ -318,40 +318,54 @@ export const Summary = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">Total Income</p>
+                          <p className="text-sm text-muted-foreground">Business EBITDA</p>
                           <Tooltip>
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
-                              <p className="font-semibold mb-2">Total Income Breakdown:</p>
+                              <p className="font-semibold mb-2">EBITDA Calculation:</p>
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between gap-4">
-                                  <span>Business Cash Flow:</span>
-                                  <span className="font-mono">${lastFullYear.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Revenue + Other Income:</span>
+                                  <span className="font-mono">
+                                    ${((parseFloat(businessPeriods[2].revenue) || 0) + (parseFloat(businessPeriods[2].otherIncome) || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Personal W-2 Income:</span>
-                                  <span className="font-mono">${lastFullYear.personalW2Income.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Less: COGS:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[2].cogs) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Schedule C Net Income:</span>
-                                  <span className="font-mono">${lastFullYear.schedCNetIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Less: Operating Expenses:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[2].operatingExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Officer's Compensation:</span>
-                                  <span className="font-mono">${lastFullYear.officersComp.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Less: Rent Expense:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[2].rentExpense) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Less: Other Expenses:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[2].otherExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
-                                  <span>Total:</span>
-                                  <span className="font-mono">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>EBITDA:</span>
+                                  <span className="font-mono">${lastFullYear.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                 </div>
                               </div>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials + Personal Financials tabs</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Source: Business Financials tab (annualized)</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className="text-2xl font-bold mt-1">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-2xl font-bold mt-1">${lastFullYear.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-green-600" />
                     </div>
@@ -451,8 +465,8 @@ export const Summary = () => {
                               <p className="font-semibold mb-2">DSCR Calculation:</p>
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between gap-4">
-                                  <span>Total Income:</span>
-                                  <span className="font-mono">${lastFullYear.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Net Cash Available:</span>
+                                  <span className="font-mono">${lastFullYear.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
                                   <span>÷ Total Debt Service:</span>
@@ -486,40 +500,54 @@ export const Summary = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">Total Income</p>
+                          <p className="text-sm text-muted-foreground">Business EBITDA</p>
                           <Tooltip>
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
-                              <p className="font-semibold mb-2">Total Income Breakdown:</p>
+                              <p className="font-semibold mb-2">EBITDA Calculation:</p>
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between gap-4">
-                                  <span>Business Cash Flow:</span>
-                                  <span className="font-mono">${interimPeriod.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Revenue + Other Income:</span>
+                                  <span className="font-mono">
+                                    ${((parseFloat(businessPeriods[3].revenue) || 0) + (parseFloat(businessPeriods[3].otherIncome) || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Personal W-2 Income:</span>
-                                  <span className="font-mono">${interimPeriod.personalW2Income.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Less: COGS:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[3].cogs) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Schedule C Net Income:</span>
-                                  <span className="font-mono">${interimPeriod.schedCNetIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Less: Operating Expenses:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[3].operatingExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Officer's Compensation:</span>
-                                  <span className="font-mono">${interimPeriod.officersComp.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Less: Rent Expense:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[3].rentExpense) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                  <span>Less: Other Expenses:</span>
+                                  <span className="font-mono">
+                                    -${(parseFloat(businessPeriods[3].otherExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </span>
                                 </div>
                                 <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
-                                  <span>Total:</span>
-                                  <span className="font-mono">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>EBITDA:</span>
+                                  <span className="font-mono">${interimPeriod.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                 </div>
                               </div>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Business Financials (interim, annualized) + Personal Financials tabs</p>
+                              <p className="text-xs mt-2 text-muted-foreground">Source: Business Financials tab (interim, annualized)</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className="text-2xl font-bold mt-1">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-2xl font-bold mt-1">${interimPeriod.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-green-600" />
                     </div>
@@ -619,8 +647,8 @@ export const Summary = () => {
                               <p className="font-semibold mb-2">DSCR Calculation:</p>
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between gap-4">
-                                  <span>Total Income:</span>
-                                  <span className="font-mono">${interimPeriod.totalIncome.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Net Cash Available:</span>
+                                  <span className="font-mono">${interimPeriod.netCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
                                   <span>÷ Total Debt Service:</span>
