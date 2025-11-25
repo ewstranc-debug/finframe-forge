@@ -3,6 +3,8 @@ import { DollarSign, TrendingUp, TrendingDown, PieChart, Info } from "lucide-rea
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { calculateDSCR } from "@/utils/financialCalculations";
+import { useMemo } from "react";
 
 export const Summary = () => {
   const {
@@ -64,78 +66,50 @@ export const Summary = () => {
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
     
-    const months = parseFloat(businessPeriod.periodMonths) || 12;
-    const annualizationFactor = 12 / months;
+    if (!businessPeriod || !personalPeriod) {
+      return {
+        dscr: 0,
+        totalIncome: 0,
+        netCashFlow: 0,
+        debtService: 0,
+        businessCashFlow: 0,
+        personalW2Income: 0,
+        schedCNetIncome: 0,
+        officersComp: 0,
+        existingDebtPayment: 0,
+        personalDebtPayment: 0,
+        personalExpenses: 0,
+      };
+    }
     
-    const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
-    const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
-                            (parseFloat(businessPeriod.operatingExpenses) || 0) +
-                            (parseFloat(businessPeriod.rentExpense) || 0) +
-                            (parseFloat(businessPeriod.otherExpenses) || 0);
-    const businessEBITDA = (businessRevenue - businessExpenses) * annualizationFactor;
-    
-    const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
-    const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
-    const amortizationAddback = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
-    const section179Addback = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
-    const otherAddbacks = (parseFloat(businessPeriod.addbacks) || 0) * annualizationFactor;
-    
-    const businessCashFlow = businessEBITDA + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
-    
-    const personalW2Income = (parseFloat(personalPeriod.salary) || 0) + 
-                            (parseFloat(personalPeriod.bonuses) || 0) +
-                            (parseFloat(personalPeriod.investments) || 0) +
-                            (parseFloat(personalPeriod.rentalIncome) || 0) +
-                            (parseFloat(personalPeriod.otherIncome) || 0);
-    
-    const schedCRevenue = parseFloat(personalPeriod.schedCRevenue) || 0;
-    const schedCExpenses = (parseFloat(personalPeriod.schedCCOGS) || 0) + (parseFloat(personalPeriod.schedCExpenses) || 0);
-    const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) + 
-                          (parseFloat(personalPeriod.schedCDepreciation) || 0) + 
-                          (parseFloat(personalPeriod.schedCAmortization) || 0) +
-                          (parseFloat(personalPeriod.schedCOther) || 0);
-    const schedCNetIncome = (schedCRevenue - schedCExpenses) + schedCAddbacks;
-    
-    const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCNetIncome;
-    
-    const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
-    const estimatedTaxOnOfficersComp = officersComp * 0.30;
-    
-    const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp;
-    
-    // Calculate existing debt payments
-    const existingDebtPayment = debts.reduce((sum, debt) => {
-      const payment = parseFloat(debt.payment) || 0;
-      return sum + (payment * 12);
-    }, 0);
-    
-    // Calculate personal debt payments from all liability categories
-    const personalDebtPayment = 
-      (parseFloat(personalLiabilities.creditCardsMonthly) || 0) * 12 +
-      (parseFloat(personalLiabilities.mortgagesMonthly) || 0) * 12 +
-      (parseFloat(personalLiabilities.vehicleLoansMonthly) || 0) * 12 +
-      (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0) * 12;
-    
-    const primaryRequest = calculatePrimaryRequest();
-    const fees = calculateSBAFees(primaryRequest);
-    const finalLoanAmount = primaryRequest + fees.upfrontFee;
-    const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
-    const annualDebtService = monthlyPayment * 12;
-    
-    const totalDebtService = annualDebtService + existingDebtPayment + personalDebtPayment;
+    const result = calculateDSCR({
+      businessPeriod,
+      personalPeriod,
+      debts,
+      personalLiabilitiesMonthly: {
+        creditCardsMonthly: personalLiabilities.creditCardsMonthly,
+        mortgagesMonthly: personalLiabilities.mortgagesMonthly,
+        vehicleLoansMonthly: personalLiabilities.vehicleLoansMonthly,
+        otherLiabilitiesMonthly: personalLiabilities.otherLiabilitiesMonthly,
+      },
+      uses,
+      interestRate,
+      termMonths,
+      guaranteePercent,
+    });
     
     return {
-      dscr: totalDebtService > 0 ? netCashAvailable / totalDebtService : 0,
-      totalIncome: totalIncomeAvailable,
-      netCashFlow: netCashAvailable,
-      debtService: totalDebtService,
-      businessCashFlow,
-      personalW2Income,
-      schedCNetIncome,
-      officersComp,
-      existingDebtPayment,
-      personalDebtPayment,
-      personalExpenses,
+      dscr: result.dscr,
+      totalIncome: result.totalIncomeAvailable,
+      netCashFlow: result.netCashAvailable,
+      debtService: result.annualDebtService,
+      businessCashFlow: result.businessEbitda,
+      personalW2Income: result.personalW2Income,
+      schedCNetIncome: result.schedCCashFlow,
+      officersComp: result.officersComp,
+      existingDebtPayment: result.existingDebtPayment,
+      personalDebtPayment: result.personalDebtPayment,
+      personalExpenses: result.personalExpenses,
     };
   };
 
@@ -164,13 +138,19 @@ export const Summary = () => {
   const finalLoanAmount = primaryRequest + fees.upfrontFee;
   const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
   const annualPayment = calculateAnnualPayment(monthlyPayment);
-  const totalSources = finalLoanAmount + parseFloat(injectionEquity);
+  const totalSources = finalLoanAmount + parseFloat(injectionEquity || "0");
   const totalUses = primaryRequest + fees.upfrontFee;
-  const globalDSCR = calculateGlobalDSCR();
   
-  // Calculate metrics for last full year and interim for Financial Overview
-  const lastFullYear = calculateDSCRForPeriod(2, 2);
-  const interimPeriod = calculateDSCRForPeriod(3, 2);
+  // Memoize DSCR calculations for performance
+  const lastFullYear = useMemo(() => calculateDSCRForPeriod(2, 2), [
+    businessPeriods, personalPeriods, debts, personalLiabilities, uses, interestRate, termMonths, guaranteePercent
+  ]);
+  
+  const interimPeriod = useMemo(() => calculateDSCRForPeriod(3, 2), [
+    businessPeriods, personalPeriods, debts, personalLiabilities, uses, interestRate, termMonths, guaranteePercent
+  ]);
+  
+  const globalDSCR = useMemo(() => calculateGlobalDSCR(), [lastFullYear, interimPeriod]);
 
   return (
     <div className="p-6 space-y-6">
@@ -273,7 +253,8 @@ export const Summary = () => {
               <EditableCell
                 value={interestRate}
                 onChange={setInterestRate}
-                type="number"
+                type="interestRate"
+                required
               />
             </div>
             <div>
@@ -281,7 +262,8 @@ export const Summary = () => {
               <EditableCell
                 value={termMonths}
                 onChange={setTermMonths}
-                type="number"
+                type="termMonths"
+                required
               />
             </div>
             <div>
@@ -289,7 +271,8 @@ export const Summary = () => {
               <EditableCell
                 value={guaranteePercent}
                 onChange={setGuaranteePercent}
-                type="number"
+                type="percentage"
+                required
               />
             </div>
             <div>

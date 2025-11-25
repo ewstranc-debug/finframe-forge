@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 interface EditableCellProps {
   value: string | number;
   onChange: (value: string) => void;
-  type?: "text" | "number" | "currency";
+  type?: "text" | "number" | "currency" | "percentage" | "interestRate" | "termMonths" | "periodMonths";
   className?: string;
   onEnter?: () => void;
   onTab?: () => void;
@@ -39,6 +39,10 @@ export const EditableCell = ({
       const num = typeof val === "string" ? parseFloat(val) || 0 : val;
       return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
     }
+    if (type === "percentage" || type === "interestRate") {
+      const num = typeof val === "string" ? parseFloat(val) : val;
+      return isNaN(Number(num)) ? val : `${num}%`;
+    }
     return val;
   };
 
@@ -46,8 +50,33 @@ export const EditableCell = ({
     if (required && !val) {
       return "Required";
     }
-    
-    if ((type === "number" || type === "currency") && val) {
+
+    // Special validation types
+    if (type === "interestRate" || type === "percentage") {
+      const numValue = parseFloat(val);
+      if (val && isNaN(numValue)) {
+        return "Invalid number";
+      }
+      if (numValue < 0 || numValue > 100) {
+        return "Must be 0-100%";
+      }
+    } else if (type === "termMonths") {
+      const numValue = parseFloat(val);
+      if (val && isNaN(numValue)) {
+        return "Invalid number";
+      }
+      if (numValue < 1 || numValue > 600) {
+        return "Must be 1-600";
+      }
+    } else if (type === "periodMonths") {
+      const numValue = parseFloat(val);
+      if (val && isNaN(numValue)) {
+        return "Invalid number";
+      }
+      if (numValue < 1 || numValue > 12) {
+        return "Must be 1-12";
+      }
+    } else if ((type === "number" || type === "currency") && val) {
       const numValue = parseFloat(val);
       if (isNaN(numValue)) {
         return "Invalid number";
@@ -104,7 +133,7 @@ export const EditableCell = ({
       <TooltipProvider>
         <div className="relative">
           <Input
-            type={type === "currency" || type === "number" ? "number" : "text"}
+            type={type === "currency" || type === "number" || type === "percentage" || type === "interestRate" || type === "termMonths" || type === "periodMonths" ? "number" : "text"}
             value={tempValue}
             onChange={(e) => setTempValue(e.target.value)}
             onBlur={handleBlur}

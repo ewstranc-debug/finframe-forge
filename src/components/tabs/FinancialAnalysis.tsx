@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet } from "lucide-react";
@@ -10,6 +10,7 @@ import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
+import { calculateDSCR } from "@/utils/financialCalculations";
 
 export const FinancialAnalysis = () => {
   const {
@@ -328,7 +329,19 @@ export const FinancialAnalysis = () => {
     
     const calculateGlobalDscrForPeriod = (businessPeriodIndex?: number) => {
       if (businessPeriodIndex === undefined) {
-        return { dscr: 0, periodLabel: 'N/A', periodMonths: '0', annualDebtService: 0, netCashAvailable: 0 };
+        return {
+          dscr: 0,
+          periodLabel: 'N/A',
+          periodMonths: '0',
+          annualDebtService: 0,
+          netCashAvailable: 0,
+          businessEbitda: 0,
+          officersComp: 0,
+          personalW2Income: 0,
+          schedCCashFlow: 0,
+          personalExpenses: 0,
+          estimatedTaxOnOfficersComp: 0,
+        };
       }
       
       const personalPeriodIndex = businessPeriodIndex < personalPeriods.length ? businessPeriodIndex : personalPeriods.length - 1;
@@ -336,11 +349,35 @@ export const FinancialAnalysis = () => {
       const personalPeriod = personalPeriods[personalPeriodIndex];
       
       if (!businessPeriod || !personalPeriod) {
-        return { dscr: 0, periodLabel: businessPeriodLabels[businessPeriodIndex] || 'N/A', periodMonths: '0', annualDebtService: 0, netCashAvailable: 0 };
+        return {
+          dscr: 0,
+          periodLabel: businessPeriodLabels[businessPeriodIndex] || 'N/A',
+          periodMonths: '0',
+          annualDebtService: 0,
+          netCashAvailable: 0,
+          businessEbitda: 0,
+          officersComp: 0,
+          personalW2Income: 0,
+          schedCCashFlow: 0,
+          personalExpenses: 0,
+          estimatedTaxOnOfficersComp: 0,
+        };
       }
       
       if (loanAnnualDebtService <= 0) {
-        return { dscr: 0, periodLabel: businessPeriodLabels[businessPeriodIndex] || `Period ${businessPeriodIndex + 1}`, periodMonths: businessPeriod.periodMonths, annualDebtService: 0, netCashAvailable: 0 };
+        return {
+          dscr: 0,
+          periodLabel: businessPeriodLabels[businessPeriodIndex] || `Period ${businessPeriodIndex + 1}`,
+          periodMonths: businessPeriod.periodMonths,
+          annualDebtService: 0,
+          netCashAvailable: 0,
+          businessEbitda: 0,
+          officersComp: 0,
+          personalW2Income: 0,
+          schedCCashFlow: 0,
+          personalExpenses: 0,
+          estimatedTaxOnOfficersComp: 0,
+        };
       }
       
       const months = parseFloat(businessPeriod.periodMonths) || 12;
@@ -394,6 +431,12 @@ export const FinancialAnalysis = () => {
         periodMonths: businessPeriod.periodMonths,
         annualDebtService: loanAnnualDebtService,
         netCashAvailable,
+        businessEbitda: businessEbitdaAnnualized,
+        officersComp: officersCompAnnualized,
+        personalW2Income,
+        schedCCashFlow,
+        personalExpenses: personalExpensesTotal,
+        estimatedTaxOnOfficersComp,
       };
     };
     
@@ -570,16 +613,47 @@ export const FinancialAnalysis = () => {
   };
 
   const handleExportPDF = () => {
-    exportToPDF(ratios);
-    toast.success("PDF exported successfully");
+    try {
+      exportToPDF(ratios);
+      toast.success("PDF exported successfully");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export PDF");
+    }
   };
 
   const handleExportExcel = () => {
-    exportToExcel({ ratios, personalPeriods, businessPeriods, personalPeriodLabels, businessPeriodLabels, personalAssets, personalLiabilities });
-    toast.success("Excel file exported successfully");
+    try {
+      exportToExcel({ 
+        ratios, 
+        personalPeriods, 
+        businessPeriods, 
+        personalPeriodLabels, 
+        businessPeriodLabels, 
+        personalAssets, 
+        personalLiabilities,
+        debts,
+        uses,
+      });
+      toast.success("Excel file exported successfully");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export Excel");
+    }
   };
 
-  const ratios = calculateFinancialRatios();
+  const ratios = useMemo(() => calculateFinancialRatios(), [
+    personalPeriods,
+    personalAssets,
+    personalLiabilities,
+    businessPeriods,
+    businessBalanceSheetPeriods,
+    debts,
+    uses,
+    interestRate,
+    termMonths,
+    guaranteePercent,
+  ]);
 
   return (
     <>
@@ -1901,12 +1975,12 @@ export const FinancialAnalysis = () => {
           open={dscrModalOpen}
           onOpenChange={setDscrModalOpen}
           periodLabel={selectedDscrData.periodLabel || "N/A"}
-          businessEbitda={0}
-          officersComp={0}
-          personalW2Income={0}
-          schedCCashFlow={0}
-          personalExpenses={0}
-          estimatedTaxOnOfficersComp={0}
+          businessEbitda={selectedDscrData.businessEbitda || 0}
+          officersComp={selectedDscrData.officersComp || 0}
+          personalW2Income={selectedDscrData.personalW2Income || 0}
+          schedCCashFlow={selectedDscrData.schedCCashFlow || 0}
+          personalExpenses={selectedDscrData.personalExpenses || 0}
+          estimatedTaxOnOfficersComp={selectedDscrData.estimatedTaxOnOfficersComp || 0}
           netCashAvailable={selectedDscrData.netCashAvailable || 0}
           annualDebtService={selectedDscrData.annualDebtService || 0}
           dscr={selectedDscrData.dscr || 0}
