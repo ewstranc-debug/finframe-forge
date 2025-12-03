@@ -1,10 +1,23 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, TrendingDown, PieChart, Info } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw } from "lucide-react";
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateDSCR } from "@/utils/financialCalculations";
 import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 
 export const Summary = () => {
   const {
@@ -19,7 +32,16 @@ export const Summary = () => {
     interimPeriodMonths,
     debts,
     personalLiabilities,
+    resetAll,
   } = useSpreadsheet();
+
+  const handleReset = () => {
+    resetAll();
+    toast({
+      title: "Data Reset",
+      description: "All financial data has been reset to default values.",
+    });
+  };
 
   const updateUse = (id: string, field: "description" | "amount", value: string) => {
     setUses(uses.map(u => u.id === id ? { ...u, [field]: value } : u));
@@ -154,6 +176,43 @@ export const Summary = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <div className="flex justify-end">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset All Data
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reset All Financial Data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will clear all entered data across all tabs including:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Sources & Uses of Funds</li>
+                  <li>Loan Terms</li>
+                  <li>Personal Financials</li>
+                  <li>Business Financials</li>
+                  <li>Personal Financial Statement</li>
+                  <li>Existing Debts</li>
+                  <li>Affiliate Financials</li>
+                  <li>Business Balance Sheet</li>
+                  <li>AI Analysis</li>
+                </ul>
+                <p className="mt-2 font-medium">This action cannot be undone.</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleReset} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Reset All Data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Sources & Uses of Funds</CardTitle>
