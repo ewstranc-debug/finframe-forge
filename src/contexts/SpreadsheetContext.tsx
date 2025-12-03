@@ -176,6 +176,9 @@ interface SpreadsheetContextType {
   
   // Save status
   saveStatus: 'saved' | 'saving' | 'error';
+  
+  // Reset function
+  resetAll: () => void;
 }
 
 const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(undefined);
@@ -330,6 +333,96 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     allStatuses.some(s => s === 'error') ? 'error' :
     allStatuses.some(s => s === 'saving') ? 'saving' : 'saved';
 
+  // Reset all data to initial defaults
+  const resetAll = () => {
+    // Summary defaults
+    setInterestRate("0");
+    setTermMonths("120");
+    setGuaranteePercent("75");
+    setInjectionEquity("0");
+    setEquityPercentage("0");
+    setUses([
+      { id: "1", description: "RE Purchase", amount: "0" },
+      { id: "2", description: "Refinance", amount: "0" },
+      { id: "3", description: "Working Capital", amount: "0" },
+      { id: "4", description: "Inventory", amount: "0" },
+      { id: "5", description: "Business Acquisition", amount: "0" },
+      { id: "6", description: "Construction", amount: "0" },
+      { id: "7", description: "Contingency", amount: "0" },
+      { id: "8", description: "Interest Reserve", amount: "0" },
+    ]);
+
+    // Personal Financials defaults
+    const defaultPersonalPeriod: PersonalPeriodData = { 
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      costOfLiving: "0", personalTaxes: "0",
+      schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+    };
+    setPersonalPeriods([defaultPersonalPeriod, defaultPersonalPeriod, defaultPersonalPeriod]);
+    setPersonalPeriodLabels(["12/31/2023", "12/31/2024", "12/31/2025"]);
+
+    // Business Financials defaults
+    const defaultBusinessPeriod: BusinessPeriodData = { 
+      revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
+      depreciation: "0", amortization: "0", section179: "0", interest: "0",
+      otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: "", periodMonths: "12"
+    };
+    setBusinessPeriods([defaultBusinessPeriod, defaultBusinessPeriod, defaultBusinessPeriod, defaultBusinessPeriod]);
+    setBusinessPeriodLabels(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+
+    // Interim period defaults
+    setInterimPeriodDate("");
+    setInterimPeriodMonths("12");
+
+    // Personal Financial Statement defaults
+    setPersonalAssets({
+      liquidAssets: "0",
+      realEstate: "0",
+      vehicles: "0",
+      accountsReceivable: "0",
+      otherAssets: "0"
+    });
+    setPersonalLiabilities({
+      creditCards: "0",
+      creditCardsMonthly: "0",
+      mortgages: "0",
+      mortgagesMonthly: "0",
+      vehicleLoans: "0",
+      vehicleLoansMonthly: "0",
+      otherLiabilities: "0",
+      otherLiabilitiesMonthly: "0"
+    });
+
+    // Existing Debts defaults
+    setDebts([
+      { id: "1", creditor: "Creditor 1", balance: "0", payment: "0", rate: "0", term: "0" }
+    ]);
+
+    // Affiliate Financials defaults
+    const defaultAffiliateIncome: AffiliateIncomeData = { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" };
+    const defaultAffiliateBalance: AffiliateBalanceSheetData = { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" };
+    setAffiliateEntities([
+      { 
+        id: "1", 
+        name: "Affiliate 1", 
+        incomePeriods: [defaultAffiliateIncome, defaultAffiliateIncome, defaultAffiliateIncome, defaultAffiliateIncome],
+        balancePeriods: [defaultAffiliateBalance, defaultAffiliateBalance, defaultAffiliateBalance, defaultAffiliateBalance]
+      }
+    ]);
+    setAffiliatePeriodLabels(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+
+    // Business Balance Sheet defaults
+    const defaultBalanceSheetPeriod: BusinessBalanceSheetPeriodData = { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" };
+    setBusinessBalanceSheetPeriods([defaultBalanceSheetPeriod, defaultBalanceSheetPeriod, defaultBalanceSheetPeriod, defaultBalanceSheetPeriod]);
+    setBusinessBalanceSheetLabels(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+
+    // Financial Analysis default
+    setFinancialAnalysis("");
+  };
+
   return (
     <SpreadsheetContext.Provider value={{
       interestRate, setInterestRate,
@@ -353,6 +446,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       businessBalanceSheetLabels, setBusinessBalanceSheetLabels,
       financialAnalysis, setFinancialAnalysis,
       saveStatus,
+      resetAll,
     }}>
       {children}
     </SpreadsheetContext.Provider>
