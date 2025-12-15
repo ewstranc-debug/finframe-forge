@@ -118,14 +118,18 @@ export const EditableCell = ({
     if (e.key === "Enter") {
       e.preventDefault();
       handleBlur();
-      onEnter?.();
+      // Defer navigation until after React re-renders the DOM
+      if (onEnter) {
+        setTimeout(onEnter, 0);
+      }
       return;
     }
 
     if (e.key === "Tab" && !e.shiftKey && onTab) {
       e.preventDefault();
       handleBlur();
-      onTab();
+      // Defer navigation until after React re-renders the DOM
+      setTimeout(onTab, 0);
     }
   };
 
