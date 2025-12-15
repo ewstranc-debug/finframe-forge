@@ -7,25 +7,54 @@ import { useSpreadsheet, type AffiliateIncomeData as IncomeData, type AffiliateB
 export const AffiliateFinancials = () => {
   const { affiliateEntities: entities, setAffiliateEntities: setEntities, affiliatePeriodLabels: periodLabels, setAffiliatePeriodLabels: setPeriodLabels } = useSpreadsheet();
 
+  const getNavFields = (currentRow: string) => {
+    const incomeFields = ["revenue", "cogs", "operatingExpenses", "depreciation", "amortization", "interest", "taxes"];
+    const balanceFields = [
+      "cash",
+      "accountsReceivable",
+      "inventory",
+      "realEstate",
+      "accumulatedDepreciation",
+      "currentLiabilities",
+      "longTermDebt",
+    ];
+
+    return incomeFields.includes(currentRow) ? incomeFields : balanceFields;
+  };
+
+  const activateCell = (entityId: string, row: string, col: number) => {
+    const el = document.querySelector(`[data-field="${entityId}-${row}-${col}"]`) as HTMLElement | null;
+    if (!el) return;
+    if (el instanceof HTMLInputElement) {
+      el.focus();
+      el.select?.();
+      return;
+    }
+    el.click();
+  };
+
   const focusNextCell = (entityId: string, currentRow: string, currentCol: number) => {
-    const incomeFields = ['revenue', 'cogs', 'operatingExpenses', 'depreciation', 'amortization', 'interest', 'taxes'];
-    const balanceFields = ['cash', 'accountsReceivable', 'inventory', 'realEstate', 'accumulatedDepreciation', 'currentLiabilities', 'longTermDebt'];
-    
-    const isIncomeField = incomeFields.includes(currentRow);
-    const fields = isIncomeField ? incomeFields : balanceFields;
+    const fields = getNavFields(currentRow);
     const currentIndex = fields.indexOf(currentRow);
-    
+
     if (currentIndex < fields.length - 1) {
-      const nextField = fields[currentIndex + 1];
-      const nextInput = document.querySelector(`input[data-field="${entityId}-${nextField}-${currentCol}"]`) as HTMLInputElement;
-      if (nextInput) nextInput.focus();
+      activateCell(entityId, fields[currentIndex + 1], currentCol);
     }
   };
 
   const focusRightCell = (entityId: string, currentRow: string, currentCol: number) => {
-    if (currentCol < 3) {
-      const nextInput = document.querySelector(`input[data-field="${entityId}-${currentRow}-${currentCol + 1}"]`) as HTMLInputElement;
-      if (nextInput) nextInput.focus();
+    const colCount = periodLabels.length;
+
+    // Excel-like wrap: last column -> next row, first column
+    if (currentCol < colCount - 1) {
+      activateCell(entityId, currentRow, currentCol + 1);
+      return;
+    }
+
+    const fields = getNavFields(currentRow);
+    const currentIndex = fields.indexOf(currentRow);
+    if (currentIndex < fields.length - 1) {
+      activateCell(entityId, fields[currentIndex + 1], 0);
     }
   };
 
