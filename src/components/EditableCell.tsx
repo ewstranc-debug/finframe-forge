@@ -118,13 +118,14 @@ export const EditableCell = ({
     if (e.key === "Enter") {
       e.preventDefault();
       handleBlur();
-      if (onEnter) onEnter();
-    } else if (e.key === "Tab" && !e.shiftKey) {
+      onEnter?.();
+      return;
+    }
+
+    if (e.key === "Tab" && !e.shiftKey && onTab) {
+      e.preventDefault();
       handleBlur();
-      if (onTab) {
-        e.preventDefault();
-        onTab();
-      }
+      onTab();
     }
   };
 
@@ -163,6 +164,7 @@ export const EditableCell = ({
       <div className="relative">
         <div
           onClick={handleClick}
+          data-field={dataField}
           className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
         >
           {formatValue(value)}

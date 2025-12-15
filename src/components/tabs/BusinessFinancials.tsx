@@ -33,25 +33,54 @@ export const BusinessFinancials = () => {
     setBusinessPeriodLabels(newLabels);
   };
 
+  const navFields = [
+    "revenue",
+    "cogs",
+    "operatingExpenses",
+    "rentExpense",
+    "officersComp",
+    "depreciation",
+    "amortization",
+    "section179",
+    "interest",
+    "taxes",
+    "otherIncome",
+    "otherExpenses",
+    "addbacks",
+    "m1BookIncome",
+    "m1FedTaxExpense",
+    "m1ExcessDepr",
+    "m1Other",
+  ];
+
+  const activateCell = (field: string, col: number) => {
+    const el = document.querySelector(`[data-field="${field}-${col}"]`) as HTMLElement | null;
+    if (!el) return;
+    if (el instanceof HTMLInputElement) {
+      el.focus();
+      el.select?.();
+      return;
+    }
+    el.click();
+  };
+
   const focusNextCell = (currentRow: string, currentCol: number) => {
-    const fields = [
-      'revenue', 'cogs', 'operatingExpenses', 'rentExpense', 'officersComp', 
-      'depreciation', 'amortization', 'section179', 'interest', 'taxes',
-      'otherIncome', 'otherExpenses', 'addbacks',
-      'm1BookIncome', 'm1FedTaxExpense', 'm1ExcessDepr', 'm1Other'
-    ];
-    const currentIndex = fields.indexOf(currentRow);
-    if (currentIndex < fields.length - 1) {
-      const nextField = fields[currentIndex + 1];
-      const nextInput = document.querySelector(`input[data-field="${nextField}-${currentCol}"]`) as HTMLInputElement;
-      if (nextInput) nextInput.focus();
+    const currentIndex = navFields.indexOf(currentRow);
+    if (currentIndex < navFields.length - 1) {
+      activateCell(navFields[currentIndex + 1], currentCol);
     }
   };
 
   const focusRightCell = (currentRow: string, currentCol: number) => {
+    // Excel-like wrap: last column -> next row, first column
     if (currentCol < businessPeriods.length - 1) {
-      const nextInput = document.querySelector(`input[data-field="${currentRow}-${currentCol + 1}"]`) as HTMLInputElement;
-      if (nextInput) nextInput.focus();
+      activateCell(currentRow, currentCol + 1);
+      return;
+    }
+
+    const currentIndex = navFields.indexOf(currentRow);
+    if (currentIndex < navFields.length - 1) {
+      activateCell(navFields[currentIndex + 1], 0);
     }
   };
 
