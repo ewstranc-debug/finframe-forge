@@ -115,21 +115,87 @@ export const EditableCell = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const defer = (fn: () => void) => {
+      // Double RAF = reliably after React commits + paints
+      requestAnimationFrame(() => requestAnimationFrame(fn));
+    };
+
+    const isVisible = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && el.offsetParent !== null;
+    };
+
+    const getScope = (start: HTMLElement) => {
+      // Pick the nearest ancestor that contains “enough” cells to navigate within.
+      let node: HTMLElement | null = start;
+      while (node) {
+        const count = node.querySelectorAll('[data-editable-cell="display"]').length;
+        if (count >= 8) return node;
+        node = node.parentElement;
+      }
+      return document.body;
+    };
+
+    const findNextCell = (direction: "down" | "right") => {
+      const start = e.currentTarget as HTMLElement;
+      const scope = getScope(start);
+      const cells = Array.from(
+        scope.querySelectorAll<HTMLElement>('[data-editable-cell="display"]')
+      ).filter(isVisible);
+
+      if (!cells.length) return null;
+
+      const r = start.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const rowTol = Math.max(10, r.height * 0.6);
+      const colTol = Math.max(16, r.width * 0.6);
+
+      const scored = (el: HTMLElement) => {
+        const b = el.getBoundingClientRect();
+        const x = b.left + b.width / 2;
+        const y = b.top + b.height / 2;
+        return { el, x, y, dx: Math.abs(x - cx), dy: Math.abs(y - cy) };
+      };
+
+      if (direction === "down") {
+        const candidates = cells
+          .map(scored)
+          .filter((c) => c.y > cy + 1 && c.dx <= colTol)
+          .sort((a, b) => a.y - b.y || a.dx - b.dx);
+        return candidates[0]?.el ?? null;
+      }
+
+      // direction === "right" (Tab)
+      const right = cells
+        .map(scored)
+        .filter((c) => Math.abs(c.y - cy) <= rowTol && c.x > cx + 1)
+        .sort((a, b) => a.x - b.x);
+      if (right[0]) return right[0].el;
+
+      // Wrap: first cell of the next row
+      const nextRow = cells
+        .map(scored)
+        .filter((c) => c.y > cy + rowTol)
+        .sort((a, b) => a.y - b.y || a.x - b.x);
+      return nextRow[0]?.el ?? null;
+    };
+
     if (e.key === "Enter") {
       e.preventDefault();
+      const fallbackTarget = onEnter ? null : findNextCell("down");
       handleBlur();
-      // Defer navigation until after React re-renders the DOM
-      if (onEnter) {
-        setTimeout(onEnter, 0);
-      }
+      if (onEnter) defer(onEnter);
+      else if (fallbackTarget) defer(() => fallbackTarget.click());
       return;
     }
 
-    if (e.key === "Tab" && !e.shiftKey && onTab) {
+    if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
+      const fallbackTarget = onTab ? null : findNextCell("right");
       handleBlur();
-      // Defer navigation until after React re-renders the DOM
-      setTimeout(onTab, 0);
+      if (onTab) defer(onTab);
+      else if (fallbackTarget) defer(() => fallbackTarget.click());
     }
   };
 
@@ -146,6 +212,7 @@ export const EditableCell = ({
             autoFocus
             className={`h-9 ${error ? "border-destructive" : "border-primary"} ${className}`}
             data-field={dataField}
+            data-editable-cell="input"
             aria-invalid={!!error}
           />
           {error && (
@@ -169,6 +236,7 @@ export const EditableCell = ({
         <div
           onClick={handleClick}
           data-field={dataField}
+          data-editable-cell="display"
           className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
         >
           {formatValue(value)}
