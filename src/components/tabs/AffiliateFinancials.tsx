@@ -23,13 +23,25 @@ export const AffiliateFinancials = () => {
   };
 
   const activateCell = (entityId: string, row: string, col: number) => {
-    const el = document.querySelector(`[data-field="${entityId}-${row}-${col}"]`) as HTMLElement | null;
+    const selector = `[data-field="${entityId}-${row}-${col}"]`;
+    const els = Array.from(document.querySelectorAll(selector)) as HTMLElement[];
+
+    const el =
+      els.find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && node.offsetParent !== null;
+      }) ??
+      els[0] ??
+      null;
+
     if (!el) return;
+
     if (el instanceof HTMLInputElement) {
       el.focus();
       el.select?.();
       return;
     }
+
     el.click();
   };
 
