@@ -136,7 +136,64 @@ export const EditableCell = ({
       return document.body;
     };
 
-    const findNextCell = (direction: "down" | "right") => {
+    const findNextInTable = (direction: "down" | "right") => {
+      const start = e.currentTarget as HTMLElement;
+      const td = start.closest<HTMLElement>("td,th");
+      const tr = start.closest<HTMLTableRowElement>("tr");
+      if (!td || !tr) return null;
+
+      const getCells = (rowEl: Element) =>
+        Array.from(rowEl.children).filter(
+          (el) => el.tagName === "TD" || el.tagName === "TH"
+        ) as HTMLElement[];
+
+      const rowCells = getCells(tr);
+      const colIndex = rowCells.indexOf(td);
+      if (colIndex < 0) return null;
+
+      const findEditableInCell = (cell: HTMLElement | undefined) => {
+        if (!cell) return null;
+        const target = cell.querySelector<HTMLElement>(
+          '[data-editable-cell="display"]'
+        );
+        return target && isVisible(target) ? target : null;
+      };
+
+      if (direction === "down") {
+        let next = tr.nextElementSibling;
+        while (next) {
+          if (next instanceof HTMLTableRowElement) {
+            const nextCells = getCells(next);
+            const target = findEditableInCell(nextCells[colIndex]);
+            if (target) return target;
+          }
+          next = next.nextElementSibling;
+        }
+        return null;
+      }
+
+      // direction === "right" (Tab)
+      for (let i = colIndex + 1; i < rowCells.length; i++) {
+        const target = findEditableInCell(rowCells[i]);
+        if (target) return target;
+      }
+
+      // Wrap: first editable cell of the next rows
+      let next = tr.nextElementSibling;
+      while (next) {
+        if (next instanceof HTMLTableRowElement) {
+          const nextCells = getCells(next);
+          for (const cell of nextCells) {
+            const target = findEditableInCell(cell);
+            if (target) return target;
+          }
+        }
+        next = next.nextElementSibling;
+      }
+      return null;
+    };
+
+    const findNextByGeometry = (direction: "down" | "right") => {
       const start = e.currentTarget as HTMLElement;
       const scope = getScope(start);
       const cells = Array.from(
@@ -183,7 +240,9 @@ export const EditableCell = ({
 
     if (e.key === "Enter") {
       e.preventDefault();
-      const fallbackTarget = onEnter ? null : findNextCell("down");
+      const fallbackTarget = onEnter
+        ? null
+        : findNextInTable("down") ?? findNextByGeometry("down");
       handleBlur();
       if (onEnter) defer(onEnter);
       else if (fallbackTarget) defer(() => fallbackTarget.click());
@@ -192,7 +251,9 @@ export const EditableCell = ({
 
     if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
-      const fallbackTarget = onTab ? null : findNextCell("right");
+      const fallbackTarget = onTab
+        ? null
+        : findNextInTable("right") ?? findNextByGeometry("right");
       handleBlur();
       if (onTab) defer(onTab);
       else if (fallbackTarget) defer(() => fallbackTarget.click());
