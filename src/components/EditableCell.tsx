@@ -240,23 +240,27 @@ export const EditableCell = ({
 
     if (e.key === "Enter") {
       e.preventDefault();
-      const fallbackTarget = onEnter
-        ? null
-        : findNextInTable("down") ?? findNextByGeometry("down");
+      // Always prefer built-in Excel-like navigation to avoid per-table mapping bugs.
+      const internalTarget =
+        findNextInTable("down") ?? findNextByGeometry("down");
+
       handleBlur();
-      if (onEnter) defer(onEnter);
-      else if (fallbackTarget) defer(() => fallbackTarget.click());
+
+      if (internalTarget) defer(() => internalTarget.click());
+      else if (onEnter) defer(onEnter);
       return;
     }
 
     if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
-      const fallbackTarget = onTab
-        ? null
-        : findNextInTable("right") ?? findNextByGeometry("right");
+      // Always prefer built-in Excel-like navigation to avoid per-table mapping bugs.
+      const internalTarget =
+        findNextInTable("right") ?? findNextByGeometry("right");
+
       handleBlur();
-      if (onTab) defer(onTab);
-      else if (fallbackTarget) defer(() => fallbackTarget.click());
+
+      if (internalTarget) defer(() => internalTarget.click());
+      else if (onTab) defer(onTab);
     }
   };
 
