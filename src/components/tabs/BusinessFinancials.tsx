@@ -408,6 +408,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('revenue', i)}
                         onTab={() => focusRightCell('revenue', i)}
                         dataField={`revenue-${i}`}
+                        navScope="business-pl"
+                        navRow={0}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -423,6 +426,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('cogs', i)}
                         onTab={() => focusRightCell('cogs', i)}
                         dataField={`cogs-${i}`}
+                        navScope="business-pl"
+                        navRow={1}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -446,6 +452,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('otherIncome', i)}
                         onTab={() => focusRightCell('otherIncome', i)}
                         dataField={`otherIncome-${i}`}
+                        navScope="business-pl"
+                        navRow={2}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -477,6 +486,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('officersComp', i)}
                         onTab={() => focusRightCell('officersComp', i)}
                         dataField={`officersComp-${i}`}
+                        navScope="business-pl"
+                        navRow={3}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -492,6 +504,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('rentExpense', i)}
                         onTab={() => focusRightCell('rentExpense', i)}
                         dataField={`rentExpense-${i}`}
+                        navScope="business-pl"
+                        navRow={4}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -507,6 +522,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('interest', i)}
                         onTab={() => focusRightCell('interest', i)}
                         dataField={`interest-${i}`}
+                        navScope="business-pl"
+                        navRow={5}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -522,6 +540,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('depreciation', i)}
                         onTab={() => focusRightCell('depreciation', i)}
                         dataField={`depreciation-${i}`}
+                        navScope="business-pl"
+                        navRow={6}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -537,6 +558,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('amortization', i)}
                         onTab={() => focusRightCell('amortization', i)}
                         dataField={`amortization-${i}`}
+                        navScope="business-pl"
+                        navRow={7}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -552,6 +576,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('section179', i)}
                         onTab={() => focusRightCell('section179', i)}
                         dataField={`section179-${i}`}
+                        navScope="business-pl"
+                        navRow={8}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -567,6 +594,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('operatingExpenses', i)}
                         onTab={() => focusRightCell('operatingExpenses', i)}
                         dataField={`operatingExpenses-${i}`}
+                        navScope="business-pl"
+                        navRow={9}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -582,6 +612,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('otherExpenses', i)}
                         onTab={() => focusRightCell('otherExpenses', i)}
                         dataField={`otherExpenses-${i}`}
+                        navScope="business-pl"
+                        navRow={10}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -625,6 +658,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('taxes', i)}
                         onTab={() => focusRightCell('taxes', i)}
                         dataField={`taxes-${i}`}
+                        navScope="business-pl"
+                        navRow={11}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -697,6 +733,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('addbacks', i)}
                         onTab={() => focusRightCell('addbacks', i)}
                         dataField={`addbacks-${i}`}
+                        navScope="business-pl"
+                        navRow={12}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -725,6 +764,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('m1BookIncome', i)}
                         onTab={() => focusRightCell('m1BookIncome', i)}
                         dataField={`m1BookIncome-${i}`}
+                        navScope="business-pl"
+                        navRow={13}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -740,6 +782,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('m1FedTaxExpense', i)}
                         onTab={() => focusRightCell('m1FedTaxExpense', i)}
                         dataField={`m1FedTaxExpense-${i}`}
+                        navScope="business-pl"
+                        navRow={14}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -755,6 +800,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('m1ExcessDepr', i)}
                         onTab={() => focusRightCell('m1ExcessDepr', i)}
                         dataField={`m1ExcessDepr-${i}`}
+                        navScope="business-pl"
+                        navRow={15}
+                        navCol={i}
                       />
                     </td>
                   ))}
@@ -770,6 +818,9 @@ export const BusinessFinancials = () => {
                         onEnter={() => focusNextCell('m1Other', i)}
                         onTab={() => focusRightCell('m1Other', i)}
                         dataField={`m1Other-${i}`}
+                        navScope="business-pl"
+                        navRow={16}
+                        navCol={i}
                       />
                     </td>
                   ))}
