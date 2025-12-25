@@ -225,27 +225,17 @@ export const EditableCell = ({
         return null;
       }
 
-      // right / left within row
-      const cols = colsByRow.get(row) ?? [];
-      const colIndex = cols.indexOf(col);
-      if (colIndex >= 0) {
-        if (direction === "right") {
-          for (let i = colIndex + 1; i < cols.length; i++) {
-            const target = getCell(row, cols[i]);
-            if (target) return target;
-          }
-        }
-
-        if (direction === "left") {
-          for (let i = colIndex - 1; i >= 0; i--) {
-            const target = getCell(row, cols[i]);
-            if (target) return target;
-          }
-        }
-      }
-
-      // Wrap to next/prev row
+      // right / left within row - use actual column value, not index in cols array
+      // (current cell's display element is hidden when editing)
       if (direction === "right") {
+        const cols = colsByRow.get(row) ?? [];
+        for (const c of cols) {
+          if (c > col) {
+            const target = getCell(row, c);
+            if (target) return target;
+          }
+        }
+        // Wrap to next row, first column
         for (let i = rowIndex + 1; i < rows.length; i++) {
           const r = rows[i];
           const c = firstColInRow(r);
@@ -256,14 +246,25 @@ export const EditableCell = ({
         return null;
       }
 
-      // direction === "left"
-      for (let i = rowIndex - 1; i >= 0; i--) {
-        const r = rows[i];
-        const c = lastColInRow(r);
-        if (c === null) continue;
-        const target = getCell(r, c);
-        if (target) return target;
+      if (direction === "left") {
+        const cols = colsByRow.get(row) ?? [];
+        for (let i = cols.length - 1; i >= 0; i--) {
+          if (cols[i] < col) {
+            const target = getCell(row, cols[i]);
+            if (target) return target;
+          }
+        }
+        // Wrap to prev row, last column
+        for (let i = rowIndex - 1; i >= 0; i--) {
+          const r = rows[i];
+          const c = lastColInRow(r);
+          if (c === null) continue;
+          const target = getCell(r, c);
+          if (target) return target;
+        }
+        return null;
       }
+
       return null;
     };
 
