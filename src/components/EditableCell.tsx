@@ -144,6 +144,129 @@ export const EditableCell = ({
       return document.body;
     };
 
+    type NavDirection = "down" | "up" | "right" | "left";
+
+    const getNavMeta = (start: HTMLElement) => {
+      const holder =
+        start.closest<HTMLElement>(
+          "[data-nav-scope][data-nav-row][data-nav-col]"
+        ) ?? start;
+
+      const scope = holder.dataset.navScope;
+      const row = holder.dataset.navRow ? Number(holder.dataset.navRow) : NaN;
+      const col = holder.dataset.navCol ? Number(holder.dataset.navCol) : NaN;
+
+      if (!scope) return null;
+      if (!Number.isFinite(row) || !Number.isFinite(col)) return null;
+
+      return { scope, row, col };
+    };
+
+    const findNextByNav = (direction: NavDirection) => {
+      const start = e.currentTarget as HTMLElement;
+      const meta = getNavMeta(start);
+      if (!meta) return null;
+
+      const { scope, row, col } = meta;
+
+      const displays = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          `[data-editable-cell="display"][data-nav-scope="${scope}"]`
+        )
+      ).filter(isVisible);
+
+      if (!displays.length) return null;
+
+      const cellByKey = new Map<string, HTMLElement>();
+      const colsByRow = new Map<number, number[]>();
+
+      for (const el of displays) {
+        const r = el.dataset.navRow ? Number(el.dataset.navRow) : NaN;
+        const c = el.dataset.navCol ? Number(el.dataset.navCol) : NaN;
+        if (!Number.isFinite(r) || !Number.isFinite(c)) continue;
+
+        cellByKey.set(`${r}:${c}`, el);
+        const arr = colsByRow.get(r) ?? [];
+        arr.push(c);
+        colsByRow.set(r, arr);
+      }
+
+      // Normalize column lists per row
+      for (const [r, arr] of colsByRow.entries()) {
+        const uniqueSorted = Array.from(new Set(arr)).sort((a, b) => a - b);
+        colsByRow.set(r, uniqueSorted);
+      }
+
+      const rows = Array.from(colsByRow.keys()).sort((a, b) => a - b);
+      const rowIndex = rows.indexOf(row);
+      if (rowIndex < 0) return null;
+
+      const firstColInRow = (r: number) => colsByRow.get(r)?.[0] ?? null;
+      const lastColInRow = (r: number) => {
+        const cols = colsByRow.get(r);
+        return cols?.[cols.length - 1] ?? null;
+      };
+
+      const getCell = (r: number, c: number) => cellByKey.get(`${r}:${c}`) ?? null;
+
+      if (direction === "down" || direction === "up") {
+        const step = direction === "down" ? 1 : -1;
+        for (let i = rowIndex + step; i >= 0 && i < rows.length; i += step) {
+          const r = rows[i];
+          const exact = getCell(r, col);
+          if (exact) return exact;
+
+          const fallbackCol = firstColInRow(r);
+          if (fallbackCol !== null) {
+            const fallback = getCell(r, fallbackCol);
+            if (fallback) return fallback;
+          }
+        }
+        return null;
+      }
+
+      // right / left within row
+      const cols = colsByRow.get(row) ?? [];
+      const colIndex = cols.indexOf(col);
+      if (colIndex >= 0) {
+        if (direction === "right") {
+          for (let i = colIndex + 1; i < cols.length; i++) {
+            const target = getCell(row, cols[i]);
+            if (target) return target;
+          }
+        }
+
+        if (direction === "left") {
+          for (let i = colIndex - 1; i >= 0; i--) {
+            const target = getCell(row, cols[i]);
+            if (target) return target;
+          }
+        }
+      }
+
+      // Wrap to next/prev row
+      if (direction === "right") {
+        for (let i = rowIndex + 1; i < rows.length; i++) {
+          const r = rows[i];
+          const c = firstColInRow(r);
+          if (c === null) continue;
+          const target = getCell(r, c);
+          if (target) return target;
+        }
+        return null;
+      }
+
+      // direction === "left"
+      for (let i = rowIndex - 1; i >= 0; i--) {
+        const r = rows[i];
+        const c = lastColInRow(r);
+        if (c === null) continue;
+        const target = getCell(r, c);
+        if (target) return target;
+      }
+      return null;
+    };
+
     const findNextInTable = (direction: "down" | "right") => {
       const start = e.currentTarget as HTMLElement;
       const td = start.closest<HTMLElement>("td,th");
@@ -246,29 +369,37 @@ export const EditableCell = ({
       return nextRow[0]?.el ?? null;
     };
 
-    if (e.key === "Enter") {
-      e.preventDefault();
-      // Always prefer built-in Excel-like navigation to avoid per-table mapping bugs.
-      const internalTarget =
-        findNextInTable("down") ?? findNextByGeometry("down");
-
+    const navigateAndCommit = (target: HTMLElement | null, fallback?: () => void) => {
       handleBlur();
+      if (target) defer(() => target.click());
+      else if (fallback) defer(fallback);
+    };
 
-      if (internalTarget) defer(() => internalTarget.click());
-      else if (onEnter) defer(onEnter);
+    if (e.key === "Enter") {
+      const dir: NavDirection = e.shiftKey ? "up" : "down";
+      const navTarget = findNextByNav(dir);
+      const fallbackTarget = !e.shiftKey
+        ? findNextInTable("down") ?? findNextByGeometry("down")
+        : null;
+
+      e.preventDefault();
+      navigateAndCommit(navTarget ?? fallbackTarget, onEnter);
       return;
     }
 
-    if (e.key === "Tab" && !e.shiftKey) {
+    if (e.key === "Tab") {
+      const dir: NavDirection = e.shiftKey ? "left" : "right";
+      const navTarget = findNextByNav(dir);
+      const fallbackTarget = !e.shiftKey
+        ? findNextInTable("right") ?? findNextByGeometry("right")
+        : null;
+
+      // Let the browser handle Shift+Tab when we don't have deterministic nav metadata.
+      if (e.shiftKey && !navTarget) return;
+
       e.preventDefault();
-      // Always prefer built-in Excel-like navigation to avoid per-table mapping bugs.
-      const internalTarget =
-        findNextInTable("right") ?? findNextByGeometry("right");
-
-      handleBlur();
-
-      if (internalTarget) defer(() => internalTarget.click());
-      else if (onTab) defer(onTab);
+      navigateAndCommit(navTarget ?? fallbackTarget, onTab);
+      return;
     }
   };
 
@@ -286,6 +417,9 @@ export const EditableCell = ({
             className={`h-9 ${error ? "border-destructive" : "border-primary"} ${className}`}
             data-field={dataField}
             data-editable-cell="input"
+            data-nav-scope={navScope}
+            data-nav-row={navRow}
+            data-nav-col={navCol}
             aria-invalid={!!error}
           />
           {error && (
@@ -310,6 +444,9 @@ export const EditableCell = ({
           onClick={handleClick}
           data-field={dataField}
           data-editable-cell="display"
+          data-nav-scope={navScope}
+          data-nav-row={navRow}
+          data-nav-col={navCol}
           className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
         >
           {formatValue(value)}
