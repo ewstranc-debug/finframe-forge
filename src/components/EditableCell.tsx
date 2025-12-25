@@ -15,20 +15,28 @@ interface EditableCellProps {
   max?: number;
   required?: boolean;
   validateFn?: (value: string) => string | null;
+
+  /** Optional deterministic spreadsheet navigation (preferred). */
+  navScope?: string;
+  navRow?: number;
+  navCol?: number;
 }
 
-export const EditableCell = ({ 
-  value, 
-  onChange, 
-  type = "text", 
-  className = "", 
-  onEnter, 
-  onTab, 
+export const EditableCell = ({
+  value,
+  onChange,
+  type = "text",
+  className = "",
+  onEnter,
+  onTab,
   dataField,
   min,
   max,
   required = false,
-  validateFn
+  validateFn,
+  navScope,
+  navRow,
+  navCol,
 }: EditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value.toString());
