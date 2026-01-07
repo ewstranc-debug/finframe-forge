@@ -1,1 +1,4 @@
 project_id = "uosfhtpdlmsjlhthxtkk"
+
+[functions.generate-financial-analysis]
+verify_jwt = false
