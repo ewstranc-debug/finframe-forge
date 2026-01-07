@@ -115,6 +115,15 @@ export interface BusinessBalanceSheetPeriodData {
   longTermDebt: string;
 }
 
+interface UploadedDocument {
+  id: string;
+  name: string;
+  path: string;
+  type: string;
+  size: number;
+  uploadedAt: string;
+}
+
 interface SpreadsheetContextType {
   // Summary state
   interestRate: string;
@@ -174,12 +183,26 @@ interface SpreadsheetContextType {
   financialAnalysis: string;
   setFinancialAnalysis: (analysis: string) => void;
   
+  // Analyst Notes
+  analystNotes: string;
+  setAnalystNotes: (notes: string) => void;
+  
+  // Uploaded Documents
+  uploadedDocuments: UploadedDocument[];
+  setUploadedDocuments: (docs: UploadedDocument[]) => void;
+  
+  // Selected AI Model
+  selectedAIModel: string;
+  setSelectedAIModel: (model: string) => void;
+  
   // Save status
   saveStatus: 'saved' | 'saving' | 'error';
   
   // Reset function
   resetAll: () => void;
 }
+
+export type { UploadedDocument };
 
 const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(undefined);
 
@@ -319,6 +342,15 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   // Financial Analysis state
   const [financialAnalysis, setFinancialAnalysis, financialAnalysisStatus] = useLocalStorage("financialTool_financialAnalysis", "");
   
+  // Analyst Notes
+  const [analystNotes, setAnalystNotes, analystNotesStatus] = useLocalStorage("financialTool_analystNotes", "");
+  
+  // Uploaded Documents metadata
+  const [uploadedDocuments, setUploadedDocuments, uploadedDocumentsStatus] = useLocalStorage<UploadedDocument[]>("financialTool_uploadedDocuments", []);
+  
+  // Selected AI Model
+  const [selectedAIModel, setSelectedAIModel, selectedAIModelStatus] = useLocalStorage("financialTool_selectedAIModel", "google/gemini-2.5-flash");
+  
   // Calculate overall save status
   const allStatuses = [
     interestRateStatus, termMonthsStatus, guaranteePercentStatus, injectionEquityStatus, 
@@ -326,7 +358,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     businessPeriodsStatus, businessPeriodLabelsStatus, interimPeriodDateStatus, interimPeriodMonthsStatus,
     personalAssetsStatus, personalLiabilitiesStatus, debtsStatus, affiliateEntitiesStatus,
     affiliatePeriodLabelsStatus, businessBalanceSheetPeriodsStatus, businessBalanceSheetLabelsStatus,
-    financialAnalysisStatus
+    financialAnalysisStatus, analystNotesStatus, uploadedDocumentsStatus, selectedAIModelStatus
   ];
   
   const saveStatus: 'saved' | 'saving' | 'error' = 
@@ -421,6 +453,11 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
 
     // Financial Analysis default
     setFinancialAnalysis("");
+    
+    // Reset new fields
+    setAnalystNotes("");
+    setUploadedDocuments([]);
+    setSelectedAIModel("google/gemini-2.5-flash");
   };
 
   return (
@@ -445,6 +482,9 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods,
       businessBalanceSheetLabels, setBusinessBalanceSheetLabels,
       financialAnalysis, setFinancialAnalysis,
+      analystNotes, setAnalystNotes,
+      uploadedDocuments, setUploadedDocuments,
+      selectedAIModel, setSelectedAIModel,
       saveStatus,
       resetAll,
     }}>

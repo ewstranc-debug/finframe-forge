@@ -12,12 +12,16 @@ serve(async (req) => {
   }
 
   try {
-    const { financialData } = await req.json();
+    const { financialData, analystNotes, documentContents, model } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    // Use provided model or default to gemini-2.5-flash
+    const selectedModel = model || 'google/gemini-2.5-flash';
+    console.log('Using AI model:', selectedModel);
 
     // Prepare comprehensive analysis prompt
     const systemPrompt = `You are a senior credit analyst and financial advisor with 20+ years of experience in personal and business credit analysis, specializing in comprehensive financial assessments for lending decisions.
@@ -89,9 +93,11 @@ serve(async (req) => {
     - Use bullet points and numbered lists for clarity
     - Include specific dollar amounts and percentages from the data
     - Compare current metrics to industry standards where relevant
-    - Be direct, professional, and analytical - this is for lending decisions`;
+    - Be direct, professional, and analytical - this is for lending decisions
+    - If analyst notes or supporting documents are provided, incorporate their context into your analysis`;
 
-    const userPrompt = `Perform a comprehensive credit analysis on this complete financial profile:
+    // Build the user prompt with all available context
+    let userPrompt = `Perform a comprehensive credit analysis on this complete financial profile:
 
 ## PERSONAL FINANCIAL DATA
 
@@ -138,7 +144,39 @@ ${JSON.stringify(financialData.affiliateEntities, null, 2)}
 ## CONSOLIDATED/GLOBAL POSITION:
 - **Total Combined Assets:** $${financialData.calculatedMetrics.combined.totalAssets.toLocaleString()}
 - **Total Combined Liabilities:** $${financialData.calculatedMetrics.combined.totalLiabilities.toLocaleString()}
-- **Total Net Worth (Global):** $${financialData.calculatedMetrics.combined.totalNetWorth.toLocaleString()}
+- **Total Net Worth (Global):** $${financialData.calculatedMetrics.combined.totalNetWorth.toLocaleString()}`;
+
+    // Add analyst notes if provided
+    if (analystNotes && analystNotes.trim()) {
+      userPrompt += `
+
+---
+
+## ANALYST NOTES & ADDITIONAL CONTEXT
+The following notes were provided by the credit analyst for additional context:
+
+${analystNotes}`;
+    }
+
+    // Add document contents if provided
+    if (documentContents && documentContents.length > 0) {
+      userPrompt += `
+
+---
+
+## SUPPORTING DOCUMENTS
+The following documents were provided for additional context:
+`;
+      for (const doc of documentContents) {
+        userPrompt += `
+
+### Document: ${doc.name}
+${doc.content}
+`;
+      }
+    }
+
+    userPrompt += `
 
 ---
 
@@ -153,7 +191,7 @@ Provide a thorough, professional credit analysis following the structure outline
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',
+        model: selectedModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }

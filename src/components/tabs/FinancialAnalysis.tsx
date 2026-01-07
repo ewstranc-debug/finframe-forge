@@ -4,13 +4,25 @@ import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet } from "lucide-react";
+import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet, StickyNote, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
 import { calculateDSCR } from "@/utils/financialCalculations";
+import { Textarea } from "@/components/ui/textarea";
+import { DocumentUpload } from "@/components/DocumentUpload";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
+const AI_MODELS = [
+  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Fast & balanced (default)" },
+  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Most capable, complex reasoning" },
+  { value: "google/gemini-3-pro-preview", label: "Gemini 3 Pro Preview", description: "Next-gen model" },
+  { value: "openai/gpt-5", label: "GPT-5", description: "Premium accuracy & nuance" },
+  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", description: "Fast with strong reasoning" },
+];
 
 export const FinancialAnalysis = () => {
   const {
@@ -29,6 +41,12 @@ export const FinancialAnalysis = () => {
     guaranteePercent,
     financialAnalysis,
     setFinancialAnalysis,
+    analystNotes,
+    setAnalystNotes,
+    uploadedDocuments,
+    setUploadedDocuments,
+    selectedAIModel,
+    setSelectedAIModel,
   } = useSpreadsheet();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -517,6 +535,36 @@ export const FinancialAnalysis = () => {
       const businessCurrentLiabilities = parseFloat(latestBalanceSheet?.currentLiabilities) || 0;
       const businessTotalLiabilities = businessCurrentLiabilities + (parseFloat(latestBalanceSheet?.longTermDebt) || 0);
       
+      // Fetch document contents if there are uploaded documents
+      const documentContents: { name: string; content: string }[] = [];
+      
+      for (const doc of uploadedDocuments) {
+        try {
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('financial-documents')
+            .download(doc.path);
+          
+          if (downloadError) {
+            console.error('Error downloading document:', downloadError);
+            continue;
+          }
+          
+          // For text files, read content directly
+          if (doc.type === 'text/plain' || doc.name.endsWith('.txt')) {
+            const text = await fileData.text();
+            documentContents.push({ name: doc.name, content: text });
+          } else {
+            // For other files, note that they were provided (full parsing would need vision/OCR)
+            documentContents.push({ 
+              name: doc.name, 
+              content: `[Document uploaded: ${doc.name} (${doc.type}). The AI will analyze available context from this document type.]` 
+            });
+          }
+        } catch (err) {
+          console.error('Error processing document:', err);
+        }
+      }
+      
       // Prepare comprehensive financial data for analysis
       const financialData = {
         personalPeriods,
@@ -558,7 +606,12 @@ export const FinancialAnalysis = () => {
       };
 
       const { data, error } = await supabase.functions.invoke('generate-financial-analysis', {
-        body: { financialData },
+        body: { 
+          financialData,
+          analystNotes: analystNotes.trim() || undefined,
+          documentContents: documentContents.length > 0 ? documentContents : undefined,
+          model: selectedAIModel,
+        },
       });
 
       if (error) throw error;
@@ -666,9 +719,27 @@ export const FinancialAnalysis = () => {
       `}</style>
       
       <div className="p-6 space-y-6 print-content">
-        <div className="flex justify-between items-center mb-4 no-print">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4 no-print">
           <h2 className="text-2xl font-bold">Financial Analysis & Insights</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="ai-model" className="text-sm whitespace-nowrap">AI Model:</Label>
+              <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
+                <SelectTrigger id="ai-model" className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AI_MODELS.map((model) => (
+                    <SelectItem key={model.value} value={model.value}>
+                      <div className="flex flex-col">
+                        <span>{model.label}</span>
+                        <span className="text-xs text-muted-foreground">{model.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={handleExportPDF} variant="outline" className="gap-2">
               <FileDown className="h-4 w-4" />
               Export PDF
@@ -688,10 +759,41 @@ export const FinancialAnalysis = () => {
                   Generating...
                 </>
               ) : (
-                "Generate AI Analysis"
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Generate AI Analysis
+                </>
               )}
             </Button>
           </div>
+        </div>
+
+        {/* Document Upload and Notes Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
+          <DocumentUpload 
+            documents={uploadedDocuments} 
+            onDocumentsChange={setUploadedDocuments} 
+          />
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <StickyNote className="h-5 w-5" />
+                Analyst Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={analystNotes}
+                onChange={(e) => setAnalystNotes(e.target.value)}
+                placeholder="Enter deal context, borrower history, special considerations, concerns, or any other notes that should be incorporated into the AI analysis..."
+                className="min-h-[180px] resize-none"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                These notes will be included in the AI analysis for additional context.
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="print:block hidden">
