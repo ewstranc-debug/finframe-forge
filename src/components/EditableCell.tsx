@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { AlertCircle } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface EditableCellProps {
   value: string | number;
@@ -406,52 +406,22 @@ export const EditableCell = ({
 
   if (isEditing) {
     return (
-      <TooltipProvider>
-        <div className="relative">
-          <Input
-            type={type === "currency" || type === "number" || type === "percentage" || type === "interestRate" || type === "termMonths" || type === "periodMonths" ? "number" : "text"}
-            value={tempValue}
-            onChange={(e) => setTempValue(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            className={`h-9 ${error ? "border-destructive" : "border-primary"} ${className}`}
-            data-field={dataField}
-            data-editable-cell="input"
-            data-nav-scope={navScope}
-            data-nav-row={navRow}
-            data-nav-col={navCol}
-            aria-invalid={!!error}
-          />
-          {error && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <AlertCircle className="h-3 w-3 text-destructive absolute right-2 top-1/2 -translate-y-1/2 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{error}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      </TooltipProvider>
-    );
-  }
-
-  return (
-    <TooltipProvider>
       <div className="relative">
-        <div
-          onClick={handleClick}
+        <Input
+          type={type === "currency" || type === "number" || type === "percentage" || type === "interestRate" || type === "termMonths" || type === "periodMonths" ? "number" : "text"}
+          value={tempValue}
+          onChange={(e) => setTempValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          className={`h-9 ${error ? "border-destructive" : "border-primary"} ${className}`}
           data-field={dataField}
-          data-editable-cell="display"
+          data-editable-cell="input"
           data-nav-scope={navScope}
           data-nav-row={navRow}
           data-nav-col={navCol}
-          className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
-        >
-          {formatValue(value)}
-        </div>
+          aria-invalid={!!error}
+        />
         {error && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -463,6 +433,32 @@ export const EditableCell = ({
           </Tooltip>
         )}
       </div>
-    </TooltipProvider>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <div
+        onClick={handleClick}
+        data-field={dataField}
+        data-editable-cell="display"
+        data-nav-scope={navScope}
+        data-nav-row={navRow}
+        data-nav-col={navCol}
+        className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
+      >
+        {formatValue(value)}
+      </div>
+      {error && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <AlertCircle className="h-3 w-3 text-destructive absolute right-2 top-1/2 -translate-y-1/2 cursor-help" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{error}</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </div>
   );
 };
