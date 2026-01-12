@@ -103,7 +103,9 @@ export const BusinessFinancials = () => {
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
       m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
       periodDate: businessPeriods[periodIndex].periodDate,
-      periodMonths: businessPeriods[periodIndex].periodMonths
+      periodMonths: businessPeriods[periodIndex].periodMonths,
+      totalDeductionsInput: "0",
+      isProjection: businessPeriods[periodIndex].isProjection || false
     };
     const newPeriods = [...businessPeriods];
     newPeriods[periodIndex] = clearedPeriod;
@@ -156,12 +158,24 @@ export const BusinessFinancials = () => {
   };
 
   const calculateEBT = (periodIndex: number) => {
-    const ebit = calculateEBIT(periodIndex);
+    // Line 15 = Line 5 (Total Income) - Line 14 (Total Deductions)
     const period = businessPeriods[periodIndex];
+    const grossProfit = calculateGrossProfit(periodIndex);
     const otherIncome = parseFloat(period.otherIncome) || 0;
-    const otherExpenses = parseFloat(period.otherExpenses) || 0;
-    const interest = parseFloat(period.interest) || 0;
-    return ebit + otherIncome - otherExpenses - interest;
+    const totalIncome = grossProfit + otherIncome; // Line 5
+    
+    const totalDeductions = (
+      (parseFloat(period.officersComp) || 0) +
+      (parseFloat(period.rentExpense) || 0) +
+      (parseFloat(period.interest) || 0) +
+      (parseFloat(period.depreciation) || 0) +
+      (parseFloat(period.amortization) || 0) +
+      (parseFloat(period.section179) || 0) +
+      (parseFloat(period.operatingExpenses) || 0) +
+      (parseFloat(period.otherExpenses) || 0)
+    ); // Line 14
+    
+    return totalIncome - totalDeductions;
   };
 
   const calculateGrossMargin = (periodIndex: number) => {

@@ -13,6 +13,7 @@ export interface PersonalPeriodData {
   bonuses: string;
   investments: string;
   rentalIncome: string;
+  retirementIncome: string;
   otherIncome: string;
   costOfLiving: string;
   personalTaxes: string;
@@ -23,6 +24,8 @@ export interface PersonalPeriodData {
   schedCDepreciation: string;
   schedCAmortization: string;
   schedCOther: string;
+  periodDate: string;
+  periodMonths: string;
 }
 
 export interface BusinessPeriodData {
@@ -45,10 +48,14 @@ export interface BusinessPeriodData {
   m1Other: string;
   periodDate: string;
   periodMonths: string;
+  totalDeductionsInput: string;
+  isProjection: boolean;
 }
 
 export interface AssetData {
   liquidAssets: string;
+  retirementAccounts: string;
+  investmentAccounts: string;
   realEstate: string;
   vehicles: string;
   accountsReceivable: string;
@@ -78,10 +85,16 @@ export interface Debt {
 export interface AffiliateIncomeData {
   revenue: string;
   cogs: string;
+  officersComp: string;
+  rentExpense: string;
   operatingExpenses: string;
   depreciation: string;
   amortization: string;
+  section179: string;
   interest: string;
+  otherIncome: string;
+  otherExpenses: string;
+  addbacks: string;
   taxes: string;
   periodDate: string;
   periodMonths: string;
@@ -227,22 +240,25 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   // Personal Financials state
   const [personalPeriods, setPersonalPeriods, personalPeriodsStatus] = useLocalStorage<PersonalPeriodData[]>("financialTool_personalPeriods", [
     { 
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", retirementIncome: "0", otherIncome: "0",
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      periodDate: "", periodMonths: "12"
     },
     { 
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", retirementIncome: "0", otherIncome: "0",
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      periodDate: "", periodMonths: "12"
     },
     { 
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", retirementIncome: "0", otherIncome: "0",
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      periodDate: "", periodMonths: "12"
     }
   ]);
   const [personalPeriodLabels, setPersonalPeriodLabels, personalPeriodLabelsStatus] = useLocalStorage("financialTool_personalPeriodLabels", ["12/31/2023", "12/31/2024", "12/31/2025"]);
@@ -254,31 +270,38 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
       m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
-      periodDate: "", periodMonths: "12"
+      periodDate: "", periodMonths: "12", totalDeductionsInput: "0", isProjection: false
     },
     { 
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
       m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
-      periodDate: "", periodMonths: "12"
+      periodDate: "", periodMonths: "12", totalDeductionsInput: "0", isProjection: false
     },
     { 
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
       m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
-      periodDate: "", periodMonths: "12"
+      periodDate: "", periodMonths: "12", totalDeductionsInput: "0", isProjection: false
     },
     { 
       revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
       m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
-      periodDate: "", periodMonths: "12"
+      periodDate: "", periodMonths: "12", totalDeductionsInput: "0", isProjection: false
+    },
+    { 
+      revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
+      depreciation: "0", amortization: "0", section179: "0", interest: "0",
+      otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: "", periodMonths: "12", totalDeductionsInput: "0", isProjection: true
     }
   ]);
-  const [businessPeriodLabels, setBusinessPeriodLabels, businessPeriodLabelsStatus] = useLocalStorage("financialTool_businessPeriodLabels", ["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+  const [businessPeriodLabels, setBusinessPeriodLabels, businessPeriodLabelsStatus] = useLocalStorage("financialTool_businessPeriodLabels", ["12/31/2023", "12/31/2024", "12/31/2025", "Interim", "Projections"]);
 
   // Interim period settings (kept for backward compatibility but now handled per-period)
   const [interimPeriodDate, setInterimPeriodDate, interimPeriodDateStatus] = useLocalStorage("financialTool_interimPeriodDate", "");
@@ -287,6 +310,8 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   // Personal Financial Statement state
   const [personalAssets, setPersonalAssets, personalAssetsStatus] = useLocalStorage<AssetData>("financialTool_personalAssets", {
     liquidAssets: "0",
+    retirementAccounts: "0",
+    investmentAccounts: "0",
     realEstate: "0",
     vehicles: "0",
     accountsReceivable: "0",
@@ -310,16 +335,17 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   ]);
 
   // Affiliate Financials state
+  const defaultAffiliateIncomePeriod: AffiliateIncomeData = { 
+    revenue: "0", cogs: "0", officersComp: "0", rentExpense: "0", operatingExpenses: "0", 
+    depreciation: "0", amortization: "0", section179: "0", interest: "0", 
+    otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0", 
+    periodDate: "", periodMonths: "12" 
+  };
   const [affiliateEntities, setAffiliateEntities, affiliateEntitiesStatus] = useLocalStorage<AffiliateEntity[]>("financialTool_affiliateEntities", [
     { 
       id: "1", 
       name: "Affiliate 1", 
-      incomePeriods: [
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" }
-      ],
+      incomePeriods: [defaultAffiliateIncomePeriod, defaultAffiliateIncomePeriod, defaultAffiliateIncomePeriod, defaultAffiliateIncomePeriod],
       balancePeriods: [
         { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
         { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
@@ -386,10 +412,11 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
 
     // Personal Financials defaults
     const defaultPersonalPeriod: PersonalPeriodData = { 
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", retirementIncome: "0", otherIncome: "0",
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      periodDate: "", periodMonths: "12"
     };
     setPersonalPeriods([defaultPersonalPeriod, defaultPersonalPeriod, defaultPersonalPeriod]);
     setPersonalPeriodLabels(["12/31/2023", "12/31/2024", "12/31/2025"]);
@@ -400,10 +427,11 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       depreciation: "0", amortization: "0", section179: "0", interest: "0",
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
       m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
-      periodDate: "", periodMonths: "12"
+      periodDate: "", periodMonths: "12", totalDeductionsInput: "0", isProjection: false
     };
-    setBusinessPeriods([defaultBusinessPeriod, defaultBusinessPeriod, defaultBusinessPeriod, defaultBusinessPeriod]);
-    setBusinessPeriodLabels(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
+    const defaultProjectionPeriod: BusinessPeriodData = { ...defaultBusinessPeriod, isProjection: true };
+    setBusinessPeriods([defaultBusinessPeriod, defaultBusinessPeriod, defaultBusinessPeriod, defaultBusinessPeriod, defaultProjectionPeriod]);
+    setBusinessPeriodLabels(["12/31/2023", "12/31/2024", "12/31/2025", "Interim", "Projections"]);
 
     // Interim period defaults
     setInterimPeriodDate("");
@@ -412,6 +440,8 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     // Personal Financial Statement defaults
     setPersonalAssets({
       liquidAssets: "0",
+      retirementAccounts: "0",
+      investmentAccounts: "0",
       realEstate: "0",
       vehicles: "0",
       accountsReceivable: "0",
@@ -434,13 +464,18 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     ]);
 
     // Affiliate Financials defaults
-    const defaultAffiliateIncome: AffiliateIncomeData = { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" };
+    const defaultAffiliateIncomeReset: AffiliateIncomeData = { 
+      revenue: "0", cogs: "0", officersComp: "0", rentExpense: "0", operatingExpenses: "0", 
+      depreciation: "0", amortization: "0", section179: "0", interest: "0", 
+      otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0", 
+      periodDate: "", periodMonths: "12" 
+    };
     const defaultAffiliateBalance: AffiliateBalanceSheetData = { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" };
     setAffiliateEntities([
       { 
         id: "1", 
         name: "Affiliate 1", 
-        incomePeriods: [defaultAffiliateIncome, defaultAffiliateIncome, defaultAffiliateIncome, defaultAffiliateIncome],
+        incomePeriods: [defaultAffiliateIncomeReset, defaultAffiliateIncomeReset, defaultAffiliateIncomeReset, defaultAffiliateIncomeReset],
         balancePeriods: [defaultAffiliateBalance, defaultAffiliateBalance, defaultAffiliateBalance, defaultAffiliateBalance]
       }
     ]);

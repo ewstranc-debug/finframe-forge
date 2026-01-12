@@ -72,15 +72,16 @@ export const AffiliateFinancials = () => {
 
   const addEntity = () => {
     const newId = (entities.length + 1).toString();
+    const defaultIncomePeriod: IncomeData = { 
+      revenue: "0", cogs: "0", officersComp: "0", rentExpense: "0", operatingExpenses: "0", 
+      depreciation: "0", amortization: "0", section179: "0", interest: "0", 
+      otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0", 
+      periodDate: "", periodMonths: "12" 
+    };
     setEntities([...entities, { 
       id: newId, 
       name: `Affiliate ${newId}`, 
-      incomePeriods: [
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" },
-        { revenue: "0", cogs: "0", operatingExpenses: "0", depreciation: "0", amortization: "0", interest: "0", taxes: "0", periodDate: "", periodMonths: "12" }
-      ],
+      incomePeriods: [defaultIncomePeriod, defaultIncomePeriod, defaultIncomePeriod, defaultIncomePeriod],
       balancePeriods: [
         { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
         { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
