@@ -98,6 +98,7 @@ export interface AffiliateIncomeData {
   taxes: string;
   periodDate: string;
   periodMonths: string;
+  isProjection?: boolean;
 }
 
 export interface AffiliateBalanceSheetData {

@@ -15,16 +15,15 @@ export const AffiliateFinancials = () => {
       otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0", 
       periodDate: "", periodMonths: "12" 
     };
+    const defaultBalancePeriod: BalanceSheetData = { 
+      cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", 
+      accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" 
+    };
     setEntities([...entities, { 
       id: newId, 
       name: `Affiliate ${newId}`, 
-      incomePeriods: [defaultIncomePeriod, defaultIncomePeriod, defaultIncomePeriod, defaultIncomePeriod],
-      balancePeriods: [
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-        { cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" }
-      ]
+      incomePeriods: Array(periodLabels.length).fill(null).map(() => ({...defaultIncomePeriod})),
+      balancePeriods: Array(periodLabels.length).fill(null).map(() => ({...defaultBalancePeriod}))
     }]);
   };
 
@@ -64,6 +63,41 @@ export const AffiliateFinancials = () => {
     const newLabels = [...periodLabels];
     newLabels[index] = value;
     setPeriodLabels(newLabels);
+  };
+
+  const addProjectionColumn = () => {
+    const defaultIncomePeriod: IncomeData = { 
+      revenue: "0", cogs: "0", officersComp: "0", rentExpense: "0", operatingExpenses: "0", 
+      depreciation: "0", amortization: "0", section179: "0", interest: "0", 
+      otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0", 
+      periodDate: "", periodMonths: "12", isProjection: true 
+    };
+    const defaultBalancePeriod: BalanceSheetData = { 
+      cash: "0", accountsReceivable: "0", inventory: "0", realEstate: "0", 
+      accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" 
+    };
+    
+    // Add column to all entities
+    setEntities(entities.map(e => ({
+      ...e,
+      incomePeriods: [...e.incomePeriods, defaultIncomePeriod],
+      balancePeriods: [...e.balancePeriods, defaultBalancePeriod]
+    })));
+    
+    setPeriodLabels([...periodLabels, `Projection ${periodLabels.filter(l => l.includes('Projection')).length + 1}`]);
+  };
+
+  const removePeriodColumn = (periodIndex: number) => {
+    if (periodLabels.length <= 1) return;
+    
+    // Remove column from all entities
+    setEntities(entities.map(e => ({
+      ...e,
+      incomePeriods: e.incomePeriods.filter((_, i) => i !== periodIndex),
+      balancePeriods: e.balancePeriods.filter((_, i) => i !== periodIndex)
+    })));
+    
+    setPeriodLabels(periodLabels.filter((_, i) => i !== periodIndex));
   };
 
   // Calculation functions to match Business P&L format
@@ -165,15 +199,25 @@ export const AffiliateFinancials = () => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
   };
 
+  // Dynamic grid columns for flexible period count
+  const gridStyle = { gridTemplateColumns: `minmax(200px, 1fr) repeat(${periodLabels.length}, minmax(150px, 1fr))` };
+  const minWidth = `${200 + periodLabels.length * 150}px`;
+
   return (
     <div className="p-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Affiliate Financial Statements</CardTitle>
-          <Button onClick={addEntity} size="sm" className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Affiliate
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={addProjectionColumn} variant="outline" size="sm" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add Projection Column
+            </Button>
+            <Button onClick={addEntity} size="sm" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add Affiliate
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-8">
           {entities.map((entity) => (
@@ -205,7 +249,7 @@ export const AffiliateFinancials = () => {
                 <CardContent>
                   <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
                     {/* Header Row with Period Labels */}
-                    <div className="grid grid-cols-5 bg-muted font-medium text-sm min-w-[800px]">
+                    <div className="grid bg-muted font-medium text-sm" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border">Line Item</div>
                       {periodLabels.map((label, i) => (
                         <div key={i} className="border-r border-border last:border-r-0 p-2">
@@ -225,7 +269,6 @@ export const AffiliateFinancials = () => {
                                       const newPeriods = [...e.incomePeriods];
                                       if (!newPeriods[i]) return e;
                                       newPeriods[i] = { ...newPeriods[i], periodDate: val };
-                                      // Auto-calculate months if we have a previous date
                                       if (val && i > 0 && e.incomePeriods[i-1]?.periodDate) {
                                         const prevDate = new Date(e.incomePeriods[i-1].periodDate);
                                         const currDate = new Date(val);
@@ -262,16 +305,27 @@ export const AffiliateFinancials = () => {
                                 className="text-center text-xs w-12"
                               />
                             </div>
+                            {entity.incomePeriods[i]?.isProjection && periodLabels.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removePeriodColumn(i)}
+                                className="text-destructive hover:text-destructive text-xs h-6 px-2"
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Remove
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
 
                     {/* INCOME SECTION */}
-                    <div className="bg-success/20 p-2 px-3 font-semibold text-sm min-w-[800px]">INCOME</div>
+                    <div className="bg-success/20 p-2 px-3 font-semibold text-sm" style={{minWidth}}>INCOME</div>
 
                     {/* Line 1: Revenue */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">1. Revenue</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -286,7 +340,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 2: COGS */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">2. Cost of Goods Sold</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -301,7 +355,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 3: Gross Profit (calculated) */}
-                    <div className="grid grid-cols-5 border-b border-border bg-muted/50 min-w-[800px]">
+                    <div className="grid border-b border-border bg-muted/50" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-semibold">3. Gross Profit</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
@@ -311,7 +365,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 4: Other Income */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">4. Other Income</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -326,7 +380,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 5: Total Income (calculated) */}
-                    <div className="grid grid-cols-5 border-b-2 border-border bg-success/10 min-w-[800px]">
+                    <div className="grid border-b-2 border-border bg-success/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-bold">5. Total Income</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
@@ -336,10 +390,10 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* DEDUCTIONS SECTION */}
-                    <div className="bg-destructive/20 p-2 px-3 font-semibold text-sm min-w-[800px]">DEDUCTIONS</div>
+                    <div className="bg-destructive/20 p-2 px-3 font-semibold text-sm" style={{minWidth}}>DEDUCTIONS</div>
 
                     {/* Line 6: Officers Compensation */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">6. Officers Compensation</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -354,7 +408,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 7: Rent Expense */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">7. Rent Expense</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -369,7 +423,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 8: Other Operating Expenses */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">8. Other Operating Expenses</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -384,7 +438,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* EBITDA (calculated) */}
-                    <div className="grid grid-cols-5 border-b border-border bg-accent/10 min-w-[800px]">
+                    <div className="grid border-b border-border bg-accent/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-semibold">EBITDA</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
@@ -394,7 +448,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 9: Depreciation */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">9. Depreciation</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -409,7 +463,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 10: Amortization */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">10. Amortization</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -424,7 +478,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 11: Section 179 */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">11. Section 179 Deduction</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -439,7 +493,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* EBIT (calculated) */}
-                    <div className="grid grid-cols-5 border-b border-border bg-accent/10 min-w-[800px]">
+                    <div className="grid border-b border-border bg-accent/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-semibold">EBIT</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
@@ -449,7 +503,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 12: Interest */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">12. Interest Expense</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -464,7 +518,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 13: Other Expenses */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">13. Other Deductions</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -479,7 +533,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 14: Total Deductions (calculated) */}
-                    <div className="grid grid-cols-5 border-b border-border bg-destructive/10 min-w-[800px]">
+                    <div className="grid border-b border-border bg-destructive/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-bold">14. Total Deductions</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
@@ -489,7 +543,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 15: Income Before Taxes (EBT) */}
-                    <div className="grid grid-cols-5 border-b border-border bg-muted/50 min-w-[800px]">
+                    <div className="grid border-b border-border bg-muted/50" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-semibold">15. Income Before Taxes (EBT)</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
@@ -499,7 +553,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 16: Taxes */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">16. Provision for Taxes</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -514,7 +568,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Line 17: Net Income (calculated) */}
-                    <div className="grid grid-cols-5 border-b-2 border-border bg-primary/10 min-w-[800px]">
+                    <div className="grid border-b-2 border-border bg-primary/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-bold">17. Net Income</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
@@ -524,10 +578,10 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* CASH FLOW ADDBACKS SECTION */}
-                    <div className="bg-accent/20 p-2 px-3 font-semibold text-sm min-w-[800px]">CASH FLOW ADDBACKS</div>
+                    <div className="bg-accent/20 p-2 px-3 font-semibold text-sm" style={{minWidth}}>CASH FLOW ADDBACKS</div>
 
                     {/* Addbacks */}
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Other Addbacks</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -542,7 +596,7 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     {/* Cash Flow for DSCR (calculated) */}
-                    <div className="grid grid-cols-5 bg-accent/10 min-w-[800px]">
+                    <div className="grid bg-accent/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-bold">Cash Flow for DSCR</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
@@ -561,16 +615,16 @@ export const AffiliateFinancials = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
-                    <div className="grid grid-cols-5 bg-muted font-medium text-sm min-w-[800px]">
+                    <div className="grid bg-muted font-medium text-sm" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border">Line Item</div>
                       {periodLabels.map((label, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0">{label}</div>
                       ))}
                     </div>
 
-                    <div className="bg-success/20 p-2 px-3 font-semibold text-sm min-w-[800px]">ASSETS</div>
+                    <div className="bg-success/20 p-2 px-3 font-semibold text-sm" style={{minWidth}}>ASSETS</div>
 
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Cash</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -584,7 +638,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Accounts Receivable</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -598,7 +652,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Inventory</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -612,7 +666,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Real Estate/Fixed Assets</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -626,7 +680,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Accumulated Depreciation</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -640,7 +694,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 border-b-2 border-border bg-success/10 min-w-[800px]">
+                    <div className="grid border-b-2 border-border bg-success/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-bold">Total Assets</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
@@ -649,9 +703,9 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="bg-destructive/20 p-2 px-3 font-semibold text-sm min-w-[800px]">LIABILITIES</div>
+                    <div className="bg-destructive/20 p-2 px-3 font-semibold text-sm" style={{minWidth}}>LIABILITIES</div>
 
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Current Liabilities</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -665,7 +719,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                    <div className="grid border-b border-border" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Long-Term Debt</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
@@ -679,7 +733,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 border-b-2 border-border bg-destructive/10 min-w-[800px]">
+                    <div className="grid border-b-2 border-border bg-destructive/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-bold">Total Liabilities</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
@@ -688,7 +742,7 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 bg-accent/10 min-w-[800px]">
+                    <div className="grid bg-accent/10" style={{...gridStyle, minWidth}}>
                       <div className="p-3 border-r border-border font-bold">Equity</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">

@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet, BusinessPeriodData } from "@/contexts/SpreadsheetContext";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 
 export const BusinessFinancials = () => {
   const {
@@ -110,6 +110,28 @@ export const BusinessFinancials = () => {
     const newPeriods = [...businessPeriods];
     newPeriods[periodIndex] = clearedPeriod;
     setBusinessPeriods(newPeriods);
+  };
+
+  const addProjectionColumn = () => {
+    const newPeriod: BusinessPeriodData = {
+      revenue: "0", cogs: "0", operatingExpenses: "0", rentExpense: "0", officersComp: "0",
+      depreciation: "0", amortization: "0", section179: "0", interest: "0",
+      otherIncome: "0", otherExpenses: "0", addbacks: "0", taxes: "0",
+      m1BookIncome: "0", m1FedTaxExpense: "0", m1ExcessDepr: "0", m1Other: "0",
+      periodDate: "", periodMonths: "12",
+      totalDeductionsInput: "0",
+      isProjection: true
+    };
+    setBusinessPeriods([...businessPeriods, newPeriod]);
+    setBusinessPeriodLabels([...businessPeriodLabels, `Projection ${businessPeriodLabels.filter(l => l.includes('Projection')).length + 1}`]);
+  };
+
+  const removeColumn = (periodIndex: number) => {
+    if (businessPeriods.length <= 1) return; // Keep at least one column
+    const newPeriods = businessPeriods.filter((_, i) => i !== periodIndex);
+    const newLabels = businessPeriodLabels.filter((_, i) => i !== periodIndex);
+    setBusinessPeriods(newPeriods);
+    setBusinessPeriodLabels(newLabels);
   };
 
   const calculateGrossProfit = (periodIndex: number) => {
@@ -340,8 +362,12 @@ export const BusinessFinancials = () => {
   return (
     <div className="p-6 space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Business Income Statement (P&L)</CardTitle>
+          <Button onClick={addProjectionColumn} variant="outline" size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Projection Column
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -392,15 +418,27 @@ export const BusinessFinancials = () => {
                             className="text-center text-xs w-16"
                           />
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => clearColumn(i)}
-                          className="w-full text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-3 h-3 mr-1" />
-                          Clear Column
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => clearColumn(i)}
+                            className="flex-1 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Clear
+                          </Button>
+                          {businessPeriods[i].isProjection && businessPeriods.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeColumn(i)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </th>
                   ))}
@@ -409,7 +447,7 @@ export const BusinessFinancials = () => {
               <tbody>
                 {/* Income Section */}
                 <tr className="bg-muted/50">
-                  <td colSpan={5} className="border border-border p-2 font-semibold sticky left-0">Income</td>
+                  <td colSpan={businessPeriods.length + 1} className="border border-border p-2 font-semibold sticky left-0">Income</td>
                 </tr>
                 <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">1. Gross Receipts or Sales</td>
