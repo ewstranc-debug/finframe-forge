@@ -184,6 +184,9 @@ Provide a thorough, professional credit analysis following the structure outline
 
     console.log('Calling Lovable AI for financial analysis...');
 
+    // Set max_tokens based on model - Pro models can handle more
+    const maxTokens = selectedModel.includes('pro') || selectedModel.includes('gpt-5') ? 16000 : 8000;
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -196,7 +199,7 @@ Provide a thorough, professional credit analysis following the structure outline
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        max_tokens: 4000,
+        max_tokens: maxTokens,
       }),
     });
 

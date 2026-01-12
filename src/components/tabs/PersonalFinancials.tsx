@@ -14,10 +14,11 @@ export const PersonalFinancials = () => {
 
   const clearAllData = () => {
     const clearedPeriod: PersonalPeriodData = {
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", retirementIncome: "0", otherIncome: "0",
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0",
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      periodDate: "", periodMonths: "12"
     };
     setPersonalPeriods(personalPeriods.map(() => ({ ...clearedPeriod })));
   };
@@ -36,10 +37,11 @@ export const PersonalFinancials = () => {
 
   const clearColumn = (periodIndex: number) => {
     const clearedPeriod: PersonalPeriodData = {
-      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", otherIncome: "0",
+      salary: "0", bonuses: "0", investments: "0", rentalIncome: "0", retirementIncome: "0", otherIncome: "0",
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0",
-      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0"
+      schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      periodDate: "", periodMonths: "12"
     };
     const newPeriods = [...personalPeriods];
     newPeriods[periodIndex] = clearedPeriod;
@@ -50,7 +52,7 @@ export const PersonalFinancials = () => {
     const period = personalPeriods[periodIndex];
     return (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0) +
            (parseFloat(period.investments) || 0) + (parseFloat(period.rentalIncome) || 0) +
-           (parseFloat(period.otherIncome) || 0);
+           (parseFloat(period.retirementIncome) || 0) + (parseFloat(period.otherIncome) || 0);
   };
 
   const calculateSchedCNetIncome = (periodIndex: number) => {

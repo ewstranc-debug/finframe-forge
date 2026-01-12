@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet, StickyNote, Sparkles } from "lucide-react";
+import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet, StickyNote, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -765,6 +765,19 @@ export const FinancialAnalysis = () => {
                 </>
               )}
             </Button>
+            {financialAnalysis && (
+              <Button 
+                onClick={() => {
+                  setFinancialAnalysis("");
+                  toast.success("AI analysis cleared");
+                }} 
+                variant="outline" 
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear Analysis
+              </Button>
+            )}
           </div>
         </div>
 

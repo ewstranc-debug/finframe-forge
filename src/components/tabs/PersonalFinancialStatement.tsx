@@ -23,6 +23,8 @@ export const PersonalFinancialStatement = () => {
   const clearAllData = () => {
     setAssets({
       liquidAssets: "0",
+      retirementAccounts: "0",
+      investmentAccounts: "0",
       realEstate: "0",
       vehicles: "0",
       accountsReceivable: "0",
@@ -107,11 +109,33 @@ export const PersonalFinancialStatement = () => {
             </div>
 
             <div className="grid grid-cols-2 border-b border-border">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Liquid Assets (Cash, Savings, Stocks)</div>
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Liquid Assets (Cash, Savings)</div>
               <div>
                 <EditableCell
                   value={assets.liquidAssets}
                   onChange={(val) => updateAsset("liquidAssets", val)}
+                  type="currency"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 border-b border-border">
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Retirement Accounts (401k, IRA)</div>
+              <div>
+                <EditableCell
+                  value={assets.retirementAccounts}
+                  onChange={(val) => updateAsset("retirementAccounts", val)}
+                  type="currency"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 border-b border-border">
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Investment Accounts (Stocks, Bonds, Mutual Funds)</div>
+              <div>
+                <EditableCell
+                  value={assets.investmentAccounts}
+                  onChange={(val) => updateAsset("investmentAccounts", val)}
                   type="currency"
                 />
               </div>
