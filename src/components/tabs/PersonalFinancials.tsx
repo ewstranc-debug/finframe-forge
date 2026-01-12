@@ -143,6 +143,36 @@ export const PersonalFinancials = () => {
                           type="text"
                           className="text-center font-semibold"
                         />
+                        <div className="text-xs text-muted-foreground">
+                          <EditableCell
+                            value={personalPeriods[i]?.periodDate || ""}
+                            onChange={(val) => {
+                              const newPeriods = [...personalPeriods];
+                              newPeriods[i] = { ...newPeriods[i], periodDate: val };
+                              // Auto-calculate months if we have a previous date
+                              if (val && i > 0 && personalPeriods[i-1]?.periodDate) {
+                                const prevDate = new Date(personalPeriods[i-1].periodDate);
+                                const currDate = new Date(val);
+                                const monthsDiff = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+                                if (monthsDiff > 0) {
+                                  newPeriods[i] = { ...newPeriods[i], periodMonths: monthsDiff.toString() };
+                                }
+                              }
+                              setPersonalPeriods(newPeriods);
+                            }}
+                            type="text"
+                            className="text-center text-xs"
+                          />
+                        </div>
+                        <div className="flex items-center justify-center gap-1 text-xs">
+                          <span>Months:</span>
+                          <EditableCell
+                            value={personalPeriods[i]?.periodMonths || "12"}
+                            onChange={(val) => updateField(i, "periodMonths", val)}
+                            type="number"
+                            className="text-center text-xs w-12"
+                          />
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -211,11 +241,23 @@ export const PersonalFinancials = () => {
                   ))}
                 </tr>
                 <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Retirement Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i]?.retirementIncome || "0"}
+                        onChange={(val) => updateField(i, "retirementIncome", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
                   <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Other Income</td>
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border">
                       <EditableCell
-                        value={personalPeriods[i].otherIncome}
+                        value={personalPeriods[i]?.otherIncome || "0"}
                         onChange={(val) => updateField(i, "otherIncome", val)}
                         type="currency"
                       />
