@@ -38,8 +38,9 @@ export const EditableCell = ({
   navRow,
   navCol,
 }: EditableCellProps) => {
+const safeValue = value ?? "";
   const [isEditing, setIsEditing] = useState(false);
-  const [tempValue, setTempValue] = useState(value.toString());
+  const [tempValue, setTempValue] = useState(safeValue.toString());
   const [error, setError] = useState<string | null>(null);
 
   const formatValue = (val: string | number) => {
@@ -111,8 +112,8 @@ export const EditableCell = ({
     onChange(tempValue);
   };
 
-  const handleClick = () => {
-    const val = value.toString();
+const handleClick = () => {
+    const val = safeValue.toString();
     // If the value is "0" or empty, clear it when clicking to edit
     if (val === "0" || val === "" || parseFloat(val) === 0) {
       setTempValue("");
@@ -447,7 +448,7 @@ export const EditableCell = ({
         data-nav-col={navCol}
         className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
       >
-        {formatValue(value)}
+        {formatValue(safeValue)}
       </div>
       {error && (
         <Tooltip>

@@ -7,69 +7,6 @@ import { useSpreadsheet, type AffiliateIncomeData as IncomeData, type AffiliateB
 export const AffiliateFinancials = () => {
   const { affiliateEntities: entities, setAffiliateEntities: setEntities, affiliatePeriodLabels: periodLabels, setAffiliatePeriodLabels: setPeriodLabels } = useSpreadsheet();
 
-  const getNavFields = (currentRow: string) => {
-    const incomeFields = ["revenue", "cogs", "operatingExpenses", "depreciation", "amortization", "interest", "taxes"];
-    const balanceFields = [
-      "cash",
-      "accountsReceivable",
-      "inventory",
-      "realEstate",
-      "accumulatedDepreciation",
-      "currentLiabilities",
-      "longTermDebt",
-    ];
-
-    return incomeFields.includes(currentRow) ? incomeFields : balanceFields;
-  };
-
-  const activateCell = (entityId: string, row: string, col: number) => {
-    const selector = `[data-field="${entityId}-${row}-${col}"]`;
-    const els = Array.from(document.querySelectorAll(selector)) as HTMLElement[];
-
-    const el =
-      els.find((node) => {
-        const rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 && node.offsetParent !== null;
-      }) ??
-      els[0] ??
-      null;
-
-    if (!el) return;
-
-    if (el instanceof HTMLInputElement) {
-      el.focus();
-      el.select?.();
-      return;
-    }
-
-    el.click();
-  };
-
-  const focusNextCell = (entityId: string, currentRow: string, currentCol: number) => {
-    const fields = getNavFields(currentRow);
-    const currentIndex = fields.indexOf(currentRow);
-
-    if (currentIndex < fields.length - 1) {
-      activateCell(entityId, fields[currentIndex + 1], currentCol);
-    }
-  };
-
-  const focusRightCell = (entityId: string, currentRow: string, currentCol: number) => {
-    const colCount = periodLabels.length;
-
-    // Excel-like wrap: last column -> next row, first column
-    if (currentCol < colCount - 1) {
-      activateCell(entityId, currentRow, currentCol + 1);
-      return;
-    }
-
-    const fields = getNavFields(currentRow);
-    const currentIndex = fields.indexOf(currentRow);
-    if (currentIndex < fields.length - 1) {
-      activateCell(entityId, fields[currentIndex + 1], 0);
-    }
-  };
-
   const addEntity = () => {
     const newId = (entities.length + 1).toString();
     const defaultIncomePeriod: IncomeData = { 
@@ -129,21 +66,84 @@ export const AffiliateFinancials = () => {
     setPeriodLabels(newLabels);
   };
 
+  // Calculation functions to match Business P&L format
+  const calculateGrossProfit = (entity: AffiliateEntity, periodIndex: number) => {
+    const period = entity.incomePeriods[periodIndex];
+    if (!period) return 0;
+    const revenue = parseFloat(period.revenue) || 0;
+    const cogs = parseFloat(period.cogs) || 0;
+    return revenue - cogs;
+  };
+
+  const calculateTotalIncome = (entity: AffiliateEntity, periodIndex: number) => {
+    const grossProfit = calculateGrossProfit(entity, periodIndex);
+    const period = entity.incomePeriods[periodIndex];
+    if (!period) return grossProfit;
+    const otherIncome = parseFloat(period.otherIncome) || 0;
+    return grossProfit + otherIncome;
+  };
+
+  const calculateTotalDeductions = (entity: AffiliateEntity, periodIndex: number) => {
+    const period = entity.incomePeriods[periodIndex];
+    if (!period) return 0;
+    return (parseFloat(period.officersComp) || 0) +
+           (parseFloat(period.rentExpense) || 0) +
+           (parseFloat(period.operatingExpenses) || 0) +
+           (parseFloat(period.depreciation) || 0) +
+           (parseFloat(period.amortization) || 0) +
+           (parseFloat(period.section179) || 0) +
+           (parseFloat(period.interest) || 0) +
+           (parseFloat(period.otherExpenses) || 0);
+  };
+
+  const calculateEBITDA = (entity: AffiliateEntity, periodIndex: number) => {
+    const period = entity.incomePeriods[periodIndex];
+    if (!period) return 0;
+    const totalIncome = calculateTotalIncome(entity, periodIndex);
+    const operatingDeductions = (parseFloat(period.officersComp) || 0) +
+                                 (parseFloat(period.rentExpense) || 0) +
+                                 (parseFloat(period.operatingExpenses) || 0);
+    return totalIncome - operatingDeductions;
+  };
+
+  const calculateEBIT = (entity: AffiliateEntity, periodIndex: number) => {
+    const period = entity.incomePeriods[periodIndex];
+    if (!period) return 0;
+    const ebitda = calculateEBITDA(entity, periodIndex);
+    const depreciation = parseFloat(period.depreciation) || 0;
+    const amortization = parseFloat(period.amortization) || 0;
+    const section179 = parseFloat(period.section179) || 0;
+    return ebitda - depreciation - amortization - section179;
+  };
+
+  const calculateEBT = (entity: AffiliateEntity, periodIndex: number) => {
+    const totalIncome = calculateTotalIncome(entity, periodIndex);
+    const totalDeductions = calculateTotalDeductions(entity, periodIndex);
+    return totalIncome - totalDeductions;
+  };
+
   const calculateNetIncome = (entity: AffiliateEntity, periodIndex: number) => {
     const period = entity.incomePeriods[periodIndex];
-    
-    const revenue = parseFloat(period.revenue) || 0;
-    const expenses = (parseFloat(period.cogs) || 0) +
-                     (parseFloat(period.operatingExpenses) || 0) +
-                     (parseFloat(period.depreciation) || 0) +
-                     (parseFloat(period.amortization) || 0) +
-                     (parseFloat(period.interest) || 0) +
-                     (parseFloat(period.taxes) || 0);
-    return revenue - expenses;
+    if (!period) return 0;
+    const ebt = calculateEBT(entity, periodIndex);
+    const taxes = parseFloat(period.taxes) || 0;
+    return ebt - taxes;
+  };
+
+  const calculateCashFlow = (entity: AffiliateEntity, periodIndex: number) => {
+    const period = entity.incomePeriods[periodIndex];
+    if (!period) return 0;
+    const netIncome = calculateNetIncome(entity, periodIndex);
+    const depreciation = parseFloat(period.depreciation) || 0;
+    const amortization = parseFloat(period.amortization) || 0;
+    const section179 = parseFloat(period.section179) || 0;
+    const addbacks = parseFloat(period.addbacks) || 0;
+    return netIncome + depreciation + amortization + section179 + addbacks;
   };
 
   const calculateTotalAssets = (entity: AffiliateEntity, periodIndex: number) => {
     const period = entity.balancePeriods[periodIndex];
+    if (!period) return 0;
     const currentAssets = (parseFloat(period.cash) || 0) + 
                          (parseFloat(period.accountsReceivable) || 0) +
                          (parseFloat(period.inventory) || 0);
@@ -153,11 +153,16 @@ export const AffiliateFinancials = () => {
 
   const calculateTotalLiabilities = (entity: AffiliateEntity, periodIndex: number) => {
     const period = entity.balancePeriods[periodIndex];
+    if (!period) return 0;
     return (parseFloat(period.currentLiabilities) || 0) + (parseFloat(period.longTermDebt) || 0);
   };
 
   const calculateEquity = (entity: AffiliateEntity, periodIndex: number) => {
     return calculateTotalAssets(entity, periodIndex) - calculateTotalLiabilities(entity, periodIndex);
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
   };
 
   return (
@@ -192,12 +197,14 @@ export const AffiliateFinancials = () => {
                 )}
               </div>
 
+              {/* Income Statement - Business P&L Format */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Income Statement</CardTitle>
+                  <CardTitle className="text-base">Income Statement (P&L)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
+                    {/* Header Row with Period Labels */}
                     <div className="grid grid-cols-5 bg-muted font-medium text-sm min-w-[800px]">
                       <div className="p-3 border-r border-border">Line Item</div>
                       {periodLabels.map((label, i) => (
@@ -211,14 +218,15 @@ export const AffiliateFinancials = () => {
                             />
                             <div className="text-xs text-muted-foreground">
                               <EditableCell
-                                value={entity.incomePeriods[i].periodDate}
+                                value={entity.incomePeriods[i]?.periodDate || ""}
                                 onChange={(val) => {
                                   setEntities(entities.map(e => {
                                     if (e.id === entity.id) {
                                       const newPeriods = [...e.incomePeriods];
+                                      if (!newPeriods[i]) return e;
                                       newPeriods[i] = { ...newPeriods[i], periodDate: val };
                                       // Auto-calculate months if we have a previous date
-                                      if (val && i > 0 && e.incomePeriods[i-1].periodDate) {
+                                      if (val && i > 0 && e.incomePeriods[i-1]?.periodDate) {
                                         const prevDate = new Date(e.incomePeriods[i-1].periodDate);
                                         const currDate = new Date(val);
                                         const monthsDiff = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
@@ -238,11 +246,12 @@ export const AffiliateFinancials = () => {
                             <div className="flex items-center justify-center gap-1 text-xs">
                               <span>Months:</span>
                               <EditableCell
-                                value={entity.incomePeriods[i].periodMonths}
+                                value={entity.incomePeriods[i]?.periodMonths || "12"}
                                 onChange={(val) => {
                                   setEntities(entities.map(e => {
                                     if (e.id === entity.id) {
                                       const newPeriods = [...e.incomePeriods];
+                                      if (!newPeriods[i]) return e;
                                       newPeriods[i] = { ...newPeriods[i], periodMonths: val };
                                       return { ...e, incomePeriods: newPeriods };
                                     }
@@ -258,123 +267,286 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
+                    {/* INCOME SECTION */}
+                    <div className="bg-success/20 p-2 px-3 font-semibold text-sm min-w-[800px]">INCOME</div>
+
+                    {/* Line 1: Revenue */}
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Revenue</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">1. Revenue</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.revenue}
+                            value={period?.revenue || "0"}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "revenue", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'revenue', i)}
-                            onTab={() => focusRightCell(entity.id, 'revenue', i)}
                             dataField={`${entity.id}-revenue-${i}`}
                           />
                         </div>
                       ))}
                     </div>
 
+                    {/* Line 2: COGS */}
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">COGS</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">2. Cost of Goods Sold</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.cogs}
+                            value={period?.cogs || "0"}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "cogs", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'cogs', i)}
-                            onTab={() => focusRightCell(entity.id, 'cogs', i)}
                             dataField={`${entity.id}-cogs-${i}`}
                           />
                         </div>
                       ))}
                     </div>
 
+                    {/* Line 3: Gross Profit (calculated) */}
+                    <div className="grid grid-cols-5 border-b border-border bg-muted/50 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-semibold">3. Gross Profit</div>
+                      {entity.incomePeriods.map((_, i) => (
+                        <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
+                          {formatCurrency(calculateGrossProfit(entity, i))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 4: Other Income */}
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Operating Expenses</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">4. Other Income</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.operatingExpenses}
+                            value={period?.otherIncome || "0"}
+                            onChange={(val) => updateIncomePeriod(entity.id, i, "otherIncome", val)}
+                            type="currency"
+                            dataField={`${entity.id}-otherIncome-${i}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 5: Total Income (calculated) */}
+                    <div className="grid grid-cols-5 border-b-2 border-border bg-success/10 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-bold">5. Total Income</div>
+                      {entity.incomePeriods.map((_, i) => (
+                        <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
+                          {formatCurrency(calculateTotalIncome(entity, i))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* DEDUCTIONS SECTION */}
+                    <div className="bg-destructive/20 p-2 px-3 font-semibold text-sm min-w-[800px]">DEDUCTIONS</div>
+
+                    {/* Line 6: Officers Compensation */}
+                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">6. Officers Compensation</div>
+                      {entity.incomePeriods.map((period, i) => (
+                        <div key={i} className="border-r border-border last:border-r-0">
+                          <EditableCell
+                            value={period?.officersComp || "0"}
+                            onChange={(val) => updateIncomePeriod(entity.id, i, "officersComp", val)}
+                            type="currency"
+                            dataField={`${entity.id}-officersComp-${i}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 7: Rent Expense */}
+                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">7. Rent Expense</div>
+                      {entity.incomePeriods.map((period, i) => (
+                        <div key={i} className="border-r border-border last:border-r-0">
+                          <EditableCell
+                            value={period?.rentExpense || "0"}
+                            onChange={(val) => updateIncomePeriod(entity.id, i, "rentExpense", val)}
+                            type="currency"
+                            dataField={`${entity.id}-rentExpense-${i}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 8: Other Operating Expenses */}
+                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">8. Other Operating Expenses</div>
+                      {entity.incomePeriods.map((period, i) => (
+                        <div key={i} className="border-r border-border last:border-r-0">
+                          <EditableCell
+                            value={period?.operatingExpenses || "0"}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "operatingExpenses", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'operatingExpenses', i)}
-                            onTab={() => focusRightCell(entity.id, 'operatingExpenses', i)}
                             dataField={`${entity.id}-operatingExpenses-${i}`}
                           />
                         </div>
                       ))}
                     </div>
 
+                    {/* EBITDA (calculated) */}
+                    <div className="grid grid-cols-5 border-b border-border bg-accent/10 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-semibold">EBITDA</div>
+                      {entity.incomePeriods.map((_, i) => (
+                        <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
+                          {formatCurrency(calculateEBITDA(entity, i))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 9: Depreciation */}
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Depreciation</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">9. Depreciation</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.depreciation}
+                            value={period?.depreciation || "0"}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "depreciation", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'depreciation', i)}
-                            onTab={() => focusRightCell(entity.id, 'depreciation', i)}
                             dataField={`${entity.id}-depreciation-${i}`}
                           />
                         </div>
                       ))}
                     </div>
 
+                    {/* Line 10: Amortization */}
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Amortization</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">10. Amortization</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.amortization}
+                            value={period?.amortization || "0"}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "amortization", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'amortization', i)}
-                            onTab={() => focusRightCell(entity.id, 'amortization', i)}
                             dataField={`${entity.id}-amortization-${i}`}
                           />
                         </div>
                       ))}
                     </div>
 
+                    {/* Line 11: Section 179 */}
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Interest</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">11. Section 179 Deduction</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.interest}
+                            value={period?.section179 || "0"}
+                            onChange={(val) => updateIncomePeriod(entity.id, i, "section179", val)}
+                            type="currency"
+                            dataField={`${entity.id}-section179-${i}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* EBIT (calculated) */}
+                    <div className="grid grid-cols-5 border-b border-border bg-accent/10 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-semibold">EBIT</div>
+                      {entity.incomePeriods.map((_, i) => (
+                        <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
+                          {formatCurrency(calculateEBIT(entity, i))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 12: Interest */}
+                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">12. Interest Expense</div>
+                      {entity.incomePeriods.map((period, i) => (
+                        <div key={i} className="border-r border-border last:border-r-0">
+                          <EditableCell
+                            value={period?.interest || "0"}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "interest", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'interest', i)}
-                            onTab={() => focusRightCell(entity.id, 'interest', i)}
                             dataField={`${entity.id}-interest-${i}`}
                           />
                         </div>
                       ))}
                     </div>
 
+                    {/* Line 13: Other Expenses */}
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Taxes</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">13. Other Deductions</div>
                       {entity.incomePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.taxes}
+                            value={period?.otherExpenses || "0"}
+                            onChange={(val) => updateIncomePeriod(entity.id, i, "otherExpenses", val)}
+                            type="currency"
+                            dataField={`${entity.id}-otherExpenses-${i}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 14: Total Deductions (calculated) */}
+                    <div className="grid grid-cols-5 border-b border-border bg-destructive/10 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-bold">14. Total Deductions</div>
+                      {entity.incomePeriods.map((_, i) => (
+                        <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
+                          {formatCurrency(calculateTotalDeductions(entity, i))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 15: Income Before Taxes (EBT) */}
+                    <div className="grid grid-cols-5 border-b border-border bg-muted/50 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-semibold">15. Income Before Taxes (EBT)</div>
+                      {entity.incomePeriods.map((_, i) => (
+                        <div key={i} className="p-3 border-r border-border last:border-r-0 font-semibold">
+                          {formatCurrency(calculateEBT(entity, i))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Line 16: Taxes */}
+                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">16. Provision for Taxes</div>
+                      {entity.incomePeriods.map((period, i) => (
+                        <div key={i} className="border-r border-border last:border-r-0">
+                          <EditableCell
+                            value={period?.taxes || "0"}
                             onChange={(val) => updateIncomePeriod(entity.id, i, "taxes", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'taxes', i)}
-                            onTab={() => focusRightCell(entity.id, 'taxes', i)}
                             dataField={`${entity.id}-taxes-${i}`}
                           />
                         </div>
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-5 bg-primary/10 min-w-[800px]">
-                      <div className="p-3 border-r border-border font-bold">Net Income</div>
+                    {/* Line 17: Net Income (calculated) */}
+                    <div className="grid grid-cols-5 border-b-2 border-border bg-primary/10 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-bold">17. Net Income</div>
                       {entity.incomePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateNetIncome(entity, i))}
+                          {formatCurrency(calculateNetIncome(entity, i))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* CASH FLOW ADDBACKS SECTION */}
+                    <div className="bg-accent/20 p-2 px-3 font-semibold text-sm min-w-[800px]">CASH FLOW ADDBACKS</div>
+
+                    {/* Addbacks */}
+                    <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Other Addbacks</div>
+                      {entity.incomePeriods.map((period, i) => (
+                        <div key={i} className="border-r border-border last:border-r-0">
+                          <EditableCell
+                            value={period?.addbacks || "0"}
+                            onChange={(val) => updateIncomePeriod(entity.id, i, "addbacks", val)}
+                            type="currency"
+                            dataField={`${entity.id}-addbacks-${i}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Cash Flow for DSCR (calculated) */}
+                    <div className="grid grid-cols-5 bg-accent/10 min-w-[800px]">
+                      <div className="p-3 border-r border-border font-bold">Cash Flow for DSCR</div>
+                      {entity.incomePeriods.map((_, i) => (
+                        <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
+                          {formatCurrency(calculateCashFlow(entity, i))}
                         </div>
                       ))}
                     </div>
@@ -382,6 +554,7 @@ export const AffiliateFinancials = () => {
                 </CardContent>
               </Card>
 
+              {/* Balance Sheet */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Balance Sheet</CardTitle>
@@ -395,20 +568,16 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
 
-                    <div className="mt-2 mb-2 px-3">
-                      <h4 className="text-sm font-semibold text-success">Assets</h4>
-                    </div>
+                    <div className="bg-success/20 p-2 px-3 font-semibold text-sm min-w-[800px]">ASSETS</div>
 
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Cash</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.cash}
+                            value={period?.cash || "0"}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "cash", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'cash', i)}
-                            onTab={() => focusRightCell(entity.id, 'cash', i)}
                             dataField={`${entity.id}-cash-${i}`}
                           />
                         </div>
@@ -416,15 +585,13 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">A/R</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Accounts Receivable</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.accountsReceivable}
+                            value={period?.accountsReceivable || "0"}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "accountsReceivable", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'accountsReceivable', i)}
-                            onTab={() => focusRightCell(entity.id, 'accountsReceivable', i)}
                             dataField={`${entity.id}-accountsReceivable-${i}`}
                           />
                         </div>
@@ -436,11 +603,9 @@ export const AffiliateFinancials = () => {
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.inventory}
+                            value={period?.inventory || "0"}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "inventory", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'inventory', i)}
-                            onTab={() => focusRightCell(entity.id, 'inventory', i)}
                             dataField={`${entity.id}-inventory-${i}`}
                           />
                         </div>
@@ -452,11 +617,9 @@ export const AffiliateFinancials = () => {
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.realEstate}
+                            value={period?.realEstate || "0"}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "realEstate", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'realEstate', i)}
-                            onTab={() => focusRightCell(entity.id, 'realEstate', i)}
                             dataField={`${entity.id}-realEstate-${i}`}
                           />
                         </div>
@@ -464,15 +627,13 @@ export const AffiliateFinancials = () => {
                     </div>
 
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Accum. Depreciation</div>
+                      <div className="p-3 border-r border-border bg-secondary/30 font-medium">Accumulated Depreciation</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.accumulatedDepreciation}
+                            value={period?.accumulatedDepreciation || "0"}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "accumulatedDepreciation", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'accumulatedDepreciation', i)}
-                            onTab={() => focusRightCell(entity.id, 'accumulatedDepreciation', i)}
                             dataField={`${entity.id}-accumulatedDepreciation-${i}`}
                           />
                         </div>
@@ -483,25 +644,21 @@ export const AffiliateFinancials = () => {
                       <div className="p-3 border-r border-border font-bold">Total Assets</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalAssets(entity, i))}
+                          {formatCurrency(calculateTotalAssets(entity, i))}
                         </div>
                       ))}
                     </div>
 
-                    <div className="mt-2 mb-2 px-3">
-                      <h4 className="text-sm font-semibold text-destructive">Liabilities</h4>
-                    </div>
+                    <div className="bg-destructive/20 p-2 px-3 font-semibold text-sm min-w-[800px]">LIABILITIES</div>
 
                     <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
                       <div className="p-3 border-r border-border bg-secondary/30 font-medium">Current Liabilities</div>
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.currentLiabilities}
+                            value={period?.currentLiabilities || "0"}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "currentLiabilities", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'currentLiabilities', i)}
-                            onTab={() => focusRightCell(entity.id, 'currentLiabilities', i)}
                             dataField={`${entity.id}-currentLiabilities-${i}`}
                           />
                         </div>
@@ -513,11 +670,9 @@ export const AffiliateFinancials = () => {
                       {entity.balancePeriods.map((period, i) => (
                         <div key={i} className="border-r border-border last:border-r-0">
                           <EditableCell
-                            value={period.longTermDebt}
+                            value={period?.longTermDebt || "0"}
                             onChange={(val) => updateBalancePeriod(entity.id, i, "longTermDebt", val)}
                             type="currency"
-                            onEnter={() => focusNextCell(entity.id, 'longTermDebt', i)}
-                            onTab={() => focusRightCell(entity.id, 'longTermDebt', i)}
                             dataField={`${entity.id}-longTermDebt-${i}`}
                           />
                         </div>
@@ -528,7 +683,7 @@ export const AffiliateFinancials = () => {
                       <div className="p-3 border-r border-border font-bold">Total Liabilities</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalLiabilities(entity, i))}
+                          {formatCurrency(calculateTotalLiabilities(entity, i))}
                         </div>
                       ))}
                     </div>
@@ -537,7 +692,7 @@ export const AffiliateFinancials = () => {
                       <div className="p-3 border-r border-border font-bold">Equity</div>
                       {entity.balancePeriods.map((_, i) => (
                         <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateEquity(entity, i))}
+                          {formatCurrency(calculateEquity(entity, i))}
                         </div>
                       ))}
                     </div>
