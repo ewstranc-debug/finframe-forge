@@ -108,11 +108,12 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
 
   const businessCashFlow = businessEbitda + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
 
-  // Calculate Personal W-2 Income
+  // Calculate Personal W-2 Income (including retirement income)
   const personalW2Income = (parseFloat(personalPeriod.salary) || 0) + 
                           (parseFloat(personalPeriod.bonuses) || 0) +
                           (parseFloat(personalPeriod.investments) || 0) +
                           (parseFloat(personalPeriod.rentalIncome) || 0) +
+                          (parseFloat(personalPeriod.retirementIncome) || 0) +
                           (parseFloat(personalPeriod.otherIncome) || 0);
 
   // Calculate Schedule C Cash Flow
