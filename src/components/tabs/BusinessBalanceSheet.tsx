@@ -1,9 +1,32 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet, type BusinessBalanceSheetPeriodData as PeriodData } from "@/contexts/SpreadsheetContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
+import {
+  calculateCurrentAssets,
+  calculateNetFixedAssets,
+  calculateTotalAssets,
+  calculateTotalLiabilities,
+  calculateEquity,
+  calculateCurrentRatio,
+  calculateDebtToEquity,
+  calculateTurnoverRatios,
+  getAnnualizedValues,
+  formatCurrency,
+  formatRatio,
+  formatDays,
+} from "@/utils/balanceSheetCalculations";
 
 export const BusinessBalanceSheet = () => {
-  const { businessBalanceSheetPeriods: periods, setBusinessBalanceSheetPeriods: setPeriods, businessBalanceSheetLabels: periodLabels, setBusinessBalanceSheetLabels: setPeriodLabels } = useSpreadsheet();
+  const { 
+    businessBalanceSheetPeriods: periods, 
+    setBusinessBalanceSheetPeriods: setPeriods, 
+    businessBalanceSheetLabels: periodLabels, 
+    setBusinessBalanceSheetLabels: setPeriodLabels,
+    businessPeriods, // Connect to P&L for turnover ratios
+  } = useSpreadsheet();
 
   const updateField = (periodIndex: number, field: keyof PeriodData, value: string) => {
     const newPeriods = [...periods];
@@ -17,59 +40,29 @@ export const BusinessBalanceSheet = () => {
     setPeriodLabels(newLabels);
   };
 
-  const calculateCurrentAssets = (periodIndex: number) => {
-    const period = periods[periodIndex];
-    return (parseFloat(period.cash) || 0) + 
-           (parseFloat(period.accountsReceivable) || 0) + 
-           (parseFloat(period.inventory) || 0) + 
-           (parseFloat(period.otherCurrentAssets) || 0);
-  };
+  // Memoize all balance sheet calculations
+  const balanceSheetMetrics = useMemo(() => {
+    return periods.map((period, index) => {
+      // Get annualized revenue and COGS from corresponding P&L period
+      const correspondingPLPeriod = businessPeriods[index];
+      const { annualizedRevenue, annualizedCOGS } = correspondingPLPeriod 
+        ? getAnnualizedValues(correspondingPLPeriod)
+        : { annualizedRevenue: 0, annualizedCOGS: 0 };
 
-  const calculateNetFixedAssets = (periodIndex: number) => {
-    const period = periods[periodIndex];
-    return (parseFloat(period.realEstate) || 0) - (parseFloat(period.accumulatedDepreciation) || 0);
-  };
+      const turnoverRatios = calculateTurnoverRatios(period, annualizedRevenue, annualizedCOGS);
 
-  const calculateTotalAssets = (periodIndex: number) => {
-    return calculateCurrentAssets(periodIndex) + calculateNetFixedAssets(periodIndex);
-  };
-
-  const calculateTotalLiabilities = (periodIndex: number) => {
-    const period = periods[periodIndex];
-    return (parseFloat(period.currentLiabilities) || 0) + (parseFloat(period.longTermDebt) || 0);
-  };
-
-  const calculateEquity = (periodIndex: number) => {
-    return calculateTotalAssets(periodIndex) - calculateTotalLiabilities(periodIndex);
-  };
-
-  // Turnover Ratios (annualized based on period)
-  const calculateARTurnover = (periodIndex: number, revenue: number) => {
-    const ar = parseFloat(periods[periodIndex].accountsReceivable) || 0;
-    return ar > 0 ? revenue / ar : 0;
-  };
-
-  const calculateInventoryTurnover = (periodIndex: number, cogs: number) => {
-    const inventory = parseFloat(periods[periodIndex].inventory) || 0;
-    return inventory > 0 ? cogs / inventory : 0;
-  };
-
-  const calculateAPTurnover = (periodIndex: number, cogs: number) => {
-    const ap = parseFloat(periods[periodIndex].currentLiabilities) || 0;
-    return ap > 0 ? cogs / ap : 0;
-  };
-
-  const calculateCurrentRatio = (periodIndex: number) => {
-    const currentAssets = calculateCurrentAssets(periodIndex);
-    const currentLiabilities = parseFloat(periods[periodIndex].currentLiabilities) || 0;
-    return currentLiabilities > 0 ? currentAssets / currentLiabilities : 0;
-  };
-
-  const calculateDebtToEquity = (periodIndex: number) => {
-    const totalLiabilities = calculateTotalLiabilities(periodIndex);
-    const equity = calculateEquity(periodIndex);
-    return equity > 0 ? totalLiabilities / equity : 0;
-  };
+      return {
+        currentAssets: calculateCurrentAssets(period),
+        netFixedAssets: calculateNetFixedAssets(period),
+        totalAssets: calculateTotalAssets(period),
+        totalLiabilities: calculateTotalLiabilities(period),
+        equity: calculateEquity(period),
+        currentRatio: calculateCurrentRatio(period),
+        debtToEquity: calculateDebtToEquity(period),
+        ...turnoverRatios,
+      };
+    });
+  }, [periods, businessPeriods]);
 
   return (
     <div className="p-6 space-y-6">
@@ -150,9 +143,9 @@ export const BusinessBalanceSheet = () => {
 
             <div className="grid grid-cols-5 border-b border-border bg-success/10 min-w-[800px]">
               <div className="p-3 border-r border-border font-bold">Total Current Assets</div>
-              {periods.map((_, i) => (
+              {balanceSheetMetrics.map((metrics, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateCurrentAssets(i))}
+                  {formatCurrency(metrics.currentAssets)}
                 </div>
               ))}
             </div>
@@ -185,18 +178,18 @@ export const BusinessBalanceSheet = () => {
 
             <div className="grid grid-cols-5 border-b border-border bg-success/10 min-w-[800px]">
               <div className="p-3 border-r border-border font-bold">Net Fixed Assets</div>
-              {periods.map((_, i) => (
+              {balanceSheetMetrics.map((metrics, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateNetFixedAssets(i))}
+                  {formatCurrency(metrics.netFixedAssets)}
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-5 border-b-2 border-border bg-primary/10 min-w-[800px]">
               <div className="p-3 border-r border-border font-bold text-lg">Total Assets</div>
-              {periods.map((_, i) => (
+              {balanceSheetMetrics.map((metrics, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold text-lg">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalAssets(i))}
+                  {formatCurrency(metrics.totalAssets)}
                 </div>
               ))}
             </div>
@@ -233,18 +226,18 @@ export const BusinessBalanceSheet = () => {
 
             <div className="grid grid-cols-5 border-b-2 border-border bg-destructive/10 min-w-[800px]">
               <div className="p-3 border-r border-border font-bold">Total Liabilities</div>
-              {periods.map((_, i) => (
+              {balanceSheetMetrics.map((metrics, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalLiabilities(i))}
+                  {formatCurrency(metrics.totalLiabilities)}
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-5 bg-accent/10 min-w-[800px]">
               <div className="p-3 border-r border-border font-bold text-lg">Equity (Net Worth)</div>
-              {periods.map((_, i) => (
+              {balanceSheetMetrics.map((metrics, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold text-lg">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateEquity(i))}
+                  {formatCurrency(metrics.equity)}
                 </div>
               ))}
             </div>
@@ -254,7 +247,17 @@ export const BusinessBalanceSheet = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Financial Ratios</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Financial Ratios
+            <Tooltip>
+              <TooltipTrigger>
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Turnover ratios are calculated using annualized revenue and COGS from the corresponding P&L period.</p>
+              </TooltipContent>
+            </Tooltip>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="border border-border rounded-lg overflow-hidden">
@@ -266,46 +269,129 @@ export const BusinessBalanceSheet = () => {
             </div>
 
             <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Current Ratio</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0">
-                  {calculateCurrentRatio(i).toFixed(2)}x
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium flex items-center gap-2">
+                Current Ratio
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Current Assets ÷ Current Liabilities. Target: &gt;1.5x</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {balanceSheetMetrics.map((metrics, i) => (
+                <div key={i} className={`p-3 border-r border-border last:border-r-0 ${
+                  metrics.currentRatio >= 1.5 ? 'text-success' : 
+                  metrics.currentRatio >= 1.0 ? 'text-warning' : 'text-destructive'
+                }`}>
+                  {formatRatio(metrics.currentRatio)}
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Debt-to-Equity Ratio</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0">
-                  {calculateDebtToEquity(i).toFixed(2)}x
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium flex items-center gap-2">
+                Debt-to-Equity Ratio
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Total Liabilities ÷ Equity. Target: &lt;2.0x</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {balanceSheetMetrics.map((metrics, i) => (
+                <div key={i} className={`p-3 border-r border-border last:border-r-0 ${
+                  metrics.debtToEquity <= 2.0 ? 'text-success' : 
+                  metrics.debtToEquity <= 3.0 ? 'text-warning' : 'text-destructive'
+                }`}>
+                  {formatRatio(metrics.debtToEquity)}
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">A/R Turnover (days)</div>
-              {periods.map((_, i) => (
-                <div key={i} className="p-3 border-r border-border last:border-r-0">
-                  {(365 / calculateARTurnover(i, 1000000)).toFixed(0)} days
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium flex items-center gap-2">
+                A/R Turnover (DSO)
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Days Sales Outstanding = 365 ÷ (Revenue ÷ AR). Target: 30-45 days</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {balanceSheetMetrics.map((metrics, i) => (
+                <div key={i} className={`p-3 border-r border-border last:border-r-0 ${
+                  metrics.arDays <= 45 ? 'text-success' : 
+                  metrics.arDays <= 60 ? 'text-warning' : 'text-destructive'
+                }`}>
+                  {metrics.arTurnover > 0 ? formatDays(metrics.arDays) : 'N/A'}
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Inventory Turnover (days)</div>
-              {periods.map((_, i) => (
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium flex items-center gap-2">
+                Inventory Turnover (DIO)
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Days Inventory Outstanding = 365 ÷ (COGS ÷ Inventory). Varies by industry.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {balanceSheetMetrics.map((metrics, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0">
-                  {(365 / calculateInventoryTurnover(i, 500000)).toFixed(0)} days
+                  {metrics.inventoryTurnover > 0 ? formatDays(metrics.inventoryDays) : 'N/A'}
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">A/P Turnover (days)</div>
-              {periods.map((_, i) => (
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium flex items-center gap-2">
+                A/P Turnover (DPO)
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Days Payable Outstanding = 365 ÷ (COGS ÷ AP). Target: 30-45 days</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {balanceSheetMetrics.map((metrics, i) => (
                 <div key={i} className="p-3 border-r border-border last:border-r-0">
-                  {(365 / calculateAPTurnover(i, 500000)).toFixed(0)} days
+                  {metrics.apTurnover > 0 ? formatDays(metrics.apDays) : 'N/A'}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-5 bg-primary/5 min-w-[800px]">
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium flex items-center gap-2">
+                Cash Conversion Cycle
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>DSO + DIO - DPO. Measures how long cash is tied up in operations. Lower is better.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              {balanceSheetMetrics.map((metrics, i) => (
+                <div key={i} className={`p-3 border-r border-border last:border-r-0 font-medium ${
+                  metrics.cashConversionCycle <= 30 ? 'text-success' : 
+                  metrics.cashConversionCycle <= 60 ? 'text-warning' : 'text-destructive'
+                }`}>
+                  {(metrics.arTurnover > 0 || metrics.inventoryTurnover > 0) 
+                    ? formatDays(metrics.cashConversionCycle) 
+                    : 'N/A'}
                 </div>
               ))}
             </div>
