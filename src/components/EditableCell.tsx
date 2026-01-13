@@ -38,10 +38,53 @@ export const EditableCell = ({
   navRow,
   navCol,
 }: EditableCellProps) => {
-const safeValue = value ?? "";
+  const safeValue = value ?? "";
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(safeValue.toString());
   const [error, setError] = useState<string | null>(null);
+  const [formula, setFormula] = useState<string | null>(null);
+
+  // Evaluate mathematical formulas (e.g., =100+50, =1000*0.05)
+  const evaluateFormula = (input: string): { result: string; formula: string | null; error: string | null } => {
+    const trimmed = input.trim();
+    
+    // Check if it's a formula (starts with =)
+    if (!trimmed.startsWith("=")) {
+      return { result: trimmed, formula: null, error: null };
+    }
+
+    const expression = trimmed.slice(1).trim();
+    
+    if (!expression) {
+      return { result: "0", formula: null, error: "Empty formula" };
+    }
+
+    // Validate: only allow numbers, operators, parentheses, decimal points, and spaces
+    const validPattern = /^[\d+\-*/().%\s]+$/;
+    if (!validPattern.test(expression)) {
+      return { result: input, formula: null, error: "Invalid characters in formula" };
+    }
+
+    try {
+      // Replace % with /100 for percentage calculations
+      const processedExpr = expression.replace(/(\d+(?:\.\d+)?)\s*%/g, "($1/100)");
+      
+      // Use Function constructor to safely evaluate math expressions
+      // eslint-disable-next-line no-new-func
+      const evalFn = new Function(`return (${processedExpr})`);
+      const result = evalFn();
+      
+      if (typeof result !== "number" || !isFinite(result)) {
+        return { result: input, formula: null, error: "Invalid result" };
+      }
+
+      // Round to 2 decimal places for cleaner results
+      const rounded = Math.round(result * 100) / 100;
+      return { result: rounded.toString(), formula: trimmed, error: null };
+    } catch {
+      return { result: input, formula: null, error: "Invalid formula" };
+    }
+  };
 
   const formatValue = (val: string | number) => {
     if (type === "currency") {
@@ -106,16 +149,29 @@ const safeValue = value ?? "";
   };
 
   const handleBlur = () => {
-    const validationError = validateValue(tempValue);
+    // Evaluate formula if present
+    const { result, formula: formulaUsed, error: formulaError } = evaluateFormula(tempValue);
+    
+    if (formulaError) {
+      setError(formulaError);
+      setIsEditing(false);
+      return;
+    }
+
+    setFormula(formulaUsed);
+    const validationError = validateValue(result);
     setError(validationError);
     setIsEditing(false);
-    onChange(tempValue);
+    onChange(result);
   };
 
-const handleClick = () => {
+  const handleClick = () => {
     const val = safeValue.toString();
-    // If the value is "0" or empty, clear it when clicking to edit
-    if (val === "0" || val === "" || parseFloat(val) === 0) {
+    // If there's a stored formula, show that instead of the calculated value
+    if (formula) {
+      setTempValue(formula);
+    } else if (val === "0" || val === "" || parseFloat(val) === 0) {
+      // If the value is "0" or empty, clear it when clicking to edit
       setTempValue("");
     } else {
       setTempValue(val);
@@ -409,7 +465,7 @@ const handleClick = () => {
     return (
       <div className="relative">
         <Input
-          type={type === "currency" || type === "number" || type === "percentage" || type === "interestRate" || type === "termMonths" || type === "periodMonths" ? "number" : "text"}
+          type="text"
           value={tempValue}
           onChange={(e) => setTempValue(e.target.value)}
           onBlur={handleBlur}
@@ -446,7 +502,8 @@ const handleClick = () => {
         data-nav-scope={navScope}
         data-nav-row={navRow}
         data-nav-col={navCol}
-        className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${className}`}
+        className={`h-9 px-3 py-2 cursor-text hover:bg-muted/50 transition-colors ${error ? "border-l-2 border-l-destructive" : ""} ${formula ? "bg-primary/5" : ""} ${className}`}
+        title={formula ? `Formula: ${formula}` : undefined}
       >
         {formatValue(safeValue)}
       </div>
