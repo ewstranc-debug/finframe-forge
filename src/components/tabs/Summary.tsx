@@ -3,7 +3,7 @@ import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw } from 
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { calculateDSCR } from "@/utils/financialCalculations";
+import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices } from "@/utils/financialCalculations";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,12 +28,29 @@ export const Summary = () => {
     equityPercentage, setEquityPercentage,
     uses, setUses,
     businessPeriods,
+    businessPeriodLabels,
     personalPeriods,
     interimPeriodMonths,
     debts,
     personalLiabilities,
     resetAll,
   } = useSpreadsheet();
+
+  // Dynamic period classification - replaces hardcoded indices
+  const periodClassifications = useMemo(() => 
+    classifyPeriods(businessPeriods, businessPeriodLabels),
+    [businessPeriods, businessPeriodLabels]
+  );
+
+  const lastFYEIndex = useMemo(() => 
+    findLastFYEIndex(periodClassifications),
+    [periodClassifications]
+  );
+
+  const interimIndices = useMemo(() => 
+    findInterimIndices(periodClassifications),
+    [periodClassifications]
+  );
 
   const handleReset = () => {
     resetAll();
@@ -135,15 +152,12 @@ export const Summary = () => {
     };
   };
 
-  const calculateGlobalDSCR = () => {
-    // Calculate DSCR for only last full year and interim period
-    const period3 = calculateDSCRForPeriod(2, 2); // Last full year
-    const interim = calculateDSCRForPeriod(3, 2); // Interim uses last personal period
-    
-    // Average only last full year and interim
-    const avgDSCR = (period3.dscr + interim.dscr) / 2;
-    
-    return avgDSCR;
+  // Map personal periods to business periods - use last personal period for later business periods
+  const getPersonalPeriodIndex = (businessPeriodIndex: number): number => {
+    if (businessPeriodIndex < personalPeriods.length) {
+      return businessPeriodIndex;
+    }
+    return Math.max(0, personalPeriods.length - 1);
   };
 
   const handleEquityPercentageChange = (value: string) => {
@@ -163,16 +177,34 @@ export const Summary = () => {
   const totalSources = finalLoanAmount + parseFloat(injectionEquity || "0");
   const totalUses = primaryRequest + fees.upfrontFee;
   
-  // Memoize DSCR calculations for performance
-  const lastFullYear = useMemo(() => calculateDSCRForPeriod(2, 2), [
-    businessPeriods, personalPeriods, debts, personalLiabilities, uses, interestRate, termMonths, guaranteePercent
-  ]);
+  // Memoize DSCR calculations for performance - using dynamic period identification
+  const lastFullYear = useMemo(() => {
+    if (lastFYEIndex === undefined) return calculateDSCRForPeriod(0, 0);
+    const personalIdx = getPersonalPeriodIndex(lastFYEIndex);
+    return calculateDSCRForPeriod(lastFYEIndex, personalIdx);
+  }, [businessPeriods, personalPeriods, debts, personalLiabilities, uses, interestRate, termMonths, guaranteePercent, lastFYEIndex]);
   
-  const interimPeriod = useMemo(() => calculateDSCRForPeriod(3, 2), [
-    businessPeriods, personalPeriods, debts, personalLiabilities, uses, interestRate, termMonths, guaranteePercent
-  ]);
+  const interimPeriod = useMemo(() => {
+    if (interimIndices.length === 0) return calculateDSCRForPeriod(0, 0);
+    const latestInterimIdx = interimIndices[interimIndices.length - 1];
+    const personalIdx = getPersonalPeriodIndex(latestInterimIdx);
+    return calculateDSCRForPeriod(latestInterimIdx, personalIdx);
+  }, [businessPeriods, personalPeriods, debts, personalLiabilities, uses, interestRate, termMonths, guaranteePercent, interimIndices]);
   
-  const globalDSCR = useMemo(() => calculateGlobalDSCR(), [lastFullYear, interimPeriod]);
+  // Calculate global DSCR as average of FYE and interim (if both exist)
+  const globalDSCR = useMemo(() => {
+    const hasFYE = lastFYEIndex !== undefined && lastFullYear.dscr > 0;
+    const hasInterim = interimIndices.length > 0 && interimPeriod.dscr > 0;
+    
+    if (hasFYE && hasInterim) {
+      return (lastFullYear.dscr + interimPeriod.dscr) / 2;
+    } else if (hasFYE) {
+      return lastFullYear.dscr;
+    } else if (hasInterim) {
+      return interimPeriod.dscr;
+    }
+    return 0;
+  }, [lastFullYear, interimPeriod, lastFYEIndex, interimIndices]);
 
   return (
     <div className="p-6 space-y-6">
@@ -370,7 +402,9 @@ export const Summary = () => {
         <CardContent>
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Last Full Year</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                Last Full Year {lastFYEIndex !== undefined && businessPeriodLabels[lastFYEIndex] ? `(${businessPeriodLabels[lastFYEIndex]})` : ''}
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-2 border-primary/30">
                   <CardContent className="pt-6">
@@ -384,42 +418,46 @@ export const Summary = () => {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
                               <p className="font-semibold mb-2">EBITDA Calculation:</p>
-                              <div className="space-y-1 text-sm">
-                                <div className="flex justify-between gap-4">
-                                  <span>Revenue + Other Income:</span>
-                                  <span className="font-mono">
-                                    ${((parseFloat(businessPeriods[2].revenue) || 0) + (parseFloat(businessPeriods[2].otherIncome) || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
+                              {lastFYEIndex !== undefined && businessPeriods[lastFYEIndex] ? (
+                                <div className="space-y-1 text-sm">
+                                  <div className="flex justify-between gap-4">
+                                    <span>Revenue + Other Income:</span>
+                                    <span className="font-mono">
+                                      ${((parseFloat(businessPeriods[lastFYEIndex].revenue) || 0) + (parseFloat(businessPeriods[lastFYEIndex].otherIncome) || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span>Less: COGS:</span>
+                                    <span className="font-mono">
+                                      -${(parseFloat(businessPeriods[lastFYEIndex].cogs) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span>Less: Operating Expenses:</span>
+                                    <span className="font-mono">
+                                      -${(parseFloat(businessPeriods[lastFYEIndex].operatingExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span>Less: Rent Expense:</span>
+                                    <span className="font-mono">
+                                      -${(parseFloat(businessPeriods[lastFYEIndex].rentExpense) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span>Less: Other Expenses:</span>
+                                    <span className="font-mono">
+                                      -${(parseFloat(businessPeriods[lastFYEIndex].otherExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                  <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
+                                    <span>EBITDA:</span>
+                                    <span className="font-mono">${lastFullYear.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  </div>
                                 </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: COGS:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[2].cogs) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: Operating Expenses:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[2].operatingExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: Rent Expense:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[2].rentExpense) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: Other Expenses:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[2].otherExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
-                                  <span>EBITDA:</span>
-                                  <span className="font-mono">${lastFullYear.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                                </div>
-                              </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No full year data available</p>
+                              )}
                               <p className="text-xs mt-2 text-muted-foreground">Source: Business Financials tab (annualized)</p>
                             </TooltipContent>
                           </Tooltip>

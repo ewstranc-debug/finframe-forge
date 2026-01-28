@@ -29,6 +29,19 @@ export interface DSCRBreakdownData {
   amortizationAddback?: number;
   section179Addback?: number;
   otherAddbacks?: number;
+  businessCashFlow?: number;
+  affiliateCashFlow?: number;
+  totalIncomeAvailable?: number;
+}
+
+// Period classification for dynamic DSCR calculations
+export interface PeriodClassification {
+  index: number;
+  months: number;
+  label: string;
+  isInterim: boolean;
+  isProjection: boolean;
+  isFYE: boolean;
 }
 
 export interface FinancialPeriod {
