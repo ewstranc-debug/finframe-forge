@@ -29,9 +29,16 @@ export const calculateTotalAssets = (period: BusinessBalanceSheetPeriodData): nu
 
 /**
  * Calculate total liabilities for a balance sheet period
+ * Now includes separate A/P, accrued expenses, and short-term debt fields
  */
 export const calculateTotalLiabilities = (period: BusinessBalanceSheetPeriodData): number => {
-  return (parseFloat(period.currentLiabilities) || 0) + (parseFloat(period.longTermDebt) || 0);
+  const accountsPayable = parseFloat(period.accountsPayable) || 0;
+  const accruedExpenses = parseFloat(period.accruedExpenses) || 0;
+  const shortTermDebt = parseFloat(period.shortTermDebt) || 0;
+  const otherCurrentLiab = parseFloat(period.currentLiabilities) || 0;
+  const longTermDebt = parseFloat(period.longTermDebt) || 0;
+  
+  return accountsPayable + accruedExpenses + shortTermDebt + otherCurrentLiab + longTermDebt;
 };
 
 /**
@@ -42,21 +49,27 @@ export const calculateEquity = (period: BusinessBalanceSheetPeriodData): number 
 };
 
 /**
- * Calculate current ratio
+ * Calculate current ratio using total current liabilities
  */
 export const calculateCurrentRatio = (period: BusinessBalanceSheetPeriodData): number => {
   const currentAssets = calculateCurrentAssets(period);
-  const currentLiabilities = parseFloat(period.currentLiabilities) || 0;
+  const currentLiabilities = (parseFloat(period.accountsPayable) || 0) + 
+                             (parseFloat(period.accruedExpenses) || 0) + 
+                             (parseFloat(period.shortTermDebt) || 0) + 
+                             (parseFloat(period.currentLiabilities) || 0);
   return currentLiabilities > 0 ? currentAssets / currentLiabilities : 0;
 };
 
 /**
- * Calculate quick ratio
+ * Calculate quick ratio using total current liabilities
  */
 export const calculateQuickRatio = (period: BusinessBalanceSheetPeriodData): number => {
   const currentAssets = calculateCurrentAssets(period);
   const inventory = parseFloat(period.inventory) || 0;
-  const currentLiabilities = parseFloat(period.currentLiabilities) || 0;
+  const currentLiabilities = (parseFloat(period.accountsPayable) || 0) + 
+                             (parseFloat(period.accruedExpenses) || 0) + 
+                             (parseFloat(period.shortTermDebt) || 0) + 
+                             (parseFloat(period.currentLiabilities) || 0);
   return currentLiabilities > 0 ? (currentAssets - inventory) / currentLiabilities : 0;
 };
 
@@ -80,12 +93,20 @@ export const calculateDebtToAssets = (period: BusinessBalanceSheetPeriodData): n
 
 /**
  * Calculate all balance sheet metrics for a period
+ * Updated to use separate liability fields for accurate ratio calculations
  */
 export const calculateBalanceSheetMetrics = (period: BusinessBalanceSheetPeriodData): BalanceSheetMetrics => {
   const currentAssets = calculateCurrentAssets(period);
   const netFixedAssets = calculateNetFixedAssets(period);
   const totalAssets = currentAssets + netFixedAssets;
-  const currentLiabilities = parseFloat(period.currentLiabilities) || 0;
+  
+  // Calculate current liabilities from separate fields
+  const accountsPayable = parseFloat(period.accountsPayable) || 0;
+  const accruedExpenses = parseFloat(period.accruedExpenses) || 0;
+  const shortTermDebt = parseFloat(period.shortTermDebt) || 0;
+  const otherCurrentLiab = parseFloat(period.currentLiabilities) || 0;
+  const currentLiabilities = accountsPayable + accruedExpenses + shortTermDebt + otherCurrentLiab;
+  
   const longTermDebt = parseFloat(period.longTermDebt) || 0;
   const totalLiabilities = currentLiabilities + longTermDebt;
   const equity = totalAssets - totalLiabilities;
@@ -130,13 +151,69 @@ export const calculateInventoryTurnover = (
 
 /**
  * Calculate AP turnover ratio (annualized COGS / AP)
+ * Now uses dedicated accountsPayable field for accuracy
  */
 export const calculateAPTurnover = (
   period: BusinessBalanceSheetPeriodData,
   annualizedCOGS: number
 ): number => {
-  const ap = parseFloat(period.currentLiabilities) || 0;
+  // Use accountsPayable if available, fall back to currentLiabilities for backward compatibility
+  const ap = parseFloat(period.accountsPayable) || parseFloat(period.currentLiabilities) || 0;
   return ap > 0 ? annualizedCOGS / ap : 0;
+};
+
+/**
+ * Calculate Fixed Charge Coverage Ratio (FCCR)
+ * FCCR = (EBITDA + Rent) / (Debt Service + Rent)
+ */
+export const calculateFCCR = (
+  ebitda: number,
+  rentExpense: number,
+  debtService: number
+): number => {
+  const numerator = ebitda + rentExpense;
+  const denominator = debtService + rentExpense;
+  return denominator > 0 ? numerator / denominator : 0;
+};
+
+/**
+ * Calculate year-over-year change percentage
+ */
+export const calculateYoYChange = (
+  currentValue: number,
+  previousValue: number
+): { change: number; isPositive: boolean; formatted: string } => {
+  if (previousValue === 0) {
+    return { 
+      change: currentValue > 0 ? 100 : 0, 
+      isPositive: currentValue >= 0,
+      formatted: currentValue > 0 ? '+∞%' : '0%'
+    };
+  }
+  const change = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+  return {
+    change,
+    isPositive: change >= 0,
+    formatted: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`
+  };
+};
+
+/**
+ * Validate M-1 Book Income ties to calculated Net Income
+ */
+export const validateM1TieOut = (
+  calculatedNetIncome: number,
+  m1BookIncome: number,
+  tolerance: number = 1 // $1 tolerance for rounding
+): { isValid: boolean; difference: number; warning?: string } => {
+  const difference = Math.abs(calculatedNetIncome - m1BookIncome);
+  const isValid = difference <= tolerance;
+  
+  return {
+    isValid,
+    difference,
+    warning: isValid ? undefined : `M-1 Book Income ($${m1BookIncome.toLocaleString()}) does not tie to calculated Net Income ($${calculatedNetIncome.toLocaleString()}). Difference: $${difference.toLocaleString()}`
+  };
 };
 
 /**

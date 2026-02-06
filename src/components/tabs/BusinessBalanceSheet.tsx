@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet, type BusinessBalanceSheetPeriodData as PeriodData } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
   calculateCurrentAssets,
   calculateNetFixedAssets,
@@ -17,6 +17,7 @@ import {
   formatCurrency,
   formatRatio,
   formatDays,
+  calculateYoYChange,
 } from "@/utils/balanceSheetCalculations";
 
 export const BusinessBalanceSheet = () => {
@@ -199,7 +200,46 @@ export const BusinessBalanceSheet = () => {
             </div>
 
             <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
-              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Current Liabilities (A/P, etc.)</div>
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Accounts Payable</div>
+              {periods.map((period, i) => (
+                <div key={i} className="border-r border-border last:border-r-0">
+                  <EditableCell
+                    value={period.accountsPayable || "0"}
+                    onChange={(val) => updateField(i, "accountsPayable", val)}
+                    type="currency"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Accrued Expenses</div>
+              {periods.map((period, i) => (
+                <div key={i} className="border-r border-border last:border-r-0">
+                  <EditableCell
+                    value={period.accruedExpenses || "0"}
+                    onChange={(val) => updateField(i, "accruedExpenses", val)}
+                    type="currency"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Short-Term Debt / CPLTD</div>
+              {periods.map((period, i) => (
+                <div key={i} className="border-r border-border last:border-r-0">
+                  <EditableCell
+                    value={period.shortTermDebt || "0"}
+                    onChange={(val) => updateField(i, "shortTermDebt", val)}
+                    type="currency"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">Other Current Liabilities</div>
               {periods.map((period, i) => (
                 <div key={i} className="border-r border-border last:border-r-0">
                   <EditableCell
@@ -209,6 +249,21 @@ export const BusinessBalanceSheet = () => {
                   />
                 </div>
               ))}
+            </div>
+
+            <div className="grid grid-cols-5 border-b border-border bg-destructive/10 min-w-[800px]">
+              <div className="p-3 border-r border-border font-bold">Total Current Liabilities</div>
+              {periods.map((period, i) => {
+                const totalCurrentLiab = (parseFloat(period.accountsPayable) || 0) + 
+                                         (parseFloat(period.accruedExpenses) || 0) + 
+                                         (parseFloat(period.shortTermDebt) || 0) +
+                                         (parseFloat(period.currentLiabilities) || 0);
+                return (
+                  <div key={i} className="p-3 border-r border-border last:border-r-0 font-bold">
+                    {formatCurrency(totalCurrentLiab)}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="grid grid-cols-5 border-b border-border min-w-[800px]">

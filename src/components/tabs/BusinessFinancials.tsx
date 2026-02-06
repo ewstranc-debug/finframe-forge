@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet, BusinessPeriodData } from "@/contexts/SpreadsheetContext";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus } from "lucide-react";
-import { calculateDSCR as calculateDSCRCentralized, calculateLoanAnnualDebtService } from "@/utils/financialCalculations";
+import { Trash2, Plus, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { calculateDSCR as calculateDSCRCentralized, calculateLoanAnnualDebtService, validateM1TieOut, calculateYoYChange } from "@/utils/financialCalculations";
 
 export const BusinessFinancials = () => {
   const {
@@ -823,6 +824,60 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
+                
+                {/* M-1 Tie-Out Validation Row */}
+                <tr className="bg-warning/10">
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-warning/10 font-medium">
+                    <div className="flex items-center gap-2">
+                      M-1 Tie-Out Validation
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Validates that M-1 Book Income ties to calculated Net Income</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </td>
+                  {businessPeriods.map((period, i) => {
+                    const m1BookIncome = parseFloat(period.m1BookIncome) || 0;
+                    const netIncome = calculateNetIncome(i);
+                    const validation = validateM1TieOut(netIncome, m1BookIncome);
+                    
+                    // Skip validation if M-1 not entered
+                    if (m1BookIncome === 0) {
+                      return (
+                        <td key={i} className="border border-border p-2 text-center text-muted-foreground">
+                          N/A
+                        </td>
+                      );
+                    }
+                    
+                    return (
+                      <td key={i} className={`border border-border p-2 text-center ${
+                        validation.isValid ? 'text-success' : 'text-destructive'
+                      }`}>
+                        {validation.isValid ? (
+                          <span className="font-medium">✓ Tied</span>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger className="text-destructive font-medium">
+                                ✗ ${validation.difference.toLocaleString()} diff
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{validation.warning}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
 
                 {/* DSCR Analysis */}
                 <tr className="bg-muted/50">
@@ -858,7 +913,7 @@ export const BusinessFinancials = () => {
         </CardContent>
       </Card>
 
-      {/* Financial Ratios */}
+      {/* Financial Ratios with YoY Trends */}
       <Card>
         <CardHeader>
           <CardTitle>Financial Ratios & Analysis</CardTitle>
@@ -868,18 +923,94 @@ export const BusinessFinancials = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-muted">
-                  <th className="border border-border p-3 text-left font-semibold">Ratio</th>
+                  <th className="border border-border p-3 text-left font-semibold">Metric</th>
                   {businessPeriodLabels.map((label, i) => (
                     <th key={i} className="border border-border p-3 text-center min-w-[150px]">{label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
+                {/* Revenue with YoY */}
+                <tr>
+                  <td className="border border-border p-2 font-medium">Revenue</td>
+                  {businessPeriods.map((period, i) => {
+                    const revenue = parseFloat(period.revenue) || 0;
+                    const prevRevenue = i > 0 ? parseFloat(businessPeriods[i - 1].revenue) || 0 : 0;
+                    const yoy = i > 0 ? calculateYoYChange(revenue, prevRevenue) : null;
+                    
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <span>${revenue.toLocaleString()}</span>
+                          {yoy && (
+                            <span className={`text-xs flex items-center ${yoy.isPositive ? 'text-success' : 'text-destructive'}`}>
+                              {yoy.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                              {yoy.formatted}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+                
+                {/* EBITDA with YoY */}
+                <tr>
+                  <td className="border border-border p-2 font-medium">EBITDA</td>
+                  {businessPeriods.map((_, i) => {
+                    const ebitda = calculateEBITDA(i);
+                    const prevEbitda = i > 0 ? calculateEBITDA(i - 1) : 0;
+                    const yoy = i > 0 ? calculateYoYChange(ebitda, prevEbitda) : null;
+                    
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <span>${ebitda.toLocaleString()}</span>
+                          {yoy && (
+                            <span className={`text-xs flex items-center ${yoy.isPositive ? 'text-success' : 'text-destructive'}`}>
+                              {yoy.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                              {yoy.formatted}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+                
+                {/* Net Income with YoY */}
+                <tr>
+                  <td className="border border-border p-2 font-medium">Net Income</td>
+                  {businessPeriods.map((_, i) => {
+                    const netIncome = calculateNetIncome(i);
+                    const prevNetIncome = i > 0 ? calculateNetIncome(i - 1) : 0;
+                    const yoy = i > 0 ? calculateYoYChange(netIncome, prevNetIncome) : null;
+                    
+                    return (
+                      <td key={i} className="border border-border p-2 text-right pr-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <span>${netIncome.toLocaleString()}</span>
+                          {yoy && (
+                            <span className={`text-xs flex items-center ${yoy.isPositive ? 'text-success' : 'text-destructive'}`}>
+                              {yoy.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                              {yoy.formatted}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+                
+                {/* Margin Ratios */}
+                <tr className="bg-muted/30">
+                  <td colSpan={businessPeriods.length + 1} className="border border-border p-2 font-semibold text-sm text-muted-foreground">Margin Ratios</td>
+                </tr>
                 <tr>
                   <td className="border border-border p-2 font-medium">Gross Margin</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-center">
-                      {calculateGrossMargin(i).toFixed(2)}%
+                      {calculateGrossMargin(i).toFixed(1)}%
                     </td>
                   ))}
                 </tr>
@@ -887,7 +1018,7 @@ export const BusinessFinancials = () => {
                   <td className="border border-border p-2 font-medium">EBITDA Margin</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-center">
-                      {calculateEBITDAMargin(i).toFixed(2)}%
+                      {calculateEBITDAMargin(i).toFixed(1)}%
                     </td>
                   ))}
                 </tr>
@@ -895,7 +1026,7 @@ export const BusinessFinancials = () => {
                   <td className="border border-border p-2 font-medium">Net Margin</td>
                   {businessPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-center">
-                      {calculateNetMargin(i).toFixed(2)}%
+                      {calculateNetMargin(i).toFixed(1)}%
                     </td>
                   ))}
                 </tr>
