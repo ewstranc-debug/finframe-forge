@@ -363,6 +363,68 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
 };
 
 /**
+ * Calculate Fixed Charge Coverage Ratio (FCCR)
+ * FCCR = (EBITDA + Rent + Lease Payments) / (Debt Service + Rent + Lease Payments)
+ * This is a key SBA lending metric
+ */
+export const calculateFCCR = (
+  ebitda: number,
+  rentExpense: number,
+  debtService: number
+): { fccr: number; numerator: number; denominator: number } => {
+  const numerator = ebitda + rentExpense;
+  const denominator = debtService + rentExpense;
+  return {
+    fccr: denominator > 0 ? numerator / denominator : 0,
+    numerator,
+    denominator,
+  };
+};
+
+/**
+ * Calculate year-over-year change for a metric
+ */
+export const calculateYoYChange = (
+  currentValue: number,
+  previousValue: number
+): { change: number; percentage: number; isPositive: boolean; formatted: string } => {
+  if (previousValue === 0) {
+    return { 
+      change: currentValue,
+      percentage: currentValue > 0 ? 100 : 0, 
+      isPositive: currentValue >= 0,
+      formatted: currentValue > 0 ? '+∞%' : '0%'
+    };
+  }
+  const change = currentValue - previousValue;
+  const percentage = (change / Math.abs(previousValue)) * 100;
+  return {
+    change,
+    percentage,
+    isPositive: change >= 0,
+    formatted: `${change >= 0 ? '+' : ''}${percentage.toFixed(1)}%`
+  };
+};
+
+/**
+ * Validate M-1 Book Income ties to calculated Net Income
+ */
+export const validateM1TieOut = (
+  calculatedNetIncome: number,
+  m1BookIncome: number,
+  tolerance: number = 1 // $1 tolerance for rounding
+): { isValid: boolean; difference: number; warning?: string } => {
+  const difference = Math.abs(calculatedNetIncome - m1BookIncome);
+  const isValid = difference <= tolerance || m1BookIncome === 0; // Skip validation if M-1 not entered
+  
+  return {
+    isValid,
+    difference,
+    warning: isValid ? undefined : `M-1 Book Income ($${m1BookIncome.toLocaleString()}) does not tie to calculated Net Income ($${calculatedNetIncome.toLocaleString()}). Difference: $${difference.toLocaleString()}`
+  };
+};
+
+/**
  * Validate critical financial fields
  */
 export const validateFinancialField = (

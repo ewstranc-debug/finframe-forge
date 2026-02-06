@@ -125,7 +125,11 @@ export interface BusinessBalanceSheetPeriodData {
   otherCurrentAssets: string;
   realEstate: string;
   accumulatedDepreciation: string;
-  currentLiabilities: string;
+  // Liabilities - now separated for accurate ratio calculations
+  accountsPayable: string;        // NEW: Separate A/P for accurate turnover
+  accruedExpenses: string;        // NEW: Accrued expenses
+  shortTermDebt: string;          // NEW: Short-term debt/current portion of LTD
+  currentLiabilities: string;     // Keep for backward compat (total current liabilities)
   longTermDebt: string;
 }
 
@@ -357,12 +361,15 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   ]);
   const [affiliatePeriodLabels, setAffiliatePeriodLabels, affiliatePeriodLabelsStatus] = useLocalStorage("financialTool_affiliatePeriodLabels", ["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
-  // Business Balance Sheet state
+  // Business Balance Sheet state - enhanced with separate liability fields
+  const defaultBalanceSheet: BusinessBalanceSheetPeriodData = { 
+    cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", 
+    realEstate: "0", accumulatedDepreciation: "0", 
+    accountsPayable: "0", accruedExpenses: "0", shortTermDebt: "0",
+    currentLiabilities: "0", longTermDebt: "0" 
+  };
   const [businessBalanceSheetPeriods, setBusinessBalanceSheetPeriods, businessBalanceSheetPeriodsStatus] = useLocalStorage<BusinessBalanceSheetPeriodData[]>("financialTool_businessBalanceSheetPeriods", [
-    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" },
-    { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" }
+    defaultBalanceSheet, defaultBalanceSheet, defaultBalanceSheet, defaultBalanceSheet
   ]);
   const [businessBalanceSheetLabels, setBusinessBalanceSheetLabels, businessBalanceSheetLabelsStatus] = useLocalStorage("financialTool_businessBalanceSheetLabels", ["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
@@ -482,8 +489,13 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     ]);
     setAffiliatePeriodLabels(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
-    // Business Balance Sheet defaults
-    const defaultBalanceSheetPeriod: BusinessBalanceSheetPeriodData = { cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", realEstate: "0", accumulatedDepreciation: "0", currentLiabilities: "0", longTermDebt: "0" };
+    // Business Balance Sheet defaults - enhanced with separate liability fields
+    const defaultBalanceSheetPeriod: BusinessBalanceSheetPeriodData = { 
+      cash: "0", accountsReceivable: "0", inventory: "0", otherCurrentAssets: "0", 
+      realEstate: "0", accumulatedDepreciation: "0", 
+      accountsPayable: "0", accruedExpenses: "0", shortTermDebt: "0",
+      currentLiabilities: "0", longTermDebt: "0" 
+    };
     setBusinessBalanceSheetPeriods([defaultBalanceSheetPeriod, defaultBalanceSheetPeriod, defaultBalanceSheetPeriod, defaultBalanceSheetPeriod]);
     setBusinessBalanceSheetLabels(["12/31/2023", "12/31/2024", "12/31/2025", "Interim"]);
 
