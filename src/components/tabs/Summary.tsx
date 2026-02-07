@@ -344,7 +344,7 @@ export const Summary = () => {
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p className="font-medium mb-1">Auto-calculated as "plug" figure</p>
-                        <p className="text-sm">SBA Loan = Total Uses − Equity Injection</p>
+                        <p className="text-sm">SBA Loan = Total Uses − Down Payment</p>
                         <p className="text-sm mt-1">This ensures Sources always equals Uses.</p>
                       </TooltipContent>
                     </Tooltip>
@@ -353,14 +353,14 @@ export const Summary = () => {
                 </div>
                 <div className="grid grid-cols-2 border-b border-border">
                   <div className="p-3 border-r border-border bg-secondary/30 flex items-center gap-2">
-                    Equity Injection
+                    Down Payment
                     {showEquityWarning && (
                       <Tooltip>
                         <TooltipTrigger>
                           <AlertTriangle className="h-4 w-4 text-destructive" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs">
-                          <p className="text-destructive font-medium">SBA requires min. 10% equity for acquisitions.</p>
+                          <p className="text-destructive font-medium">SBA requires min. 10% down payment for acquisitions.</p>
                           <p className="text-sm mt-1">Current equity: {actualEquityPercent.toFixed(1)}%</p>
                         </TooltipContent>
                       </Tooltip>
@@ -377,11 +377,11 @@ export const Summary = () => {
                 {showEquityWarning && (
                   <div className="border-b border-border bg-destructive/10 p-2 text-destructive text-sm flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
-                    SBA requires min. 10% equity for acquisitions. Current: {actualEquityPercent.toFixed(1)}%
+                    SBA requires min. 10% down payment for acquisitions. Current: {actualEquityPercent.toFixed(1)}%
                   </div>
                 )}
                 <div className="grid grid-cols-2 border-b border-border bg-accent/20">
-                  <div className="p-3 border-r border-border text-sm">Equity % of Total Project</div>
+                  <div className="p-3 border-r border-border text-sm">Down Payment % of Total Project</div>
                   <div className="p-2">
                     <EditableCell
                       value={equityPercentage}
