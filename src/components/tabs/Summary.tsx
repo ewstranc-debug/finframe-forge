@@ -64,18 +64,20 @@ export const Summary = () => {
     setUses(uses.map(u => u.id === id ? { ...u, [field]: value } : u));
   };
 
+  // Calculate Total Uses (Primary Request = sum of use of funds items)
   const calculatePrimaryRequest = () => {
     return uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
   };
 
-  const calculateSBAFees = (primaryAmount: number) => {
+  // Calculate SBA fees based on a given SBA loan amount
+  const calculateSBAFees = (sbaLoanAmount: number) => {
     const guaranteePct = parseFloat(guaranteePercent) || 75;
     
     // Use FY 2026 fee structure: 3.5% up to $1M, 3.75% over $1M on guaranteed portion
-    const upfrontFee = calculateSBAGuaranteeFee(primaryAmount, guaranteePct);
+    const upfrontFee = calculateSBAGuaranteeFee(sbaLoanAmount, guaranteePct);
     
     // Annual servicing fee (0.55% of guaranteed portion)
-    const guaranteedAmount = primaryAmount * (guaranteePct / 100);
+    const guaranteedAmount = sbaLoanAmount * (guaranteePct / 100);
     const annualFee = guaranteedAmount * 0.0055;
     
     return { upfrontFee, annualFee, guaranteedAmount };
@@ -89,12 +91,41 @@ export const Summary = () => {
     );
   }, [uses]);
 
-  // Calculate equity percentage of total project
-  const equityInjectionAmount = parseFloat(injectionEquity) || 0;
+  // Calculate Sources & Uses with SBA loan as the "plug" figure
+  // Total Uses = Primary Request + SBA Fee
+  // Total Sources = SBA Loan + Equity Injection (+ Other Sources if any)
+  // SBA Loan = Total Uses - Equity Injection - Other Sources
   const primaryRequest = calculatePrimaryRequest();
-  const fees = calculateSBAFees(primaryRequest);
-  const totalProjectCost = primaryRequest + fees.upfrontFee;
-  const actualEquityPercent = totalProjectCost > 0 ? (equityInjectionAmount / totalProjectCost) * 100 : 0;
+  const equityInjectionAmount = parseFloat(injectionEquity) || 0;
+  
+  // Calculate SBA loan amount as the plug (iterative because fee depends on loan amount)
+  // Formula: SBA Loan + Equity = Primary Request + SBA Fee(SBA Loan)
+  // SBA Loan = Primary Request + SBA Fee(SBA Loan) - Equity
+  // We need to solve iteratively since fee depends on loan amount
+  const calculateSBALoanAmount = useMemo(() => {
+    // Initial estimate: SBA Loan = Primary Request - Equity
+    let sbaLoan = Math.max(0, primaryRequest - equityInjectionAmount);
+    
+    // Iterate to converge on the correct amount (fee depends on loan)
+    for (let i = 0; i < 10; i++) {
+      const fee = calculateSBAGuaranteeFee(sbaLoan, parseFloat(guaranteePercent) || 75);
+      const totalUses = primaryRequest + fee;
+      const newSbaLoan = Math.max(0, totalUses - equityInjectionAmount);
+      
+      if (Math.abs(newSbaLoan - sbaLoan) < 1) break; // Converged
+      sbaLoan = newSbaLoan;
+    }
+    
+    return sbaLoan;
+  }, [primaryRequest, equityInjectionAmount, guaranteePercent]);
+
+  const sbaLoanAmount = calculateSBALoanAmount;
+  const fees = calculateSBAFees(sbaLoanAmount);
+  const totalUses = primaryRequest + fees.upfrontFee;
+  const totalSources = sbaLoanAmount + equityInjectionAmount; // Always equals totalUses
+  
+  // Equity percentage of total project
+  const actualEquityPercent = totalUses > 0 ? (equityInjectionAmount / totalUses) * 100 : 0;
   
   // Equity injection warning: required if business acquisition and equity < 10%
   const showEquityWarning = hasBusinessAcquisition && actualEquityPercent < 10;
@@ -174,15 +205,14 @@ export const Summary = () => {
 
   const handleEquityPercentageChange = (value: string) => {
     setEquityPercentage(value);
-    const calculatedEquity = (parseFloat(value) || 0) / 100 * totalProjectCost;
+    const calculatedEquity = (parseFloat(value) || 0) / 100 * totalUses;
     setInjectionEquity(calculatedEquity.toString());
   };
 
-  const finalLoanAmount = primaryRequest + fees.upfrontFee;
+  // Final loan amount for payment calculation = SBA Loan (which already includes the upfront fee in the total uses balance)
+  const finalLoanAmount = sbaLoanAmount;
   const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
   const annualPayment = calculateAnnualPayment(monthlyPayment);
-  const totalSources = finalLoanAmount + equityInjectionAmount;
-  const totalUses = primaryRequest + fees.upfrontFee;
   
   // Memoize DSCR calculations for performance - using dynamic period identification
   const lastFullYear = useMemo(() => {
@@ -306,8 +336,20 @@ export const Summary = () => {
                   <div className="p-3">Amount</div>
                 </div>
                 <div className="grid grid-cols-2 border-b border-border">
-                  <div className="p-3 border-r border-border bg-secondary/30">SBA 7(a) Loan</div>
-                  <div className="p-3">${finalLoanAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                  <div className="p-3 border-r border-border bg-secondary/30 flex items-center gap-2">
+                    SBA 7(a) Loan
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="font-medium mb-1">Auto-calculated as "plug" figure</p>
+                        <p className="text-sm">SBA Loan = Total Uses − Equity Injection</p>
+                        <p className="text-sm mt-1">This ensures Sources always equals Uses.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="p-3">${sbaLoanAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
                 <div className="grid grid-cols-2 border-b border-border">
                   <div className="p-3 border-r border-border bg-secondary/30 flex items-center gap-2">

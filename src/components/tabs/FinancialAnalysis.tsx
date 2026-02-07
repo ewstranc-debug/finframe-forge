@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
-import { calculateDSCR } from "@/utils/financialCalculations";
+import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService } from "@/utils/financialCalculations";
 import { Textarea } from "@/components/ui/textarea";
 import { DocumentUpload } from "@/components/DocumentUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -314,36 +314,9 @@ export const FinancialAnalysis = () => {
     const globalCurrentRatio = globalTotalLiabilities > 0 ? globalTotalAssets / globalTotalLiabilities : 0;
     const globalSavingsRate = globalTotalIncome > 0 ? ((globalTotalIncome - globalTotalExpenses) / globalTotalIncome) * 100 : 0;
     
-    // Helper to calculate annual debt service for the SBA / proposed loan (matches Business Financials tab)
-    const calculateLoanAnnualDebtService = () => {
-      const primaryRequest = uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
-      const guaranteePct = parseFloat(guaranteePercent) || 75;
-      const guaranteedAmount = primaryRequest * (guaranteePct / 100);
-      
-      let upfrontFee = 0;
-      if (primaryRequest <= 150000) {
-        upfrontFee = 0;
-      } else if (primaryRequest <= 700000) {
-        upfrontFee = (primaryRequest - 150000) * 0.03;
-      } else {
-        upfrontFee = (550000 * 0.03) + ((primaryRequest - 700000) * 0.035);
-      }
-      
-      const finalLoanAmount = primaryRequest + upfrontFee;
-      const rate = (parseFloat(interestRate) || 0) / 100 / 12;
-      const term = parseFloat(termMonths) || 1;
-      
-      let monthlyPayment;
-      if (rate === 0) {
-        monthlyPayment = finalLoanAmount / term;
-      } else {
-        monthlyPayment = finalLoanAmount * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
-      }
-      
-      return monthlyPayment * 12;
-    };
-    
-    const loanAnnualDebtService = calculateLoanAnnualDebtService();
+    // Helper to calculate annual debt service for the SBA / proposed loan
+    // Uses the centralized FY2026 fee calculation from financialCalculations.ts
+    const loanAnnualDebtService = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
     
     const calculateGlobalDscrForPeriod = (businessPeriodIndex?: number) => {
       if (businessPeriodIndex === undefined) {
