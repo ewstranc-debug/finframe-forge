@@ -175,6 +175,9 @@ export const FinancialAnalysis = () => {
     const personalLiquidityRatio = totalPersonalLiabilities > 0 ? liquidAssets / totalPersonalLiabilities : 0;
     const personalCurrentRatio = totalPersonalLiabilities > 0 ? totalPersonalAssets / totalPersonalLiabilities : 0;
     
+    // Calculate proposed loan annual debt service using centralized function
+    const proposedLoanAnnualPayment = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
+    
     // BUSINESS METRICS - Calculate for each period
     const calcBusinessMetrics = (periodIndex: number) => {
       const period = businessPeriods[periodIndex];
@@ -196,15 +199,27 @@ export const FinancialAnalysis = () => {
       const grossProfit = revenue - cogs;
       const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
       
-      // EBITDA = Revenue + Other Income - COGS - OpEx - Rent - Officers Comp - Other Expenses
-      const ebitda = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks;
-      const ebit = ebitda - depreciation - amortization;
+      // Get period months for annualization
+      const periodMonths = parseFloat(period.periodMonths) || 12;
+      const annualizationFactor = 12 / periodMonths;
+      
+      // EBITDA = Revenue + Other Income - COGS - OpEx - Rent - Officers Comp - Other Expenses + Addbacks
+      // For interim periods, annualize the EBITDA
+      const rawEbitda = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks;
+      const ebitda = rawEbitda * annualizationFactor;
+      
+      const ebit = rawEbitda - depreciation - amortization;
       const netIncome = ebit - interest - taxes;
       const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
       
-      // DSCR calculations - Existing vs Proposed
-      const existingDSCR = annualDebtService > 0 ? ebitda / annualDebtService : 0;
-      const proposedDSCR = totalProposedAnnualDebtService > 0 ? ebitda / totalProposedAnnualDebtService : 0;
+      // Business DSCR = Annualized EBITDA / Proposed Loan Annual Payment
+      // This is the key fix: Business DSCR uses ONLY the proposed loan payment, not existing debts
+      const businessDSCR = proposedLoanAnnualPayment > 0 ? ebitda / proposedLoanAnnualPayment : 0;
+      
+      // Total debt service (existing + proposed) for reference
+      const totalDebtService = annualDebtService + proposedLoanAnnualPayment;
+      const existingDSCR = businessDSCR; // Use the corrected calculation
+      const proposedDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
       
       return {
         revenue,
@@ -214,9 +229,9 @@ export const FinancialAnalysis = () => {
         ebitda,
         netIncome,
         netMargin,
-        dscr: existingDSCR,  // Keep for backward compatibility
-        existingDSCR,
-        proposedDSCR,
+        dscr: businessDSCR,
+        existingDSCR: businessDSCR, // Business DSCR = EBITDA / Proposed Loan Payment
+        proposedDSCR, // For reference: EBITDA / (Existing + Proposed)
         opEx,
         rentExpense,
         officersComp,
@@ -229,6 +244,8 @@ export const FinancialAnalysis = () => {
         addbacks,
         periodLabel: businessPeriodLabels[periodIndex] || `Period ${periodIndex + 1}`,
         periodMonths: period.periodMonths,
+        proposedLoanAnnualPayment,
+        totalDebtService,
       };
     };
     
@@ -996,10 +1013,10 @@ export const FinancialAnalysis = () => {
                               </p>
                             </div>
                             <div className="space-y-1 text-sm border-t pt-2">
-                              <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                              <p className="font-medium">Proposed Loan Annual Payment: ${(ratios.dscr.fullYear?.proposedLoanAnnualPayment || 0).toLocaleString()}</p>
                             </div>
                             <p className="font-semibold border-t pt-2 mt-2">
-                              DSCR = EBITDA / Annual Debt Service = {ratios.dscr.fullYear.dscr.toFixed(2)}
+                              DSCR = EBITDA / Proposed Loan Payment = {ratios.dscr.fullYear.dscr.toFixed(2)}
                             </p>
                           </>
                         ) : (
@@ -1052,12 +1069,12 @@ export const FinancialAnalysis = () => {
                               </p>
                             </div>
                             <div className="space-y-1 text-sm border-t pt-2">
-                              <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                              <p className="font-medium">Proposed Loan Annual Payment: ${(ratios.dscr.interim?.proposedLoanAnnualPayment || 0).toLocaleString()}</p>
                             </div>
                             <p className="font-semibold border-t pt-2 mt-2">
-                              DSCR = EBITDA / Annual Debt Service = {ratios.dscr.interim.existingDSCR.toFixed(2)}
+                              DSCR = EBITDA / Proposed Loan Payment = {ratios.dscr.interim.existingDSCR.toFixed(2)}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-1">Note: Interim period annualized for comparison</p>
+                            <p className="text-xs text-muted-foreground mt-1">Note: Interim EBITDA annualized for comparison</p>
                           </>
                         ) : (
                           <p>Enter interim period business financials to calculate interim Business DSCR.</p>
