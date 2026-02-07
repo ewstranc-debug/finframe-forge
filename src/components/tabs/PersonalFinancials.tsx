@@ -18,6 +18,7 @@ export const PersonalFinancials = () => {
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0",
       schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      schedENetRentalIncome: "0", k1OrdinaryIncome: "0", k1GuaranteedPayments: "0", k1Distributions: "0",
       periodDate: "", periodMonths: "12"
     };
     setPersonalPeriods(personalPeriods.map(() => ({ ...clearedPeriod })));
@@ -41,6 +42,7 @@ export const PersonalFinancials = () => {
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0",
       schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      schedENetRentalIncome: "0", k1OrdinaryIncome: "0", k1GuaranteedPayments: "0", k1Distributions: "0",
       periodDate: "", periodMonths: "12"
     };
     const newPeriods = [...personalPeriods];
@@ -72,8 +74,18 @@ export const PersonalFinancials = () => {
     return netIncome + addbacks;
   };
 
+  // Calculate Schedule E / K-1 Income
+  const calculateScheduleEK1Income = (periodIndex: number) => {
+    const period = personalPeriods[periodIndex];
+    const netRentalIncome = parseFloat(period.schedENetRentalIncome) || 0;
+    const k1OrdinaryIncome = parseFloat(period.k1OrdinaryIncome) || 0;
+    const k1GuaranteedPayments = parseFloat(period.k1GuaranteedPayments) || 0;
+    // Distributions are tracked but not added to income (cash flow only, avoids double counting)
+    return netRentalIncome + k1OrdinaryIncome + k1GuaranteedPayments;
+  };
+
   const calculateTotalIncome = (periodIndex: number) => {
-    return calculateW2Income(periodIndex) + calculateSchedCCashFlow(periodIndex);
+    return calculateW2Income(periodIndex) + calculateSchedCCashFlow(periodIndex) + calculateScheduleEK1Income(periodIndex);
   };
 
   const calculateTotalExpenses = (periodIndex: number) => {
@@ -379,6 +391,67 @@ export const PersonalFinancials = () => {
                   {personalPeriods.map((_, i) => (
                     <td key={i} className="border border-border p-2 text-right pr-4">
                       ${calculateSchedCCashFlow(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Schedule E / K-1 Income Section */}
+                <tr className="bg-primary/10">
+                  <td colSpan={4} className="border border-border p-2 font-semibold sticky left-0">Schedule E / K-1 Income</td>
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">Rental Income (Net)</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i]?.schedENetRentalIncome || "0"}
+                        onChange={(val) => updateField(i, "schedENetRentalIncome", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">K-1 Ordinary Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i]?.k1OrdinaryIncome || "0"}
+                        onChange={(val) => updateField(i, "k1OrdinaryIncome", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">K-1 Guaranteed Payments</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i]?.k1GuaranteedPayments || "0"}
+                        onChange={(val) => updateField(i, "k1GuaranteedPayments", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background text-muted-foreground">Less: K-1 Distributions (Info Only)</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={personalPeriods[i]?.k1Distributions || "0"}
+                        onChange={(val) => updateField(i, "k1Distributions", val)}
+                        type="currency"
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-secondary/20 font-semibold">
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-secondary/20">Total Schedule E / K-1 Income</td>
+                  {personalPeriods.map((_, i) => (
+                    <td key={i} className="border border-border p-2 text-right pr-4">
+                      ${calculateScheduleEK1Income(i).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </td>
                   ))}
                 </tr>

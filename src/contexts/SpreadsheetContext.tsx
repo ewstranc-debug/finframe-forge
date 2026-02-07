@@ -24,6 +24,11 @@ export interface PersonalPeriodData {
   schedCDepreciation: string;
   schedCAmortization: string;
   schedCOther: string;
+  // Schedule E / K-1 Income fields
+  schedENetRentalIncome: string;
+  k1OrdinaryIncome: string;
+  k1GuaranteedPayments: string;
+  k1Distributions: string;
   periodDate: string;
   periodMonths: string;
 }
@@ -249,6 +254,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
       schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      schedENetRentalIncome: "0", k1OrdinaryIncome: "0", k1GuaranteedPayments: "0", k1Distributions: "0",
       periodDate: "", periodMonths: "12"
     },
     { 
@@ -256,6 +262,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
       schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      schedENetRentalIncome: "0", k1OrdinaryIncome: "0", k1GuaranteedPayments: "0", k1Distributions: "0",
       periodDate: "", periodMonths: "12"
     },
     { 
@@ -263,6 +270,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
       schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      schedENetRentalIncome: "0", k1OrdinaryIncome: "0", k1GuaranteedPayments: "0", k1Distributions: "0",
       periodDate: "", periodMonths: "12"
     }
   ]);
@@ -424,6 +432,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       costOfLiving: "0", personalTaxes: "0",
       schedCRevenue: "0", schedCCOGS: "0", schedCExpenses: "0", 
       schedCInterest: "0", schedCDepreciation: "0", schedCAmortization: "0", schedCOther: "0",
+      schedENetRentalIncome: "0", k1OrdinaryIncome: "0", k1GuaranteedPayments: "0", k1Distributions: "0",
       periodDate: "", periodMonths: "12"
     };
     setPersonalPeriods([defaultPersonalPeriod, defaultPersonalPeriod, defaultPersonalPeriod]);
