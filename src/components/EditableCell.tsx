@@ -461,13 +461,34 @@ export const EditableCell = ({
     }
   };
 
+  // Handle input change - update both temp value and parent state for real-time updates
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setTempValue(newValue);
+    
+    // For non-formula values, update parent state immediately for real-time totals
+    // Skip formula evaluation during typing (will be done on blur)
+    if (!newValue.startsWith("=")) {
+      // Clear any formula that was stored since user is typing new content
+      if (formula) setFormula(null);
+      
+      // Only validate and update if it's a potentially valid value
+      const cleanValue = newValue.replace(/[,$%]/g, '').trim();
+      if (cleanValue === '' || cleanValue === '-' || !isNaN(parseFloat(cleanValue))) {
+        const validationError = validateValue(cleanValue || '0');
+        setError(validationError);
+        onChange(cleanValue || '0');
+      }
+    }
+  };
+
   if (isEditing) {
     return (
       <div className="relative">
         <Input
           type="text"
           value={tempValue}
-          onChange={(e) => setTempValue(e.target.value)}
+          onChange={handleInputChange}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           autoFocus
