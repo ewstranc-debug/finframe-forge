@@ -200,8 +200,28 @@ export const calculateAffiliateCashFlow = (period: AffiliateIncomeData, annualiz
 };
 
 /**
+ * Calculate SBA Guarantee Fee based on FY 2026 tier structure
+ * For loans with maturity > 12 months:
+ * - 3.5% on the guaranteed portion up to $1,000,000
+ * - 3.75% on the guaranteed portion over $1,000,000
+ */
+export const calculateSBAGuaranteeFee = (
+  loanAmount: number,
+  guaranteePercent: number
+): number => {
+  const guaranteedAmount = loanAmount * (guaranteePercent / 100);
+  
+  if (guaranteedAmount <= 1000000) {
+    return guaranteedAmount * 0.035;
+  } else {
+    // 3.5% on first $1M + 3.75% on amount over $1M
+    return (1000000 * 0.035) + ((guaranteedAmount - 1000000) * 0.0375);
+  }
+};
+
+/**
  * Calculate SBA loan annual debt service based on loan parameters
- * Updated to match 2024 SBA fee structure
+ * Updated to match FY 2026 SBA fee structure
  */
 export const calculateLoanAnnualDebtService = (
   uses: UseOfFunds[],
@@ -213,20 +233,8 @@ export const calculateLoanAnnualDebtService = (
   const guaranteePct = parseFloat(guaranteePercent) || 75;
   const term = parseFloat(termMonths) || 1;
   
-  // Calculate SBA upfront fee (2024 structure)
-  let upfrontFee = 0;
-  if (primaryRequest <= 150000) {
-    upfrontFee = 0;
-  } else if (primaryRequest <= 500000) {
-    // 0% on first $150K, varies on $150K-$500K portion
-    upfrontFee = (primaryRequest - 150000) * (term > 180 ? 0.0325 : 0.03);
-  } else if (primaryRequest <= 1000000) {
-    // Tiered for $500K-$1M
-    upfrontFee = (350000 * 0.03) + ((primaryRequest - 500000) * 0.035);
-  } else {
-    // Loans over $1M: 3.5% on guaranteed portion over $1M
-    upfrontFee = (350000 * 0.03) + (500000 * 0.035) + ((primaryRequest - 1000000) * 0.035);
-  }
+  // Calculate SBA upfront fee using FY 2026 structure
+  const upfrontFee = calculateSBAGuaranteeFee(primaryRequest, guaranteePct);
   
   const finalLoanAmount = primaryRequest + upfrontFee;
   const rate = (parseFloat(interestRate) || 0) / 100 / 12;
@@ -242,10 +250,10 @@ export const calculateLoanAnnualDebtService = (
 /**
  * Centralized DSCR calculation function
  * This ensures consistency across all components
- */
-/**
- * Centralized DSCR calculation function
- * This ensures consistency across all components
+ * 
+ * IMPORTANT: For interim periods, the function annualizes the cash flow
+ * by dividing by period months and multiplying by 12 to compare against
+ * annual debt service properly.
  */
 export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResult => {
   const {
@@ -301,8 +309,13 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
                         (parseFloat(personalPeriod.schedCOther) || 0);
   const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
 
-  // Calculate total income available (includes affiliate if provided)
-  const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow + affiliateCashFlow;
+  // Calculate Schedule E / K-1 Income (passive income)
+  const schedEK1Income = (parseFloat((personalPeriod as any).schedENetRentalIncome) || 0) +
+                         (parseFloat((personalPeriod as any).k1OrdinaryIncome) || 0) +
+                         (parseFloat((personalPeriod as any).k1GuaranteedPayments) || 0);
+
+  // Calculate total income available (includes affiliate and Schedule E/K-1 if provided)
+  const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow + schedEK1Income + affiliateCashFlow;
 
   // Calculate personal expenses
   const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);

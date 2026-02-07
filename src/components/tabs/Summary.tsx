@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw, AlertTriangle } from "lucide-react";
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices } from "@/utils/financialCalculations";
+import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee } from "@/utils/financialCalculations";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,22 +70,34 @@ export const Summary = () => {
 
   const calculateSBAFees = (primaryAmount: number) => {
     const guaranteePct = parseFloat(guaranteePercent) || 75;
+    
+    // Use FY 2026 fee structure: 3.5% up to $1M, 3.75% over $1M on guaranteed portion
+    const upfrontFee = calculateSBAGuaranteeFee(primaryAmount, guaranteePct);
+    
+    // Annual servicing fee (0.55% of guaranteed portion)
     const guaranteedAmount = primaryAmount * (guaranteePct / 100);
-    
-    let upfrontFee = 0;
-    
-    if (primaryAmount <= 150000) {
-      upfrontFee = 0;
-    } else if (primaryAmount <= 700000) {
-      upfrontFee = (primaryAmount - 150000) * 0.03;
-    } else {
-      upfrontFee = (550000 * 0.03) + ((primaryAmount - 700000) * 0.035);
-    }
-    
     const annualFee = guaranteedAmount * 0.0055;
     
     return { upfrontFee, annualFee, guaranteedAmount };
   };
+
+  // Check if Business Acquisition is included in uses
+  const hasBusinessAcquisition = useMemo(() => {
+    return uses.some(use => 
+      use.description.toLowerCase().includes('business acquisition') && 
+      parseFloat(use.amount) > 0
+    );
+  }, [uses]);
+
+  // Calculate equity percentage of total project
+  const equityInjectionAmount = parseFloat(injectionEquity) || 0;
+  const primaryRequest = calculatePrimaryRequest();
+  const fees = calculateSBAFees(primaryRequest);
+  const totalProjectCost = primaryRequest + fees.upfrontFee;
+  const actualEquityPercent = totalProjectCost > 0 ? (equityInjectionAmount / totalProjectCost) * 100 : 0;
+  
+  // Equity injection warning: required if business acquisition and equity < 10%
+  const showEquityWarning = hasBusinessAcquisition && actualEquityPercent < 10;
 
   const calculateMonthlyPayment = (principal: number) => {
     const rate = (parseFloat(interestRate) || 0) / 100 / 12;
@@ -162,19 +174,14 @@ export const Summary = () => {
 
   const handleEquityPercentageChange = (value: string) => {
     setEquityPercentage(value);
-    const primaryRequest = calculatePrimaryRequest();
-    const fees = calculateSBAFees(primaryRequest);
-    const totalProjectCost = primaryRequest + fees.upfrontFee;
     const calculatedEquity = (parseFloat(value) || 0) / 100 * totalProjectCost;
     setInjectionEquity(calculatedEquity.toString());
   };
 
-  const primaryRequest = calculatePrimaryRequest();
-  const fees = calculateSBAFees(primaryRequest);
   const finalLoanAmount = primaryRequest + fees.upfrontFee;
   const monthlyPayment = calculateMonthlyPayment(finalLoanAmount);
   const annualPayment = calculateAnnualPayment(monthlyPayment);
-  const totalSources = finalLoanAmount + parseFloat(injectionEquity || "0");
+  const totalSources = finalLoanAmount + equityInjectionAmount;
   const totalUses = primaryRequest + fees.upfrontFee;
   
   // Memoize DSCR calculations for performance - using dynamic period identification
@@ -303,7 +310,20 @@ export const Summary = () => {
                   <div className="p-3">${finalLoanAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
                 <div className="grid grid-cols-2 border-b border-border">
-                  <div className="p-3 border-r border-border bg-secondary/30">Equity Injection</div>
+                  <div className="p-3 border-r border-border bg-secondary/30 flex items-center gap-2">
+                    Equity Injection
+                    {showEquityWarning && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-destructive font-medium">SBA requires min. 10% equity for acquisitions.</p>
+                          <p className="text-sm mt-1">Current equity: {actualEquityPercent.toFixed(1)}%</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   <div>
                     <EditableCell
                       value={injectionEquity}
@@ -312,6 +332,12 @@ export const Summary = () => {
                     />
                   </div>
                 </div>
+                {showEquityWarning && (
+                  <div className="border-b border-border bg-destructive/10 p-2 text-destructive text-sm flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    SBA requires min. 10% equity for acquisitions. Current: {actualEquityPercent.toFixed(1)}%
+                  </div>
+                )}
                 <div className="grid grid-cols-2 border-b border-border bg-accent/20">
                   <div className="p-3 border-r border-border text-sm">Equity % of Total Project</div>
                   <div className="p-2">
