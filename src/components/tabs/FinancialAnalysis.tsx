@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
-import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, calculateFCCR } from "@/utils/financialCalculations";
+import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, calculateFCCR, classifyPeriods, findLastFYEIndex, findInterimIndices, isLastFYEProjection } from "@/utils/financialCalculations";
 import { getDSCRColorClass } from "@/utils/dscrUtils";
 import { Textarea } from "@/components/ui/textarea";
 import { DocumentUpload } from "@/components/DocumentUpload";
@@ -250,32 +250,14 @@ export const FinancialAnalysis = () => {
       };
     };
     
-    // Build helper structure for period classification
-    const periodInfo = businessPeriods.map((p, i) => ({
-      index: i,
-      months: parseFloat(p.periodMonths) || 0,
-      label: (businessPeriodLabels[i] || "").toLowerCase(),
-    }));
-    
-    // Find the last full year-end period (12 months, excluding explicit interim labels)
-    const lastFyeEntry = periodInfo
-      .filter(p => p.months === 12 && !p.label.includes("interim"))
-      .sort((a, b) => b.index - a.index)[0];
-    const lastFYEIndex = lastFyeEntry?.index;
+    // Use centralized period classification to ensure consistency with Summary tab
+    const periodClassifications = classifyPeriods(businessPeriods, businessPeriodLabels);
+    const lastFYEIndex = findLastFYEIndex(periodClassifications);
+    const interimPeriodIndices = findInterimIndices(periodClassifications);
+    const isProjectionPeriod = isLastFYEProjection(periodClassifications);
     
     const fullYearMetrics = lastFYEIndex !== undefined ? calcBusinessMetrics(lastFYEIndex) : null;
-    
-    // Get all interim periods (either partial-year months or explicitly labeled as interim)
-    const interimPeriodIndices = periodInfo
-      .filter(p => p.months > 0 && (p.months < 12 || p.label.includes("interim")))
-      .map(p => p.index);
-    
     const interimMetrics = interimPeriodIndices.map(idx => calcBusinessMetrics(idx)).filter(Boolean);
-    
-    console.log('Business Periods:', periodInfo);
-    console.log('Last FYE Index:', lastFYEIndex);
-    console.log('Interim Period Indices:', interimPeriodIndices);
-    console.log('Interim Metrics:', interimMetrics);
     
     // Use latest business period for overall business metrics
     const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
@@ -490,6 +472,8 @@ export const FinancialAnalysis = () => {
         fccr: fccrResult.fccr,
         fccrNumerator: fccrResult.numerator,
         fccrDenominator: fccrResult.denominator,
+        isProjection: isProjectionPeriod, // Track if the FYE is from a projection
+        lastFYEIndex, // Track which period index is used
       },
       global: {
         totalAssets: globalTotalAssets,
@@ -678,6 +662,7 @@ export const FinancialAnalysis = () => {
     personalAssets,
     personalLiabilities,
     businessPeriods,
+    businessPeriodLabels, // Added to trigger recalculation when labels change
     businessBalanceSheetPeriods,
     debts,
     uses,
@@ -985,7 +970,9 @@ export const FinancialAnalysis = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help bg-primary/5 p-3 rounded-lg border-2 border-primary/20">
-                        <p className="text-sm text-muted-foreground font-semibold">Business DSCR - FYE</p>
+                        <p className="text-sm text-muted-foreground font-semibold">
+                          Business DSCR - {ratios.dscr.isProjection ? 'Projected' : 'FYE'}
+                        </p>
                         <p
                           className={`text-2xl font-bold ${
                             !ratios.dscr.fullYear || ratios.dscr.fullYear.existingDSCR === 0
