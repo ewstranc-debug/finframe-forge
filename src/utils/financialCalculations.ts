@@ -64,7 +64,8 @@ export const classifyPeriods = (
     const label = (labels[i] || "").toLowerCase();
     const isProjection = p.isProjection || label.includes("projection");
     const isInterim = months > 0 && months < 12 || label.includes("interim");
-    const isFYE = months === 12 && !isInterim && !isProjection;
+    // FYE includes projections with 12 months - they are valid for DSCR calculations
+    const isFYE = months === 12 && !isInterim;
     
     return {
       index: i,
@@ -78,12 +79,22 @@ export const classifyPeriods = (
 };
 
 /**
- * Find the last full year end period index
+ * Find the last full year end period index (includes projections with 12 months)
+ * Prioritizes the most recent period by index
  */
 export const findLastFYEIndex = (classifications: PeriodClassification[]): number | undefined => {
   const fyePeriods = classifications.filter(p => p.isFYE);
   if (fyePeriods.length === 0) return undefined;
   return fyePeriods.sort((a, b) => b.index - a.index)[0].index;
+};
+
+/**
+ * Check if the last FYE period is a projection
+ */
+export const isLastFYEProjection = (classifications: PeriodClassification[]): boolean => {
+  const lastFYEIdx = findLastFYEIndex(classifications);
+  if (lastFYEIdx === undefined) return false;
+  return classifications[lastFYEIdx]?.isProjection || false;
 };
 
 /**

@@ -3,7 +3,7 @@ import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw, AlertT
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee } from "@/utils/financialCalculations";
+import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection } from "@/utils/financialCalculations";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +51,22 @@ export const Summary = () => {
     findInterimIndices(periodClassifications),
     [periodClassifications]
   );
+
+  // Check if the last FYE is a projection for dynamic labeling
+  const isLastFYEAProjection = useMemo(() => 
+    isLastFYEProjection(periodClassifications),
+    [periodClassifications]
+  );
+
+  // Dynamic label for the FYE section
+  const fyeSectionLabel = useMemo(() => {
+    if (lastFYEIndex === undefined) return 'Last Full Year';
+    const label = businessPeriodLabels[lastFYEIndex] || '';
+    if (isLastFYEAProjection) {
+      return `Projected FYE ${label ? `(${label})` : ''}`;
+    }
+    return `Last Full Year ${label ? `(${label})` : ''}`;
+  }, [lastFYEIndex, businessPeriodLabels, isLastFYEAProjection]);
 
   const handleReset = () => {
     resetAll();
@@ -471,7 +487,7 @@ export const Summary = () => {
           <div className="space-y-6">
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                Last Full Year {lastFYEIndex !== undefined && businessPeriodLabels[lastFYEIndex] ? `(${businessPeriodLabels[lastFYEIndex]})` : ''}
+                {fyeSectionLabel}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-2 border-primary/30">
