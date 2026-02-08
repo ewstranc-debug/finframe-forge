@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { getDSCRStatus, getDSCRStatusText } from "@/utils/dscrUtils";
 
 interface DSCRBreakdownProps {
   open: boolean;
@@ -76,17 +77,22 @@ export const DSCRBreakdownModal = ({
 
         <div className="space-y-6">
           {/* Final DSCR Result */}
-          <Card className={`${dscr >= 1.25 ? 'border-green-500 bg-green-50 dark:bg-green-950' : dscr >= 1.15 ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' : 'border-red-500 bg-red-50 dark:bg-red-950'}`}>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Global DSCR</p>
-                <p className="text-4xl font-bold text-foreground">{dscr.toFixed(2)}x</p>
-                <p className="text-sm mt-2 text-muted-foreground">
-                  {dscr >= 1.25 ? '✓ Strong (≥1.25)' : dscr >= 1.15 ? '⚠ Acceptable (≥1.15)' : '✗ Below Threshold (<1.15)'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {(() => {
+            const status = getDSCRStatus(dscr);
+            return (
+              <Card className={`${status.borderColor} ${status.bgColor}`}>
+                <CardContent className="pt-6">
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-2">Global DSCR</p>
+                    <p className="text-4xl font-bold text-foreground">{dscr.toFixed(2)}x</p>
+                    <p className="text-sm mt-2 text-muted-foreground">
+                      {getDSCRStatusText(dscr)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Formula */}
           <div className="bg-muted p-4 rounded-lg">

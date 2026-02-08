@@ -900,7 +900,7 @@ export const BusinessFinancials = () => {
                   {businessPeriods.map((_, i) => (
                     <td key={i} className={`border border-border p-2 text-center font-semibold ${
                       calculateDSCRWithRent(i) >= 1.25 ? 'text-green-600' : 
-                      calculateDSCRWithRent(i) >= 1.0 ? 'text-yellow-600' : 
+                      calculateDSCRWithRent(i) >= 1.15 ? 'text-yellow-600' : 
                       'text-red-600'
                     }`}>
                       {calculateDSCRWithRent(i).toFixed(2)}x

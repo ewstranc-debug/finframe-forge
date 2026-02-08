@@ -310,9 +310,9 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
   const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
 
   // Calculate Schedule E / K-1 Income (passive income)
-  const schedEK1Income = (parseFloat((personalPeriod as any).schedENetRentalIncome) || 0) +
-                         (parseFloat((personalPeriod as any).k1OrdinaryIncome) || 0) +
-                         (parseFloat((personalPeriod as any).k1GuaranteedPayments) || 0);
+  const schedEK1Income = (parseFloat(personalPeriod.schedENetRentalIncome) || 0) +
+                         (parseFloat(personalPeriod.k1OrdinaryIncome) || 0) +
+                         (parseFloat(personalPeriod.k1GuaranteedPayments) || 0);
 
   // Calculate total income available (includes affiliate and Schedule E/K-1 if provided)
   const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow + schedEK1Income + affiliateCashFlow;

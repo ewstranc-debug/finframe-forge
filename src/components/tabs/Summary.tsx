@@ -673,36 +673,44 @@ export const Summary = () => {
                             <TooltipContent className="max-w-sm">
                               <p className="font-semibold mb-2">EBITDA Calculation:</p>
                               <div className="space-y-1 text-sm">
-                                <div className="flex justify-between gap-4">
-                                  <span>Revenue + Other Income:</span>
-                                  <span className="font-mono">
-                                    ${((parseFloat(businessPeriods[3].revenue) || 0) + (parseFloat(businessPeriods[3].otherIncome) || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: COGS:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[3].cogs) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: Operating Expenses:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[3].operatingExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: Rent Expense:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[3].rentExpense) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between gap-4">
-                                  <span>Less: Other Expenses:</span>
-                                  <span className="font-mono">
-                                    -${(parseFloat(businessPeriods[3].otherExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                  </span>
-                                </div>
+                                {interimIndices.length > 0 && (() => {
+                                  const latestInterimIdx = interimIndices[interimIndices.length - 1];
+                                  const interimData = businessPeriods[latestInterimIdx];
+                                  return (
+                                    <>
+                                      <div className="flex justify-between gap-4">
+                                        <span>Revenue + Other Income:</span>
+                                        <span className="font-mono">
+                                          ${((parseFloat(interimData?.revenue) || 0) + (parseFloat(interimData?.otherIncome) || 0)).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between gap-4">
+                                        <span>Less: COGS:</span>
+                                        <span className="font-mono">
+                                          -${(parseFloat(interimData?.cogs) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between gap-4">
+                                        <span>Less: Operating Expenses:</span>
+                                        <span className="font-mono">
+                                          -${(parseFloat(interimData?.operatingExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between gap-4">
+                                        <span>Less: Rent Expense:</span>
+                                        <span className="font-mono">
+                                          -${(parseFloat(interimData?.rentExpense) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between gap-4">
+                                        <span>Less: Other Expenses:</span>
+                                        <span className="font-mono">
+                                          -${(parseFloat(interimData?.otherExpenses) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                        </span>
+                                      </div>
+                                    </>
+                                  );
+                                })()}
                                 <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
                                   <span>EBITDA:</span>
                                   <span className="font-mono">${interimPeriod.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
@@ -828,7 +836,7 @@ export const Summary = () => {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.15 ? 'text-yellow-600' : 'text-red-600'}`}>
                           {interimPeriod.dscr.toFixed(2)}x
                         </p>
                       </div>
