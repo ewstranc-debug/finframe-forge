@@ -1670,15 +1670,15 @@ export const FinancialAnalysis = () => {
                     <div className="mt-4 grid grid-cols-3 gap-4">
                       <div className="p-3 bg-muted/30 rounded">
                         <p className="text-xs font-semibold mb-1">Existing Debt Service</p>
-                        <p className="text-lg font-bold">${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.annualDebtService).toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-primary/10 rounded border border-primary/20">
                         <p className="text-xs font-semibold mb-1">New Loan Payment</p>
-                        <p className="text-lg font-bold">+${ratios.dscr.proposedAnnualDebtService.toLocaleString()}</p>
+                        <p className="text-lg font-bold">+${Math.round(ratios.dscr.proposedAnnualDebtService).toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-accent/30 rounded">
                         <p className="text-xs font-semibold mb-1">Total Proposed</p>
-                        <p className="text-lg font-bold">${ratios.dscr.totalProposedAnnualDebtService.toLocaleString()}</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                       </div>
                     </div>
                   </CardContent>

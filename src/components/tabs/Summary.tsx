@@ -145,6 +145,7 @@ export const Summary = () => {
   
   // Equity injection warning: required if business acquisition and equity < 10%
   const showEquityWarning = hasBusinessAcquisition && actualEquityPercent < 10;
+  const meetsEquityMinimum = hasBusinessAcquisition && actualEquityPercent >= 10;
 
   const calculateMonthlyPayment = (principal: number) => {
     const rate = (parseFloat(interestRate) || 0) / 100 / 12;

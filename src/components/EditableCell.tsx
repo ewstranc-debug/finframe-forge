@@ -492,6 +492,7 @@ export const EditableCell = ({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           autoFocus
+          onFocus={(e) => e.target.select()}
           className={`h-9 ${error ? "border-destructive" : "border-primary"} ${className}`}
           data-field={dataField}
           data-editable-cell="input"
