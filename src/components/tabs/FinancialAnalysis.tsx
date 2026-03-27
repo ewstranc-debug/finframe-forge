@@ -1643,42 +1643,54 @@ export const FinancialAnalysis = () => {
                     <CardTitle>DSCR Comparison: Existing vs Proposed Debt</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={[
+                    {(() => {
+                      const dscrChartData = [
                         ratios.dscr.fullYear ? { 
-                          name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year',
+                          name: ratios.dscr.fullYear.periodLabel || 'Full Year',
                           existingDSCR: ratios.dscr.fullYear.existingDSCR,
                           proposedDSCR: ratios.dscr.fullYear.proposedDSCR,
                         } : null,
                         ratios.dscr.interim ? {
-                          name: businessPeriodLabels[2] || 'Interim',
+                          name: ratios.dscr.interim.periodLabel || 'Interim',
                           existingDSCR: ratios.dscr.interim.existingDSCR,
                           proposedDSCR: ratios.dscr.interim.proposedDSCR,
                         } : null
-                      ].filter(Boolean)}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <RechartsTooltip formatter={(value: number) => value.toFixed(2)} />
-                        <Legend />
-                        <ReferenceLine y={1.15} stroke="hsl(var(--success))" strokeDasharray="3 3" label="Target (1.15)" />
-                        <ReferenceLine y={1.0} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label="Minimum (1.0)" />
-                        <Line type="monotone" dataKey="existingDSCR" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Existing DSCR" />
-                        <Line type="monotone" dataKey="proposedDSCR" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" name="Proposed DSCR" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                      ].filter(Boolean);
+                      
+                      if (dscrChartData.length === 0) {
+                        return <p className="text-muted-foreground text-center py-8">Enter business financial data to see DSCR comparison chart.</p>;
+                      }
+                      
+                      return (
+                        <div style={{ width: '100%', height: 300 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={dscrChartData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <RechartsTooltip formatter={(value: number) => value.toFixed(2)} />
+                              <Legend />
+                              <ReferenceLine y={1.15} stroke="hsl(var(--success))" strokeDasharray="3 3" label="Target (1.15)" />
+                              <ReferenceLine y={1.0} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label="Minimum (1.0)" />
+                              <Line type="monotone" dataKey="existingDSCR" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Existing DSCR" />
+                              <Line type="monotone" dataKey="proposedDSCR" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" name="Proposed DSCR" />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })()}
                     <div className="mt-4 grid grid-cols-3 gap-4">
                       <div className="p-3 bg-muted/30 rounded">
                         <p className="text-xs font-semibold mb-1">Existing Debt Service</p>
-                        <p className="text-lg font-bold">${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.annualDebtService).toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-primary/10 rounded border border-primary/20">
                         <p className="text-xs font-semibold mb-1">New Loan Payment</p>
-                        <p className="text-lg font-bold">+${ratios.dscr.proposedAnnualDebtService.toLocaleString()}</p>
+                        <p className="text-lg font-bold">+${Math.round(ratios.dscr.proposedAnnualDebtService).toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-accent/30 rounded">
                         <p className="text-xs font-semibold mb-1">Total Proposed</p>
-                        <p className="text-lg font-bold">${ratios.dscr.totalProposedAnnualDebtService.toLocaleString()}</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -1691,10 +1703,10 @@ export const FinancialAnalysis = () => {
                       <CardTitle>EBITDA Component Breakdown</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={[
+                      {(() => {
+                        const ebitdaChartData = [
                           ratios.dscr.fullYear ? {
-                            name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year',
+                            name: ratios.dscr.fullYear.periodLabel || 'Full Year',
                             Revenue: ratios.dscr.fullYear.revenue,
                             'Other Income': ratios.dscr.fullYear.otherIncome,
                             'COGS': -ratios.dscr.fullYear.cogs,
@@ -1706,7 +1718,7 @@ export const FinancialAnalysis = () => {
                             'EBITDA': ratios.dscr.fullYear.ebitda,
                           } : null,
                           ratios.dscr.interim ? {
-                            name: businessPeriodLabels[2] || 'Interim',
+                            name: ratios.dscr.interim.periodLabel || 'Interim',
                             Revenue: ratios.dscr.interim.revenue,
                             'Other Income': ratios.dscr.interim.otherIncome,
                             'COGS': -ratios.dscr.interim.cogs,
@@ -1717,23 +1729,33 @@ export const FinancialAnalysis = () => {
                             'Addbacks': ratios.dscr.interim.addbacks,
                             'EBITDA': ratios.dscr.interim.ebitda,
                           } : null
-                        ].filter(Boolean)}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
-                          <Legend />
-                          <Bar dataKey="Revenue" fill="#10b981" />
-                          <Bar dataKey="Other Income" fill="#34d399" />
-                          <Bar dataKey="COGS" fill="#ef4444" />
-                          <Bar dataKey="Operating Exp" fill="#f87171" />
-                          <Bar dataKey="Rent" fill="#fb923c" />
-                          <Bar dataKey="Officers Comp" fill="#fbbf24" />
-                          <Bar dataKey="Other Exp" fill="#dc2626" />
-                          <Bar dataKey="Addbacks" fill="#3b82f6" />
-                          <Bar dataKey="EBITDA" fill="#8b5cf6" strokeWidth={2} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                        ].filter(Boolean);
+                        
+                        if (ebitdaChartData.length === 0) return null;
+                        
+                        return (
+                          <div style={{ width: '100%', height: 350 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={ebitdaChartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                                <Legend />
+                                <Bar dataKey="Revenue" fill="#10b981" />
+                                <Bar dataKey="Other Income" fill="#34d399" />
+                                <Bar dataKey="COGS" fill="#ef4444" />
+                                <Bar dataKey="Operating Exp" fill="#f87171" />
+                                <Bar dataKey="Rent" fill="#fb923c" />
+                                <Bar dataKey="Officers Comp" fill="#fbbf24" />
+                                <Bar dataKey="Other Exp" fill="#dc2626" />
+                                <Bar dataKey="Addbacks" fill="#3b82f6" />
+                                <Bar dataKey="EBITDA" fill="#8b5cf6" strokeWidth={2} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 )}

@@ -145,6 +145,7 @@ export const Summary = () => {
   
   // Equity injection warning: required if business acquisition and equity < 10%
   const showEquityWarning = hasBusinessAcquisition && actualEquityPercent < 10;
+  const meetsEquityMinimum = hasBusinessAcquisition && actualEquityPercent >= 10;
 
   const calculateMonthlyPayment = (principal: number) => {
     const rate = (parseFloat(interestRate) || 0) / 100 / 12;
@@ -381,6 +382,9 @@ export const Summary = () => {
                         </TooltipContent>
                       </Tooltip>
                     )}
+                    {meetsEquityMinimum && (
+                      <span className="text-green-600 text-xs font-medium">✓</span>
+                    )}
                   </div>
                   <div>
                     <EditableCell
@@ -394,6 +398,11 @@ export const Summary = () => {
                   <div className="border-b border-border bg-destructive/10 p-2 text-destructive text-sm flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     SBA requires min. 10% down payment for acquisitions. Current: {actualEquityPercent.toFixed(1)}%
+                  </div>
+                )}
+                {meetsEquityMinimum && (
+                  <div className="border-b border-border bg-green-50 dark:bg-green-950/20 p-2 text-green-600 text-sm flex items-center gap-2">
+                    ✓ Meets minimum 10% down payment requirement ({actualEquityPercent.toFixed(1)}%)
                   </div>
                 )}
                 <div className="grid grid-cols-2 border-b border-border bg-accent/20">

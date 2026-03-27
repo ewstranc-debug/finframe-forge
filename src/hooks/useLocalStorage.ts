@@ -13,7 +13,7 @@ export function useLocalStorage<T>(key: string, initialValue: T, debounceMs: num
   });
 
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [saveTimeout, setSaveTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   // Save to localStorage with debounce
   useEffect(() => {
