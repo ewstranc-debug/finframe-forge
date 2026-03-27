@@ -319,7 +319,7 @@ export const PersonalFinancialStatement = () => {
             <div className="flex justify-between text-xl border-t-2 border-border pt-3">
               <span className="font-bold">Net Worth:</span>
               <span className={`font-bold ${calculateNetWorth() >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateNetWorth())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateNetWorth())}
               </span>
             </div>
           </div>
