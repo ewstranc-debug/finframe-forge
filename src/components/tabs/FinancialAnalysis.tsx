@@ -1768,7 +1768,7 @@ export const FinancialAnalysis = () => {
                         <Card className="cursor-help">
                           <CardHeader>
                             <CardTitle className="text-lg">Full Year DSCR Analysis</CardTitle>
-                            <p className="text-sm text-muted-foreground">{businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
+                            <p className="text-sm text-muted-foreground">{ratios.dscr.fullYear?.periodLabel || businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-4">
