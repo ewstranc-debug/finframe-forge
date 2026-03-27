@@ -401,7 +401,7 @@ export const FinancialAnalysis = () => {
     const globalInterimDscr = calculateGlobalDscrForPeriod(latestInterimIndex);
     
     // Global DSCR using combined EBITDA only (legacy)
-    const globalDSCR = annualDebtService > 0 ? businessEBITDA / annualDebtService : 0;
+    const globalDSCR = totalProposedAnnualDebtService > 0 ? businessEBITDA / totalProposedAnnualDebtService : 0;
     
     // Calculate FCCR (Fixed Charge Coverage Ratio)
     // FCCR = (EBITDA + Rent) / (Total Debt Service + Rent)
