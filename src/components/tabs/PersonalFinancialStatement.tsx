@@ -301,7 +301,7 @@ export const PersonalFinancialStatement = () => {
             <div className="flex justify-between text-lg">
               <span className="font-medium">Total Assets:</span>
               <span className="font-bold text-success">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalAssets())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalAssets())}
               </span>
             </div>
             <div className="flex justify-between text-lg">
