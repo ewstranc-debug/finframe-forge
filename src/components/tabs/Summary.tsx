@@ -225,8 +225,22 @@ export const Summary = () => {
   const handleEquityPercentageChange = (value: string) => {
     setEquityPercentage(value);
     const calculatedEquity = (parseFloat(value) || 0) / 100 * totalUses;
-    setInjectionEquity(calculatedEquity.toString());
+    setInjectionEquity(Math.round(calculatedEquity).toString());
   };
+
+  // Bug 3 fix: Auto-recalculate down payment when totalUses changes
+  const prevTotalUsesRef = useMemo(() => ({ current: totalUses }), []);
+  useMemo(() => {
+    const pct = parseFloat(equityPercentage) || 0;
+    if (pct > 0 && totalUses > 0) {
+      const calculatedEquity = Math.round(pct / 100 * totalUses);
+      if (calculatedEquity.toString() !== injectionEquity) {
+        // Schedule update to avoid render-during-render
+        setTimeout(() => setInjectionEquity(calculatedEquity.toString()), 0);
+      }
+    }
+    prevTotalUsesRef.current = totalUses;
+  }, [totalUses]);
 
   // Final loan amount for payment calculation = SBA Loan (which already includes the upfront fee in the total uses balance)
   const finalLoanAmount = sbaLoanAmount;

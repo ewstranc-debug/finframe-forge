@@ -1624,7 +1624,7 @@ export const FinancialAnalysis = () => {
                         </div>
                         <div className="pb-2 mb-2">
                           <p className="font-medium text-sm">Annual Debt Service:</p>
-                          <p className="text-sm">${ratios.personal.annualDebtService.toLocaleString()}</p>
+                          <p className="text-sm">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                         </div>
                         <p className="border-t pt-1 mt-1 font-semibold">Global DSCR = Total Available / Annual Debt Service = {ratios.global.dscr.toFixed(2)}</p>
                       </div>

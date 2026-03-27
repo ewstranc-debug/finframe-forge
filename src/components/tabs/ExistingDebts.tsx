@@ -65,16 +65,18 @@ export const ExistingDebts = () => {
       if (payment > 0 && balance > 0) {
         if (rate > 0) {
           const monthlyRate = rate / 100 / 12;
-          // Remaining term = -log(1 - (balance * monthlyRate / payment)) / log(1 + monthlyRate)
           const numerator = balance * monthlyRate / payment;
           if (numerator < 1) {
             remainingTerm = Math.ceil(-Math.log(1 - numerator) / Math.log(1 + monthlyRate));
           } else {
-            remainingTerm = term; // Can't calculate, use original term
+            remainingTerm = term;
           }
         } else {
-          // No interest, simple division
           remainingTerm = Math.ceil(balance / payment);
+        }
+        // Cap remaining term at original term
+        if (term > 0) {
+          remainingTerm = Math.min(remainingTerm, term);
         }
       }
 

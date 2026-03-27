@@ -285,7 +285,7 @@ export const PersonalFinancialStatement = () => {
                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalLiabilities())}
               </div>
               <div className="p-3 font-bold text-destructive">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalMonthlyDebt())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalMonthlyDebt())}
               </div>
             </div>
           </div>
