@@ -4,7 +4,7 @@ import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection } from "@/utils/financialCalculations";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -225,8 +225,22 @@ export const Summary = () => {
   const handleEquityPercentageChange = (value: string) => {
     setEquityPercentage(value);
     const calculatedEquity = (parseFloat(value) || 0) / 100 * totalUses;
-    setInjectionEquity(calculatedEquity.toString());
+    setInjectionEquity(Math.round(calculatedEquity).toString());
   };
+
+  // Bug 3 fix: Auto-recalculate down payment when totalUses changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const pct = parseFloat(equityPercentage) || 0;
+    if (pct > 0 && totalUses > 0) {
+      const calculatedEquity = Math.round(pct / 100 * totalUses);
+      setInjectionEquity(calculatedEquity.toString());
+    }
+  }, [totalUses]);
 
   // Final loan amount for payment calculation = SBA Loan (which already includes the upfront fee in the total uses balance)
   const finalLoanAmount = sbaLoanAmount;

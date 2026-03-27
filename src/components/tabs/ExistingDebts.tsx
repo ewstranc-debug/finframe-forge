@@ -36,12 +36,13 @@ export const ExistingDebts = () => {
     setDebts(debts.map(d => {
       if (d.id === id) {
         const updated = { ...d, [field]: value };
-        // Auto-calculate payment if balance, rate, or term changes
+        // Auto-calculate payment only when payment is zero (preserve user-entered values)
         if ((field === 'balance' || field === 'rate' || field === 'term')) {
           const balance = parseFloat(updated.balance) || 0;
           const rate = parseFloat(updated.rate) || 0;
           const term = parseFloat(updated.term) || 0;
-          if (balance > 0 && rate > 0 && term > 0) {
+          const currentPayment = parseFloat(updated.payment) || 0;
+          if (balance > 0 && rate > 0 && term > 0 && currentPayment === 0) {
             const calculatedPayment = calculateMonthlyPayment(balance, rate, term);
             updated.payment = calculatedPayment.toFixed(2);
           }
@@ -65,16 +66,18 @@ export const ExistingDebts = () => {
       if (payment > 0 && balance > 0) {
         if (rate > 0) {
           const monthlyRate = rate / 100 / 12;
-          // Remaining term = -log(1 - (balance * monthlyRate / payment)) / log(1 + monthlyRate)
           const numerator = balance * monthlyRate / payment;
           if (numerator < 1) {
             remainingTerm = Math.ceil(-Math.log(1 - numerator) / Math.log(1 + monthlyRate));
           } else {
-            remainingTerm = term; // Can't calculate, use original term
+            remainingTerm = term;
           }
         } else {
-          // No interest, simple division
           remainingTerm = Math.ceil(balance / payment);
+        }
+        // Cap remaining term at original term
+        if (term > 0) {
+          remainingTerm = Math.min(remainingTerm, term);
         }
       }
 

@@ -188,7 +188,7 @@ export const PersonalFinancialStatement = () => {
             <div className="grid grid-cols-2 bg-success/10">
               <div className="p-3 border-r border-border font-bold">Total Assets</div>
               <div className="p-3 font-bold text-success">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalAssets())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalAssets())}
               </div>
             </div>
           </div>
@@ -282,10 +282,10 @@ export const PersonalFinancialStatement = () => {
             <div className="grid grid-cols-3 bg-destructive/10">
               <div className="p-3 border-r border-border font-bold">Total Liabilities</div>
               <div className="p-3 border-r border-border font-bold text-destructive">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalLiabilities())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalLiabilities())}
               </div>
               <div className="p-3 font-bold text-destructive">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalMonthlyDebt())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalMonthlyDebt())}
               </div>
             </div>
           </div>
@@ -301,25 +301,25 @@ export const PersonalFinancialStatement = () => {
             <div className="flex justify-between text-lg">
               <span className="font-medium">Total Assets:</span>
               <span className="font-bold text-success">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalAssets())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalAssets())}
               </span>
             </div>
             <div className="flex justify-between text-lg">
               <span className="font-medium">Total Liabilities:</span>
               <span className="font-bold text-destructive">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalLiabilities())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalLiabilities())}
               </span>
             </div>
             <div className="flex justify-between text-lg border-t pt-3">
               <span className="font-bold">Monthly Debt Service:</span>
               <span className="font-bold text-primary">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalMonthlyDebt())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalMonthlyDebt())}
               </span>
             </div>
             <div className="flex justify-between text-xl border-t-2 border-border pt-3">
               <span className="font-bold">Net Worth:</span>
               <span className={`font-bold ${calculateNetWorth() >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateNetWorth())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateNetWorth())}
               </span>
             </div>
           </div>

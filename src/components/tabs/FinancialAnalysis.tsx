@@ -401,7 +401,7 @@ export const FinancialAnalysis = () => {
     const globalInterimDscr = calculateGlobalDscrForPeriod(latestInterimIndex);
     
     // Global DSCR using combined EBITDA only (legacy)
-    const globalDSCR = annualDebtService > 0 ? businessEBITDA / annualDebtService : 0;
+    const globalDSCR = totalProposedAnnualDebtService > 0 ? businessEBITDA / totalProposedAnnualDebtService : 0;
     
     // Calculate FCCR (Fixed Charge Coverage Ratio)
     // FCCR = (EBITDA + Rent) / (Total Debt Service + Rent)
@@ -1624,7 +1624,7 @@ export const FinancialAnalysis = () => {
                         </div>
                         <div className="pb-2 mb-2">
                           <p className="font-medium text-sm">Annual Debt Service:</p>
-                          <p className="text-sm">${ratios.personal.annualDebtService.toLocaleString()}</p>
+                          <p className="text-sm">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                         </div>
                         <p className="border-t pt-1 mt-1 font-semibold">Global DSCR = Total Available / Annual Debt Service = {ratios.global.dscr.toFixed(2)}</p>
                       </div>
@@ -1768,7 +1768,7 @@ export const FinancialAnalysis = () => {
                         <Card className="cursor-help">
                           <CardHeader>
                             <CardTitle className="text-lg">Full Year DSCR Analysis</CardTitle>
-                            <p className="text-sm text-muted-foreground">{businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
+                            <p className="text-sm text-muted-foreground">{ratios.dscr.fullYear?.periodLabel || businessPeriodLabels[1] || businessPeriodLabels[0]}</p>
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-4">
@@ -1785,8 +1785,8 @@ export const FinancialAnalysis = () => {
                                   <p className="text-lg font-semibold">${ratios.dscr.fullYear.ebitda.toLocaleString()}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground">Debt Service</p>
-                                  <p className="text-lg font-semibold">${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                                  <p className="text-xs text-muted-foreground">Total Debt Service</p>
+                                  <p className="text-lg font-semibold">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground">Revenue</p>
@@ -1817,7 +1817,7 @@ export const FinancialAnalysis = () => {
                             <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.fullYear.ebitda.toLocaleString()}</p>
                           </div>
                           <div className="space-y-1 text-sm border-t pt-2">
-                            <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                            <p className="font-medium">Total Proposed Debt Service: ${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                           </div>
                           <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.fullYear.dscr.toFixed(2)}</p>
                         </div>
@@ -1831,7 +1831,7 @@ export const FinancialAnalysis = () => {
                         <Card className="cursor-help">
                           <CardHeader>
                             <CardTitle className="text-lg">Interim Period DSCR Analysis</CardTitle>
-                            <p className="text-sm text-muted-foreground">{businessPeriodLabels[2]}</p>
+                            <p className="text-sm text-muted-foreground">{ratios.dscr.interim?.periodLabel || businessPeriodLabels[2]}</p>
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-4">
@@ -1848,8 +1848,8 @@ export const FinancialAnalysis = () => {
                                   <p className="text-lg font-semibold">${ratios.dscr.interim.ebitda.toLocaleString()}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground">Debt Service</p>
-                                  <p className="text-lg font-semibold">${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                                  <p className="text-xs text-muted-foreground">Total Debt Service</p>
+                                  <p className="text-lg font-semibold">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground">Revenue</p>
@@ -1880,7 +1880,7 @@ export const FinancialAnalysis = () => {
                             <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.interim.ebitda.toLocaleString()}</p>
                           </div>
                           <div className="space-y-1 text-sm border-t pt-2">
-                            <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                            <p className="font-medium">Total Proposed Debt Service: ${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                           </div>
                           <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.interim.dscr.toFixed(2)}</p>
                         </div>
