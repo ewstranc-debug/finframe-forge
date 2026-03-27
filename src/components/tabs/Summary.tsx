@@ -144,8 +144,10 @@ export const Summary = () => {
   const actualEquityPercent = totalUses > 0 ? (equityInjectionAmount / totalUses) * 100 : 0;
   
   // Equity injection warning: required if business acquisition and equity < 10%
-  const showEquityWarning = hasBusinessAcquisition && actualEquityPercent < 10;
-  const meetsEquityMinimum = hasBusinessAcquisition && actualEquityPercent >= 10;
+  // Use rounded comparison to avoid floating point issues (e.g. 9.9999999 vs 10)
+  const roundedEquityPercent = Math.round(actualEquityPercent * 100) / 100;
+  const showEquityWarning = hasBusinessAcquisition && roundedEquityPercent < 10;
+  const meetsEquityMinimum = hasBusinessAcquisition && roundedEquityPercent >= 10;
 
   const calculateMonthlyPayment = (principal: number) => {
     const rate = (parseFloat(interestRate) || 0) / 100 / 12;
