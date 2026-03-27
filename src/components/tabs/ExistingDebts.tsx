@@ -36,12 +36,13 @@ export const ExistingDebts = () => {
     setDebts(debts.map(d => {
       if (d.id === id) {
         const updated = { ...d, [field]: value };
-        // Auto-calculate payment if balance, rate, or term changes
+        // Auto-calculate payment only when payment is zero (preserve user-entered values)
         if ((field === 'balance' || field === 'rate' || field === 'term')) {
           const balance = parseFloat(updated.balance) || 0;
           const rate = parseFloat(updated.rate) || 0;
           const term = parseFloat(updated.term) || 0;
-          if (balance > 0 && rate > 0 && term > 0) {
+          const currentPayment = parseFloat(updated.payment) || 0;
+          if (balance > 0 && rate > 0 && term > 0 && currentPayment === 0) {
             const calculatedPayment = calculateMonthlyPayment(balance, rate, term);
             updated.payment = calculatedPayment.toFixed(2);
           }
