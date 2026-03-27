@@ -1880,7 +1880,7 @@ export const FinancialAnalysis = () => {
                             <p className="font-semibold border-t pt-1 mt-1">= EBITDA: ${ratios.dscr.interim.ebitda.toLocaleString()}</p>
                           </div>
                           <div className="space-y-1 text-sm border-t pt-2">
-                            <p className="font-medium">Annual Debt Service: ${ratios.dscr.annualDebtService.toLocaleString()}</p>
+                            <p className="font-medium">Total Proposed Debt Service: ${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                           </div>
                           <p className="font-semibold border-t pt-2 mt-2">DSCR = EBITDA / Annual Debt Service = {ratios.dscr.interim.dscr.toFixed(2)}</p>
                         </div>
