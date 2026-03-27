@@ -275,20 +275,22 @@ export const Summary = () => {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Reset All Financial Data?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will clear all entered data across all tabs including:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Sources & Uses of Funds</li>
-                  <li>Loan Terms</li>
-                  <li>Personal Financials</li>
-                  <li>Business Financials</li>
-                  <li>Personal Financial Statement</li>
-                  <li>Existing Debts</li>
-                  <li>Affiliate Financials</li>
-                  <li>Business Balance Sheet</li>
-                  <li>AI Analysis</li>
-                </ul>
-                <p className="mt-2 font-medium">This action cannot be undone.</p>
+              <AlertDialogDescription asChild>
+                <div>
+                  This will clear all entered data across all tabs including:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Sources & Uses of Funds</li>
+                    <li>Loan Terms</li>
+                    <li>Personal Financials</li>
+                    <li>Business Financials</li>
+                    <li>Personal Financial Statement</li>
+                    <li>Existing Debts</li>
+                    <li>Affiliate Financials</li>
+                    <li>Business Balance Sheet</li>
+                    <li>AI Analysis</li>
+                  </ul>
+                  <p className="mt-2 font-medium">This action cannot be undone.</p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

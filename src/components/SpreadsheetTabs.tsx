@@ -87,6 +87,5 @@ export const SpreadsheetTabs = () => {
         <FinancialAnalysis />
       </TabsContent>
     </Tabs>
-    </SpreadsheetProvider>
   );
 };
