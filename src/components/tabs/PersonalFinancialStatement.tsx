@@ -282,7 +282,7 @@ export const PersonalFinancialStatement = () => {
             <div className="grid grid-cols-3 bg-destructive/10">
               <div className="p-3 border-r border-border font-bold">Total Liabilities</div>
               <div className="p-3 border-r border-border font-bold text-destructive">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalLiabilities())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalLiabilities())}
               </div>
               <div className="p-3 font-bold text-destructive">
                 {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalMonthlyDebt())}
