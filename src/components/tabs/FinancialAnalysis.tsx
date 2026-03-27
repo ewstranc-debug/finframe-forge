@@ -1703,10 +1703,10 @@ export const FinancialAnalysis = () => {
                       <CardTitle>EBITDA Component Breakdown</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={[
+                      {(() => {
+                        const ebitdaChartData = [
                           ratios.dscr.fullYear ? {
-                            name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year',
+                            name: ratios.dscr.fullYear.periodLabel || 'Full Year',
                             Revenue: ratios.dscr.fullYear.revenue,
                             'Other Income': ratios.dscr.fullYear.otherIncome,
                             'COGS': -ratios.dscr.fullYear.cogs,
@@ -1718,7 +1718,7 @@ export const FinancialAnalysis = () => {
                             'EBITDA': ratios.dscr.fullYear.ebitda,
                           } : null,
                           ratios.dscr.interim ? {
-                            name: businessPeriodLabels[2] || 'Interim',
+                            name: ratios.dscr.interim.periodLabel || 'Interim',
                             Revenue: ratios.dscr.interim.revenue,
                             'Other Income': ratios.dscr.interim.otherIncome,
                             'COGS': -ratios.dscr.interim.cogs,
@@ -1729,23 +1729,33 @@ export const FinancialAnalysis = () => {
                             'Addbacks': ratios.dscr.interim.addbacks,
                             'EBITDA': ratios.dscr.interim.ebitda,
                           } : null
-                        ].filter(Boolean)}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
-                          <Legend />
-                          <Bar dataKey="Revenue" fill="#10b981" />
-                          <Bar dataKey="Other Income" fill="#34d399" />
-                          <Bar dataKey="COGS" fill="#ef4444" />
-                          <Bar dataKey="Operating Exp" fill="#f87171" />
-                          <Bar dataKey="Rent" fill="#fb923c" />
-                          <Bar dataKey="Officers Comp" fill="#fbbf24" />
-                          <Bar dataKey="Other Exp" fill="#dc2626" />
-                          <Bar dataKey="Addbacks" fill="#3b82f6" />
-                          <Bar dataKey="EBITDA" fill="#8b5cf6" strokeWidth={2} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                        ].filter(Boolean);
+                        
+                        if (ebitdaChartData.length === 0) return null;
+                        
+                        return (
+                          <div style={{ width: '100%', height: 350 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={ebitdaChartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <RechartsTooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                                <Legend />
+                                <Bar dataKey="Revenue" fill="#10b981" />
+                                <Bar dataKey="Other Income" fill="#34d399" />
+                                <Bar dataKey="COGS" fill="#ef4444" />
+                                <Bar dataKey="Operating Exp" fill="#f87171" />
+                                <Bar dataKey="Rent" fill="#fb923c" />
+                                <Bar dataKey="Officers Comp" fill="#fbbf24" />
+                                <Bar dataKey="Other Exp" fill="#dc2626" />
+                                <Bar dataKey="Addbacks" fill="#3b82f6" />
+                                <Bar dataKey="EBITDA" fill="#8b5cf6" strokeWidth={2} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 )}
