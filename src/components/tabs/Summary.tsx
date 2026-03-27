@@ -4,7 +4,7 @@ import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection } from "@/utils/financialCalculations";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
