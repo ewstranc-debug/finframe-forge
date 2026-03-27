@@ -7,11 +7,9 @@ import { BusinessBalanceSheet } from "./tabs/BusinessBalanceSheet";
 import { AffiliateFinancials } from "./tabs/AffiliateFinancials";
 import { ExistingDebts } from "./tabs/ExistingDebts";
 import { FinancialAnalysis } from "./tabs/FinancialAnalysis";
-import { SpreadsheetProvider } from "@/contexts/SpreadsheetContext";
 
 export const SpreadsheetTabs = () => {
   return (
-    <SpreadsheetProvider>
       <Tabs defaultValue="summary" className="w-full">
       <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
         <TabsTrigger 
@@ -89,6 +87,5 @@ export const SpreadsheetTabs = () => {
         <FinancialAnalysis />
       </TabsContent>
     </Tabs>
-    </SpreadsheetProvider>
   );
 };

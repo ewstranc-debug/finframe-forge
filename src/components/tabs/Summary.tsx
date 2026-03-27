@@ -144,8 +144,10 @@ export const Summary = () => {
   const actualEquityPercent = totalUses > 0 ? (equityInjectionAmount / totalUses) * 100 : 0;
   
   // Equity injection warning: required if business acquisition and equity < 10%
-  const showEquityWarning = hasBusinessAcquisition && actualEquityPercent < 10;
-  const meetsEquityMinimum = hasBusinessAcquisition && actualEquityPercent >= 10;
+  // Use rounded comparison to avoid floating point issues (e.g. 9.9999999 vs 10)
+  const roundedEquityPercent = Math.round(actualEquityPercent * 100) / 100;
+  const showEquityWarning = hasBusinessAcquisition && roundedEquityPercent < 10;
+  const meetsEquityMinimum = hasBusinessAcquisition && roundedEquityPercent >= 10;
 
   const calculateMonthlyPayment = (principal: number) => {
     const rate = (parseFloat(interestRate) || 0) / 100 / 12;
@@ -273,20 +275,22 @@ export const Summary = () => {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Reset All Financial Data?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will clear all entered data across all tabs including:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Sources & Uses of Funds</li>
-                  <li>Loan Terms</li>
-                  <li>Personal Financials</li>
-                  <li>Business Financials</li>
-                  <li>Personal Financial Statement</li>
-                  <li>Existing Debts</li>
-                  <li>Affiliate Financials</li>
-                  <li>Business Balance Sheet</li>
-                  <li>AI Analysis</li>
-                </ul>
-                <p className="mt-2 font-medium">This action cannot be undone.</p>
+              <AlertDialogDescription asChild>
+                <div>
+                  This will clear all entered data across all tabs including:
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>Sources & Uses of Funds</li>
+                    <li>Loan Terms</li>
+                    <li>Personal Financials</li>
+                    <li>Business Financials</li>
+                    <li>Personal Financial Statement</li>
+                    <li>Existing Debts</li>
+                    <li>Affiliate Financials</li>
+                    <li>Business Balance Sheet</li>
+                    <li>AI Analysis</li>
+                  </ul>
+                  <p className="mt-2 font-medium">This action cannot be undone.</p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
