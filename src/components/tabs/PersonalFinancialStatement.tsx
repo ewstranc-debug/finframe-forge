@@ -188,7 +188,7 @@ export const PersonalFinancialStatement = () => {
             <div className="grid grid-cols-2 bg-success/10">
               <div className="p-3 border-r border-border font-bold">Total Assets</div>
               <div className="p-3 font-bold text-success">
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(calculateTotalAssets())}
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(calculateTotalAssets())}
               </div>
             </div>
           </div>
