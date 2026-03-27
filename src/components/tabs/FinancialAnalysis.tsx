@@ -1643,30 +1643,42 @@ export const FinancialAnalysis = () => {
                     <CardTitle>DSCR Comparison: Existing vs Proposed Debt</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={[
+                    {(() => {
+                      const dscrChartData = [
                         ratios.dscr.fullYear ? { 
-                          name: businessPeriodLabels[1] || businessPeriodLabels[0] || 'Full Year',
+                          name: ratios.dscr.fullYear.periodLabel || 'Full Year',
                           existingDSCR: ratios.dscr.fullYear.existingDSCR,
                           proposedDSCR: ratios.dscr.fullYear.proposedDSCR,
                         } : null,
                         ratios.dscr.interim ? {
-                          name: businessPeriodLabels[2] || 'Interim',
+                          name: ratios.dscr.interim.periodLabel || 'Interim',
                           existingDSCR: ratios.dscr.interim.existingDSCR,
                           proposedDSCR: ratios.dscr.interim.proposedDSCR,
                         } : null
-                      ].filter(Boolean)}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <RechartsTooltip formatter={(value: number) => value.toFixed(2)} />
-                        <Legend />
-                        <ReferenceLine y={1.15} stroke="hsl(var(--success))" strokeDasharray="3 3" label="Target (1.15)" />
-                        <ReferenceLine y={1.0} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label="Minimum (1.0)" />
-                        <Line type="monotone" dataKey="existingDSCR" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Existing DSCR" />
-                        <Line type="monotone" dataKey="proposedDSCR" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" name="Proposed DSCR" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                      ].filter(Boolean);
+                      
+                      if (dscrChartData.length === 0) {
+                        return <p className="text-muted-foreground text-center py-8">Enter business financial data to see DSCR comparison chart.</p>;
+                      }
+                      
+                      return (
+                        <div style={{ width: '100%', height: 300 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={dscrChartData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <RechartsTooltip formatter={(value: number) => value.toFixed(2)} />
+                              <Legend />
+                              <ReferenceLine y={1.15} stroke="hsl(var(--success))" strokeDasharray="3 3" label="Target (1.15)" />
+                              <ReferenceLine y={1.0} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label="Minimum (1.0)" />
+                              <Line type="monotone" dataKey="existingDSCR" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Existing DSCR" />
+                              <Line type="monotone" dataKey="proposedDSCR" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" name="Proposed DSCR" />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })()}
                     <div className="mt-4 grid grid-cols-3 gap-4">
                       <div className="p-3 bg-muted/30 rounded">
                         <p className="text-xs font-semibold mb-1">Existing Debt Service</p>
