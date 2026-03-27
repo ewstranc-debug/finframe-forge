@@ -229,17 +229,17 @@ export const Summary = () => {
   };
 
   // Bug 3 fix: Auto-recalculate down payment when totalUses changes
-  const prevTotalUsesRef = useMemo(() => ({ current: totalUses }), []);
-  useMemo(() => {
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     const pct = parseFloat(equityPercentage) || 0;
     if (pct > 0 && totalUses > 0) {
       const calculatedEquity = Math.round(pct / 100 * totalUses);
-      if (calculatedEquity.toString() !== injectionEquity) {
-        // Schedule update to avoid render-during-render
-        setTimeout(() => setInjectionEquity(calculatedEquity.toString()), 0);
-      }
+      setInjectionEquity(calculatedEquity.toString());
     }
-    prevTotalUsesRef.current = totalUses;
   }, [totalUses]);
 
   // Final loan amount for payment calculation = SBA Loan (which already includes the upfront fee in the total uses balance)
