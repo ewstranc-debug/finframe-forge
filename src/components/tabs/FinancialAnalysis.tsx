@@ -1666,23 +1666,30 @@ export const FinancialAnalysis = () => {
                   </CardHeader>
                   <CardContent>
                     {(() => {
+                      // Only plot a period if it actually has DSCR data — otherwise we'd
+                      // imply a false trend at 0.
+                      const hasFY = !!ratios.dscr.fullYear &&
+                        (ratios.dscr.fullYear.existingDSCR > 0 || ratios.dscr.fullYear.proposedDSCR > 0);
+                      const hasInterim = !!ratios.dscr.interim &&
+                        (ratios.dscr.interim.existingDSCR > 0 || ratios.dscr.interim.proposedDSCR > 0);
+
                       const dscrChartData = [
-                        ratios.dscr.fullYear ? { 
-                          name: ratios.dscr.fullYear.periodLabel || 'Full Year',
-                          existingDSCR: ratios.dscr.fullYear.existingDSCR,
-                          proposedDSCR: ratios.dscr.fullYear.proposedDSCR,
+                        hasFY ? {
+                          name: ratios.dscr.fullYear!.periodLabel || 'Full Year',
+                          existingDSCR: ratios.dscr.fullYear!.existingDSCR,
+                          proposedDSCR: ratios.dscr.fullYear!.proposedDSCR,
                         } : null,
-                        ratios.dscr.interim ? {
-                          name: ratios.dscr.interim.periodLabel || 'Interim',
-                          existingDSCR: ratios.dscr.interim.existingDSCR,
-                          proposedDSCR: ratios.dscr.interim.proposedDSCR,
-                        } : null
-                      ].filter(Boolean);
-                      
+                        hasInterim ? {
+                          name: ratios.dscr.interim!.periodLabel || 'Interim',
+                          existingDSCR: ratios.dscr.interim!.existingDSCR,
+                          proposedDSCR: ratios.dscr.interim!.proposedDSCR,
+                        } : null,
+                      ].filter(Boolean) as { name: string; existingDSCR: number; proposedDSCR: number }[];
+
                       if (dscrChartData.length === 0) {
                         return <p className="text-muted-foreground text-center py-8">Enter business financial data to see DSCR comparison chart.</p>;
                       }
-                      
+
                       return (
                         <div style={{ width: '100%', height: 300 }}>
                           <ResponsiveContainer width="100%" height="100%">
@@ -1694,8 +1701,8 @@ export const FinancialAnalysis = () => {
                               <Legend />
                               <ReferenceLine y={1.15} stroke="hsl(var(--success))" strokeDasharray="3 3" label="Target (1.15)" />
                               <ReferenceLine y={1.0} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label="Minimum (1.0)" />
-                              <Line type="monotone" dataKey="existingDSCR" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Existing DSCR" />
-                              <Line type="monotone" dataKey="proposedDSCR" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" name="Proposed DSCR" />
+                              <Line type="monotone" dataKey="existingDSCR" stroke="hsl(var(--chart-2))" strokeWidth={2} name="Existing DSCR" connectNulls={false} />
+                              <Line type="monotone" dataKey="proposedDSCR" stroke="hsl(var(--primary))" strokeWidth={2} strokeDasharray="5 5" name="Proposed DSCR" connectNulls={false} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
