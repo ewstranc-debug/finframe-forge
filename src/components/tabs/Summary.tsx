@@ -541,13 +541,13 @@ export const Summary = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">Business EBITDA</p>
+                          <p className="text-sm text-muted-foreground">Cash Flow Available for Debt Service</p>
                           <Tooltip>
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
-                              <p className="font-semibold mb-2">EBITDA Calculation:</p>
+                              <p className="font-semibold mb-2">Cash Flow Available for Debt Service:</p>
                               {lastFYEIndex !== undefined && businessPeriods[lastFYEIndex] ? (
                                 <div className="space-y-1 text-sm">
                                   <div className="flex justify-between gap-4">
@@ -581,7 +581,7 @@ export const Summary = () => {
                                     </span>
                                   </div>
                                   <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
-                                    <span>EBITDA:</span>
+                                    <span>Cash Flow Available:</span>
                                     <span className="font-mono">${lastFullYear.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                   </div>
                                 </div>
@@ -732,13 +732,13 @@ export const Summary = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">Business EBITDA</p>
+                          <p className="text-sm text-muted-foreground">Cash Flow Available for Debt Service</p>
                           <Tooltip>
                             <TooltipTrigger>
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
-                              <p className="font-semibold mb-2">EBITDA Calculation:</p>
+                              <p className="font-semibold mb-2">Cash Flow Available for Debt Service:</p>
                               <div className="space-y-1 text-sm">
                                 {interimIndices.length > 0 && (() => {
                                   const latestInterimIdx = interimIndices[interimIndices.length - 1];
@@ -779,7 +779,7 @@ export const Summary = () => {
                                   );
                                 })()}
                                 <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
-                                  <span>EBITDA:</span>
+                                  <span>Cash Flow Available:</span>
                                   <span className="font-mono">${interimPeriod.businessCashFlow.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
                                 </div>
                               </div>
