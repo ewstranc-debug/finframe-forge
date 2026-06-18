@@ -1053,7 +1053,7 @@ export const FinancialAnalysis = () => {
                         <p className="text-sm text-muted-foreground font-semibold">Business DSCR - Interim</p>
                         <p
                           className={`text-2xl font-bold ${
-                            !ratios.dscr.interim || ratios.dscr.interim.existingDSCR === 0
+                            !ratios.dscr.interim || !(ratios.dscr.interim.existingDSCR > 0)
                               ? "text-muted-foreground"
                               : ratios.dscr.interim.existingDSCR < 1.0
                               ? "text-destructive"
@@ -1062,7 +1062,7 @@ export const FinancialAnalysis = () => {
                               : "text-green-600"
                           }`}
                         >
-                          {ratios.dscr.interim ? ratios.dscr.interim.existingDSCR.toFixed(2) : "N/A"}
+                          {ratios.dscr.interim && ratios.dscr.interim.existingDSCR > 0 ? ratios.dscr.interim.existingDSCR.toFixed(2) : "N/A"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Target: &gt;1.15 | {ratios.dscr.interim ? `${ratios.dscr.interim.periodLabel} (${ratios.dscr.interim.periodMonths}mo)` : "No Data"}
