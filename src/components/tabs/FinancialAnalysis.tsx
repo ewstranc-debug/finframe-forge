@@ -219,15 +219,13 @@ export const FinancialAnalysis = () => {
       const netIncome = ebit - interest - taxes;
       const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
       
-      // Business DSCR = Annualized EBITDA / Proposed Loan Annual Payment
-      // This is the key fix: Business DSCR uses ONLY the proposed loan payment, not existing debts
-      const businessDSCR = proposedLoanAnnualPayment > 0 ? ebitda / proposedLoanAnnualPayment : 0;
-      
-      // Total debt service (existing + proposed) for reference
-      const totalDebtService = annualDebtService + proposedLoanAnnualPayment;
-      const existingDSCR = businessDSCR; // Use the corrected calculation
-      const proposedDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
-      
+      // Business DSCR uses the 3-line Total Proposed Debt Service as the denominator
+      // (Existing Business Debt + New Loan P&I + SBA Annual Service Fee)
+      const totalDebtService = totalProposedAnnualDebtService;
+      const businessDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
+      const existingDSCR = businessDSCR;
+      const proposedDSCR = businessDSCR;
+
       return {
         revenue,
         cogs,
@@ -237,8 +235,8 @@ export const FinancialAnalysis = () => {
         netIncome,
         netMargin,
         dscr: businessDSCR,
-        existingDSCR: businessDSCR, // Business DSCR = EBITDA / Proposed Loan Payment
-        proposedDSCR, // For reference: EBITDA / (Existing + Proposed)
+        existingDSCR,
+        proposedDSCR,
         opEx,
         rentExpense,
         officersComp,
@@ -252,6 +250,8 @@ export const FinancialAnalysis = () => {
         periodLabel: businessPeriodLabels[periodIndex] || `Period ${periodIndex + 1}`,
         periodMonths: period.periodMonths,
         proposedLoanAnnualPayment,
+        existingDebtPayment: annualDebtService,
+        sbaAnnualServiceFee,
         totalDebtService,
       };
     };
