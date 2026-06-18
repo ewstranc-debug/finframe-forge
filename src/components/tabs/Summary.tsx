@@ -713,8 +713,8 @@ export const Summary = () => {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className={`text-2xl font-bold mt-1 ${lastFullYear.dscr >= 1.25 ? 'text-green-600' : lastFullYear.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {lastFullYear.dscr.toFixed(2)}x
+                        <p className={`text-2xl font-bold mt-1 ${lastFullYear.dscr === 0 ? 'text-muted-foreground' : lastFullYear.dscr >= 1.25 ? 'text-green-600' : lastFullYear.dscr >= 1.15 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {lastFullYear.dscr === 0 ? 'N/A' : `${lastFullYear.dscr.toFixed(2)}x`}
                         </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-primary" />
