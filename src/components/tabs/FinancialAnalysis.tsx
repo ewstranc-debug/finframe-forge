@@ -1700,17 +1700,23 @@ export const FinancialAnalysis = () => {
                         </div>
                       );
                     })()}
-                    <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="p-3 bg-muted/30 rounded">
-                        <p className="text-xs font-semibold mb-1">Existing Debt Service</p>
+                        <p className="text-xs font-semibold mb-1">Existing Business Debt</p>
                         <p className="text-lg font-bold">${Math.round(ratios.dscr.annualDebtService).toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-primary/10 rounded border border-primary/20">
-                        <p className="text-xs font-semibold mb-1">New Loan Payment</p>
-                        <p className="text-lg font-bold">+${Math.round(ratios.dscr.proposedAnnualDebtService).toLocaleString()}</p>
+                        <p className="text-xs font-semibold mb-1">+ New Loan Annual P&amp;I</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.proposedAnnualDebtService).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Principal: ${Math.round(ratios.dscr.sbaLoanAmount).toLocaleString()} (SBA 7(a) Loan)</p>
+                      </div>
+                      <div className="p-3 bg-primary/10 rounded border border-primary/20">
+                        <p className="text-xs font-semibold mb-1">+ SBA Annual Service Fee</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.sbaAnnualServiceFee).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">0.55% × guaranteed portion</p>
                       </div>
                       <div className="p-3 bg-accent/30 rounded">
-                        <p className="text-xs font-semibold mb-1">Total Proposed</p>
+                        <p className="text-xs font-semibold mb-1">= Total Proposed</p>
                         <p className="text-lg font-bold">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                       </div>
                     </div>
