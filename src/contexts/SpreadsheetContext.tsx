@@ -231,7 +231,7 @@ const SpreadsheetContext = createContext<SpreadsheetContextType | undefined>(und
 
 export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
   // Use localStorage for all state with auto-save
-  const [interestRate, setInterestRate, interestRateStatus] = useLocalStorage("financialTool_interestRate", "0");
+  const [interestRate, setInterestRate, interestRateStatus] = useLocalStorage("financialTool_interestRate", "11.5");
   const [termMonths, setTermMonths, termMonthsStatus] = useLocalStorage("financialTool_termMonths", "120");
   const [guaranteePercent, setGuaranteePercent, guaranteePercentStatus] = useLocalStorage("financialTool_guaranteePercent", "75");
   const [injectionEquity, setInjectionEquity, injectionEquityStatus] = useLocalStorage("financialTool_injectionEquity", "0");

@@ -14,8 +14,10 @@ export interface DSCRCalculationInput {
   interestRate: string;
   termMonths: string;
   guaranteePercent: string;
+  /** Equity injection ($) so SBA loan principal matches the Summary plug. */
+  equityInjection?: string;
   includeRentAddback?: boolean;
-  affiliateCashFlow?: number; // Optional: include affiliate cash flow in consolidated DSCR
+  affiliateCashFlow?: number;
 }
 
 export interface DSCRCalculationResult {
@@ -28,12 +30,14 @@ export interface DSCRCalculationResult {
   personalExpenses: number;
   estimatedTaxOnOfficersComp: number;
   netCashAvailable: number;
+  /** = existingDebtPayment + proposedDebtPayment + sbaAnnualServiceFee */
   annualDebtService: number;
   existingDebtPayment: number;
   personalDebtPayment: number;
   proposedDebtPayment: number;
+  sbaAnnualServiceFee: number;
+  sbaLoanAmount: number;
   rentAddback?: number;
-  // Enhanced breakdown fields
   depreciationAddback: number;
   amortizationAddback: number;
   section179Addback: number;
@@ -211,51 +215,101 @@ export const calculateAffiliateCashFlow = (period: AffiliateIncomeData, annualiz
 };
 
 /**
- * Calculate SBA Guarantee Fee based on FY 2026 tier structure
- * For loans with maturity > 12 months:
- * - 3.5% on the guaranteed portion up to $1,000,000
- * - 3.75% on the guaranteed portion over $1,000,000
+ * SBA 7(a) Upfront Guaranty Fee — FY 2026 tiered structure.
+ * Tier is selected based on the TOTAL loan amount, then the fee % is applied to
+ * the guaranteed portion. Loans with maturities > 12 months:
+ *   ≤ $150,000            → 2.00%
+ *   $150,001 – $1,000,000 → 3.00%
+ *   > $1,000,000          → 3.50% on guaranteed ≤ $1M + 3.75% on guaranteed > $1M
  */
 export const calculateSBAGuaranteeFee = (
   loanAmount: number,
   guaranteePercent: number
 ): number => {
-  const guaranteedAmount = loanAmount * (guaranteePercent / 100);
-  
-  if (guaranteedAmount <= 1000000) {
-    return guaranteedAmount * 0.035;
-  } else {
-    // 3.5% on first $1M + 3.75% on amount over $1M
-    return (1000000 * 0.035) + ((guaranteedAmount - 1000000) * 0.0375);
-  }
+  if (!Number.isFinite(loanAmount) || loanAmount <= 0) return 0;
+  const guaranteed = loanAmount * (guaranteePercent / 100);
+  if (loanAmount <= 150000) return guaranteed * 0.02;
+  if (loanAmount <= 1000000) return guaranteed * 0.03;
+  const guaranteedUpToCap = Math.min(guaranteed, 1000000);
+  const guaranteedOver = Math.max(0, guaranteed - 1000000);
+  return guaranteedUpToCap * 0.035 + guaranteedOver * 0.0375;
 };
 
 /**
- * Calculate SBA loan annual debt service based on loan parameters
- * Updated to match FY 2026 SBA fee structure
+ * SINGLE SOURCE OF TRUTH for the new SBA loan's annual P&I payment.
+ * Principal MUST be the SBA 7(a) Loan amount (the plug from Sources & Uses),
+ * NOT the primary request or total uses. Returns 0 when any input is missing
+ * or invalid so empty states can render as "N/A".
+ */
+export const computeNewLoanAnnualPayment = (
+  principal: number,
+  interestRate: string | number,
+  termMonths: string | number
+): number => {
+  const ratePct = parseFloat(String(interestRate ?? ""));
+  const term = parseFloat(String(termMonths ?? ""));
+  if (!Number.isFinite(ratePct) || ratePct <= 0) return 0;
+  if (!Number.isFinite(term) || term <= 0) return 0;
+  if (!Number.isFinite(principal) || principal <= 0) return 0;
+  const r = ratePct / 100 / 12;
+  const monthly = principal * (r * Math.pow(1 + r, term)) / (Math.pow(1 + r, term) - 1);
+  return monthly * 12;
+};
+
+/**
+ * Iteratively compute the SBA 7(a) Loan amount (the "plug") consistent with the
+ * Summary tab's Sources & Uses logic:
+ *   SBA Loan = Primary Request + SBA Upfront Fee(SBA Loan) - Equity Injection
+ */
+export const computeSBALoanAmount = (
+  uses: UseOfFunds[],
+  equityInjection: number,
+  guaranteePercent: number
+): number => {
+  const primaryRequest = uses.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+  const gp = Number.isFinite(guaranteePercent) ? guaranteePercent : 75;
+  const equity = Number.isFinite(equityInjection) ? equityInjection : 0;
+  let sba = Math.max(0, primaryRequest - equity);
+  for (let i = 0; i < 12; i++) {
+    const fee = calculateSBAGuaranteeFee(sba, gp);
+    const newSba = Math.max(0, primaryRequest + fee - equity);
+    if (Math.abs(newSba - sba) < 1) {
+      sba = newSba;
+      break;
+    }
+    sba = newSba;
+  }
+  return sba;
+};
+
+/**
+ * SBA annual service fee on the guaranteed portion (0.55%).
+ */
+export const computeSBAAnnualServiceFee = (
+  sbaLoanAmount: number,
+  guaranteePercent: number
+): number => {
+  if (!Number.isFinite(sbaLoanAmount) || sbaLoanAmount <= 0) return 0;
+  const gp = Number.isFinite(guaranteePercent) ? guaranteePercent : 75;
+  return sbaLoanAmount * (gp / 100) * 0.0055;
+};
+
+/**
+ * Annual P&I on the proposed loan, computed from the SBA Loan amount (plug).
+ * Every component must call this — or the lower-level computeNewLoanAnnualPayment —
+ * so the same dollar figure shows up everywhere.
  */
 export const calculateLoanAnnualDebtService = (
   uses: UseOfFunds[],
   interestRate: string,
   termMonths: string,
-  guaranteePercent: string
+  guaranteePercent: string,
+  equityInjection: string = "0"
 ): number => {
-  const primaryRequest = uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
+  const equity = parseFloat(equityInjection) || 0;
   const guaranteePct = parseFloat(guaranteePercent) || 75;
-  const term = parseFloat(termMonths) || 1;
-  
-  // Calculate SBA upfront fee using FY 2026 structure
-  const upfrontFee = calculateSBAGuaranteeFee(primaryRequest, guaranteePct);
-  
-  const finalLoanAmount = primaryRequest + upfrontFee;
-  const rate = (parseFloat(interestRate) || 0) / 100 / 12;
-  
-  if (rate === 0 || term === 0 || finalLoanAmount === 0) {
-    return finalLoanAmount / (term || 1) * 12;
-  }
-  
-  const monthlyPayment = finalLoanAmount * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
-  return monthlyPayment * 12;
+  const sbaLoan = computeSBALoanAmount(uses, equity, guaranteePct);
+  return computeNewLoanAnnualPayment(sbaLoan, interestRate, termMonths);
 };
 
 /**
@@ -276,26 +330,23 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
     interestRate,
     termMonths,
     guaranteePercent,
+    equityInjection = "0",
     includeRentAddback = false,
     affiliateCashFlow = 0,
   } = input;
 
-  // Get period months for annualization
   const months = parseFloat(businessPeriod.periodMonths) || 12;
   const annualizationFactor = 12 / months;
 
-  // Calculate Business EBITDA (annualized) - excludes Officers Comp since we add it back
+  // EBITDA (annualized) — excludes Officers Comp (added back below)
   const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
-  const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
+  const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) +
                           (parseFloat(businessPeriod.operatingExpenses) || 0) +
                           (parseFloat(businessPeriod.rentExpense) || 0) +
                           (parseFloat(businessPeriod.otherExpenses) || 0);
   const businessEbitda = (businessRevenue - businessExpenses) * annualizationFactor;
 
-  // Calculate Officers Compensation (annualized) - added back for SBA global DSCR
   const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
-
-  // Add back depreciation, amortization, section 179, and other addbacks (annualized)
   const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
   const amortizationAddback = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
   const section179Addback = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
@@ -303,63 +354,56 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
 
   const businessCashFlow = businessEbitda + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
 
-  // Calculate Personal W-2 Income (including retirement income)
-  const personalW2Income = (parseFloat(personalPeriod.salary) || 0) + 
+  const personalW2Income = (parseFloat(personalPeriod.salary) || 0) +
                           (parseFloat(personalPeriod.bonuses) || 0) +
                           (parseFloat(personalPeriod.investments) || 0) +
                           (parseFloat(personalPeriod.rentalIncome) || 0) +
                           (parseFloat(personalPeriod.retirementIncome) || 0) +
                           (parseFloat(personalPeriod.otherIncome) || 0);
 
-  // Calculate Schedule C Cash Flow
   const schedCRevenue = parseFloat(personalPeriod.schedCRevenue) || 0;
   const schedCExpenses = (parseFloat(personalPeriod.schedCCOGS) || 0) + (parseFloat(personalPeriod.schedCExpenses) || 0);
-  const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) + 
-                        (parseFloat(personalPeriod.schedCDepreciation) || 0) + 
+  const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) +
+                        (parseFloat(personalPeriod.schedCDepreciation) || 0) +
                         (parseFloat(personalPeriod.schedCAmortization) || 0) +
                         (parseFloat(personalPeriod.schedCOther) || 0);
   const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
 
-  // Calculate Schedule E / K-1 Income (passive income)
   const schedEK1Income = (parseFloat(personalPeriod.schedENetRentalIncome) || 0) +
                          (parseFloat(personalPeriod.k1OrdinaryIncome) || 0) +
                          (parseFloat(personalPeriod.k1GuaranteedPayments) || 0);
 
-  // Calculate total income available (includes affiliate and Schedule E/K-1 if provided)
   const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow + schedEK1Income + affiliateCashFlow;
 
-  // Calculate personal expenses
   const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
-  
-  // Estimate tax on officers compensation (30% rate)
   const estimatedTaxOnOfficersComp = officersComp * 0.30;
-
-  // Calculate rent addback if requested
   const rentAddback = includeRentAddback ? (parseFloat(businessPeriod.rentExpense) || 0) * annualizationFactor : 0;
 
-  // Calculate net cash available
-  const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp + rentAddback;
-
-  // Calculate existing business debt payments
+  // Existing business debt (annual P&I from Existing Debts tab)
   const existingDebtPayment = debts.reduce((sum, debt) => {
     const payment = parseFloat(debt.payment) || 0;
     return sum + (payment * 12);
   }, 0);
 
-  // Calculate personal debt payments
-  const personalDebtPayment = 
+  // Personal debt service — subtracted from net cash (not in the denominator)
+  const personalDebtPayment =
     (parseFloat(personalLiabilitiesMonthly.creditCardsMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.mortgagesMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.vehicleLoansMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.otherLiabilitiesMonthly) || 0) * 12;
 
-  // Calculate proposed loan debt service
-  const proposedDebtPayment = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
+  // Net cash available for debt service
+  const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp + rentAddback - personalDebtPayment;
 
-  // Total annual debt service
-  const annualDebtService = existingDebtPayment + personalDebtPayment + proposedDebtPayment;
+  // Proposed-loan principal = SBA Loan plug (the same figure shown on Summary)
+  const equity = parseFloat(equityInjection) || 0;
+  const guaranteePct = parseFloat(guaranteePercent) || 75;
+  const sbaLoanAmount = computeSBALoanAmount(uses, equity, guaranteePct);
+  const proposedDebtPayment = computeNewLoanAnnualPayment(sbaLoanAmount, interestRate, termMonths);
+  const sbaAnnualServiceFee = computeSBAAnnualServiceFee(sbaLoanAmount, guaranteePct);
 
-  // Calculate DSCR
+  // DSCR denominator: 3 auditable line items
+  const annualDebtService = existingDebtPayment + proposedDebtPayment + sbaAnnualServiceFee;
   const dscr = annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
 
   return {
@@ -376,6 +420,8 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
     existingDebtPayment,
     personalDebtPayment,
     proposedDebtPayment,
+    sbaAnnualServiceFee,
+    sbaLoanAmount,
     rentAddback,
     depreciationAddback,
     amortizationAddback,

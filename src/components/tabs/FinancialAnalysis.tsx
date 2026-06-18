@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
-import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, calculateFCCR, classifyPeriods, findLastFYEIndex, findInterimIndices, isLastFYEProjection } from "@/utils/financialCalculations";
+import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, calculateFCCR, classifyPeriods, findLastFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount } from "@/utils/financialCalculations";
 import { getDSCRColorClass } from "@/utils/dscrUtils";
 import { Textarea } from "@/components/ui/textarea";
 import { DocumentUpload } from "@/components/DocumentUpload";
@@ -40,6 +40,7 @@ export const FinancialAnalysis = () => {
     interestRate,
     termMonths,
     guaranteePercent,
+    injectionEquity,
     financialAnalysis,
     setFinancialAnalysis,
     analystNotes,
@@ -153,31 +154,36 @@ export const FinancialAnalysis = () => {
                                debts.reduce((sum, debt) => sum + (parseFloat(debt.payment) || 0), 0);
     const annualDebtService = monthlyDebtPayment * 12;
     
-    // Calculate proposed debt service
-    const calculateProposedDebtService = () => {
-      const loanAmount = uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
-      const rate = parseFloat(interestRate) || 0;
-      const term = parseFloat(termMonths) || 0;
-      
-      if (rate === 0 || term === 0 || loanAmount === 0) return 0;
-      
-      const monthlyRate = rate / 100 / 12;
-      const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1);
-      return monthlyPayment * 12;
-    };
-    
-    const proposedAnnualDebtService = calculateProposedDebtService();
-    const totalProposedAnnualDebtService = annualDebtService + proposedAnnualDebtService;
-    
+    // Proposed loan annual P&I — single source of truth (SBA Loan amount as principal)
+    const proposedLoanAnnualPayment = calculateLoanAnnualDebtService(
+      uses,
+      interestRate,
+      termMonths,
+      guaranteePercent,
+      injectionEquity
+    );
+
+    // SBA Loan amount (plug) and annual service fee for transparent itemization
+    const sbaLoanAmount = computeSBALoanAmount(
+      uses,
+      parseFloat(injectionEquity) || 0,
+      parseFloat(guaranteePercent) || 75
+    );
+    const sbaAnnualServiceFee = computeSBAAnnualServiceFee(
+      sbaLoanAmount,
+      parseFloat(guaranteePercent) || 75
+    );
+
+    const proposedAnnualDebtService = proposedLoanAnnualPayment;
+    // Total Proposed Debt Service = Existing Business Debt + New Loan P&I + SBA Annual Service Fee
+    const totalProposedAnnualDebtService = annualDebtService + proposedLoanAnnualPayment + sbaAnnualServiceFee;
+
     const monthlyPersonalIncome = personalIncome / 12;
     const personalDebtToIncome = monthlyPersonalIncome > 0 ? (monthlyDebtPayment / monthlyPersonalIncome) * 100 : 0;
     const personalDebtToAssets = totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0;
     const personalSavingsRate = personalIncome > 0 ? ((personalIncome - personalExpenses) / personalIncome) * 100 : 0;
     const personalLiquidityRatio = totalPersonalLiabilities > 0 ? liquidAssets / totalPersonalLiabilities : 0;
     const personalCurrentRatio = totalPersonalLiabilities > 0 ? totalPersonalAssets / totalPersonalLiabilities : 0;
-    
-    // Calculate proposed loan annual debt service using centralized function
-    const proposedLoanAnnualPayment = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
     
     // BUSINESS METRICS - Calculate for each period
     const calcBusinessMetrics = (periodIndex: number) => {
@@ -213,15 +219,13 @@ export const FinancialAnalysis = () => {
       const netIncome = ebit - interest - taxes;
       const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
       
-      // Business DSCR = Annualized EBITDA / Proposed Loan Annual Payment
-      // This is the key fix: Business DSCR uses ONLY the proposed loan payment, not existing debts
-      const businessDSCR = proposedLoanAnnualPayment > 0 ? ebitda / proposedLoanAnnualPayment : 0;
-      
-      // Total debt service (existing + proposed) for reference
-      const totalDebtService = annualDebtService + proposedLoanAnnualPayment;
-      const existingDSCR = businessDSCR; // Use the corrected calculation
-      const proposedDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
-      
+      // Business DSCR uses the 3-line Total Proposed Debt Service as the denominator
+      // (Existing Business Debt + New Loan P&I + SBA Annual Service Fee)
+      const totalDebtService = totalProposedAnnualDebtService;
+      const businessDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
+      const existingDSCR = businessDSCR;
+      const proposedDSCR = businessDSCR;
+
       return {
         revenue,
         cogs,
@@ -231,8 +235,8 @@ export const FinancialAnalysis = () => {
         netIncome,
         netMargin,
         dscr: businessDSCR,
-        existingDSCR: businessDSCR, // Business DSCR = EBITDA / Proposed Loan Payment
-        proposedDSCR, // For reference: EBITDA / (Existing + Proposed)
+        existingDSCR,
+        proposedDSCR,
         opEx,
         rentExpense,
         officersComp,
@@ -246,6 +250,8 @@ export const FinancialAnalysis = () => {
         periodLabel: businessPeriodLabels[periodIndex] || `Period ${periodIndex + 1}`,
         periodMonths: period.periodMonths,
         proposedLoanAnnualPayment,
+        existingDebtPayment: annualDebtService,
+        sbaAnnualServiceFee,
         totalDebtService,
       };
     };
@@ -259,8 +265,19 @@ export const FinancialAnalysis = () => {
     const fullYearMetrics = lastFYEIndex !== undefined ? calcBusinessMetrics(lastFYEIndex) : null;
     const interimMetrics = interimPeriodIndices.map(idx => calcBusinessMetrics(idx)).filter(Boolean);
     
-    // Use latest business period for overall business metrics
-    const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
+    // Source business EBITDA / margin cards from the same period DSCR uses (last FYE,
+    // which may be a 12-month projection). Falls back to the latest period with data.
+    const businessMetricsPeriodIndex = lastFYEIndex !== undefined
+      ? lastFYEIndex
+      : (() => {
+          for (let i = businessPeriods.length - 1; i >= 0; i--) {
+            const p = businessPeriods[i];
+            if (p && ((parseFloat(p.revenue) || 0) > 0 || (parseFloat(p.cogs) || 0) > 0)) return i;
+          }
+          return businessPeriods.length - 1;
+        })();
+    const latestBusinessPeriod = businessPeriods[businessMetricsPeriodIndex];
+    const latestBusinessPeriodLabel = businessPeriodLabels[businessMetricsPeriodIndex] || '';
     const businessRevenue = parseFloat(latestBusinessPeriod?.revenue) || 0;
     const businessCOGS = parseFloat(latestBusinessPeriod?.cogs) || 0;
     const businessOpEx = parseFloat(latestBusinessPeriod?.operatingExpenses) || 0;
@@ -376,6 +393,7 @@ export const FinancialAnalysis = () => {
         interestRate,
         termMonths,
         guaranteePercent,
+        equityInjection: injectionEquity,
       });
       
       return {
@@ -462,18 +480,21 @@ export const FinancialAnalysis = () => {
       },
       dscr: {
         fullYear: fullYearMetrics,
-        interim: interimMetrics.length > 0 ? interimMetrics[interimMetrics.length - 1] : null, // Latest interim for backward compatibility
+        interim: interimMetrics.length > 0 ? interimMetrics[interimMetrics.length - 1] : null,
         interimPeriods: interimMetrics,
-        annualDebtService,
-        proposedAnnualDebtService,
-        totalProposedAnnualDebtService,
+        // Itemized denominator (3 lines)
+        annualDebtService,                  // Existing Business Debt
+        proposedAnnualDebtService,          // New Loan Annual P&I (SBA Loan principal)
+        sbaAnnualServiceFee,                // SBA Annual Service Fee
+        sbaLoanAmount,                      // For tooltips/audit
+        totalProposedAnnualDebtService,     // = sum of the three lines above
         globalFullYear: globalFullYearDscr,
         globalInterim: globalInterimDscr,
         fccr: fccrResult.fccr,
         fccrNumerator: fccrResult.numerator,
         fccrDenominator: fccrResult.denominator,
-        isProjection: isProjectionPeriod, // Track if the FYE is from a projection
-        lastFYEIndex, // Track which period index is used
+        isProjection: isProjectionPeriod,
+        lastFYEIndex,
       },
       global: {
         totalAssets: globalTotalAssets,
@@ -669,6 +690,7 @@ export const FinancialAnalysis = () => {
     interestRate,
     termMonths,
     guaranteePercent,
+    injectionEquity,
   ]);
 
   return (
@@ -1679,17 +1701,23 @@ export const FinancialAnalysis = () => {
                         </div>
                       );
                     })()}
-                    <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="p-3 bg-muted/30 rounded">
-                        <p className="text-xs font-semibold mb-1">Existing Debt Service</p>
+                        <p className="text-xs font-semibold mb-1">Existing Business Debt</p>
                         <p className="text-lg font-bold">${Math.round(ratios.dscr.annualDebtService).toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-primary/10 rounded border border-primary/20">
-                        <p className="text-xs font-semibold mb-1">New Loan Payment</p>
-                        <p className="text-lg font-bold">+${Math.round(ratios.dscr.proposedAnnualDebtService).toLocaleString()}</p>
+                        <p className="text-xs font-semibold mb-1">+ New Loan Annual P&amp;I</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.proposedAnnualDebtService).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Principal: ${Math.round(ratios.dscr.sbaLoanAmount).toLocaleString()} (SBA 7(a) Loan)</p>
+                      </div>
+                      <div className="p-3 bg-primary/10 rounded border border-primary/20">
+                        <p className="text-xs font-semibold mb-1">+ SBA Annual Service Fee</p>
+                        <p className="text-lg font-bold">${Math.round(ratios.dscr.sbaAnnualServiceFee).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">0.55% × guaranteed portion</p>
                       </div>
                       <div className="p-3 bg-accent/30 rounded">
-                        <p className="text-xs font-semibold mb-1">Total Proposed</p>
+                        <p className="text-xs font-semibold mb-1">= Total Proposed</p>
                         <p className="text-lg font-bold">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                       </div>
                     </div>

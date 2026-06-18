@@ -3,7 +3,7 @@ import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw, AlertT
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection } from "@/utils/financialCalculations";
+import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection, computeNewLoanAnnualPayment, computeSBAAnnualServiceFee } from "@/utils/financialCalculations";
 import { useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -150,23 +150,24 @@ export const Summary = () => {
   const meetsEquityMinimum = hasBusinessAcquisition && roundedEquityPercent >= 10;
 
   const calculateMonthlyPayment = (principal: number) => {
-    const rate = (parseFloat(interestRate) || 0) / 100 / 12;
-    const term = parseFloat(termMonths) || 1;
-    
-    if (rate === 0) return principal / term;
-    
-    const payment = principal * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
-    return payment;
+    const annual = computeNewLoanAnnualPayment(principal, interestRate, termMonths);
+    return annual / 12;
   };
 
-  const calculateAnnualPayment = (monthlyPayment: number) => {
-    return monthlyPayment * 12;
-  };
+  const calculateAnnualPayment = (monthlyPayment: number) => monthlyPayment * 12;
+
+  // Interest rate validation
+  const rateValue = parseFloat(interestRate);
+  const isRateMissing = !Number.isFinite(rateValue) || rateValue <= 0;
+  // Approximate SBA 7(a) max allowable (Prime + ~6.5%) for loans > $50K, 7+ year maturity.
+  // Prime is updated infrequently; we use 7.5% as a conservative cap reference.
+  const SBA_MAX_RATE = 14.0;
+  const isRateAboveMax = Number.isFinite(rateValue) && rateValue > SBA_MAX_RATE;
 
   const calculateDSCRForPeriod = (businessPeriodIndex: number, personalPeriodIndex: number) => {
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
-    
+
     if (!businessPeriod || !personalPeriod) {
       return {
         dscr: 0,
@@ -180,9 +181,11 @@ export const Summary = () => {
         existingDebtPayment: 0,
         personalDebtPayment: 0,
         personalExpenses: 0,
+        proposedDebtPayment: 0,
+        sbaAnnualServiceFee: 0,
       };
     }
-    
+
     const result = calculateDSCR({
       businessPeriod,
       personalPeriod,
@@ -197,8 +200,9 @@ export const Summary = () => {
       interestRate,
       termMonths,
       guaranteePercent,
+      equityInjection: injectionEquity,
     });
-    
+
     return {
       dscr: result.dscr,
       totalIncome: result.totalIncomeAvailable,
@@ -211,6 +215,8 @@ export const Summary = () => {
       existingDebtPayment: result.existingDebtPayment,
       personalDebtPayment: result.personalDebtPayment,
       personalExpenses: result.personalExpenses,
+      proposedDebtPayment: result.proposedDebtPayment,
+      sbaAnnualServiceFee: result.sbaAnnualServiceFee,
     };
   };
 
@@ -485,12 +491,25 @@ export const Summary = () => {
             </div>
           </div>
 
+          {(isRateMissing || isRateAboveMax) && (
+            <div className={`mt-4 p-3 rounded-md border flex items-start gap-2 text-sm ${isRateMissing ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-500/40 text-yellow-700 dark:text-yellow-400' : 'bg-red-50 dark:bg-red-950/30 border-red-500/40 text-red-700 dark:text-red-400'}`}>
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                {isRateMissing ? (
+                  <span>Enter an interest rate to calculate the loan payment. The rate cannot be 0% — use a realistic SBA 7(a) rate (typically Prime + 2.75%–4.75%).</span>
+                ) : (
+                  <span>Interest rate of {rateValue.toFixed(2)}% exceeds the SBA 7(a) maximum allowable spread (~{SBA_MAX_RATE.toFixed(1)}%). Verify the rate.</span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="bg-primary/5">
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">Annual Payment</div>
                 <div className="text-2xl font-bold text-primary">
-                  ${annualPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  {isRateMissing ? '—' : `$${annualPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                 </div>
               </CardContent>
             </Card>
@@ -498,7 +517,7 @@ export const Summary = () => {
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">Monthly Payment</div>
                 <div className="text-2xl font-bold text-primary">
-                  ${monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  {isRateMissing ? '—' : `$${monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                 </div>
               </CardContent>
             </Card>
@@ -590,30 +609,35 @@ export const Summary = () => {
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
-                              <p className="font-semibold mb-2">Debt Service Breakdown:</p>
+                              <p className="font-semibold mb-2">Total Proposed Debt Service:</p>
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between gap-4">
-                                  <span>Proposed Loan Payment:</span>
-                                  <span className="font-mono">${annualPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Existing Business Debt:</span>
+                                  <span className="font-mono">${Math.round(lastFullYear.existingDebtPayment).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Existing Business Debts:</span>
-                                  <span className="font-mono">${lastFullYear.existingDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>+ New Loan Annual P&amp;I:</span>
+                                  <span className="font-mono">${Math.round(lastFullYear.proposedDebtPayment).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Personal Debt Payments:</span>
-                                  <span className="font-mono">${lastFullYear.personalDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>+ SBA Annual Service Fee:</span>
+                                  <span className="font-mono">${Math.round(lastFullYear.sbaAnnualServiceFee).toLocaleString()}</span>
                                 </div>
                                 <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
                                   <span>Total:</span>
-                                  <span className="font-mono">${lastFullYear.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span className="font-mono">${Math.round(lastFullYear.debtService).toLocaleString()}</span>
                                 </div>
                               </div>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary + Existing Debts + Personal Financial Statement tabs</p>
+                              <p className="text-xs mt-2 text-muted-foreground">New Loan P&amp;I uses the SBA 7(a) Loan amount (${Math.round(sbaLoanAmount).toLocaleString()}) as principal. Personal debt payments are subtracted from Net Cash Flow.</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className="text-2xl font-bold mt-1">${lastFullYear.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-2xl font-bold mt-1">${Math.round(lastFullYear.debtService).toLocaleString()}</p>
+                        <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                          <div className="flex justify-between"><span>Existing</span><span className="font-mono">${Math.round(lastFullYear.existingDebtPayment).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>+ New Loan P&amp;I</span><span className="font-mono">${Math.round(lastFullYear.proposedDebtPayment).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>+ SBA Service Fee</span><span className="font-mono">${Math.round(lastFullYear.sbaAnnualServiceFee).toLocaleString()}</span></div>
+                        </div>
                       </div>
                       <PieChart className="h-8 w-8 text-blue-600" />
                     </div>
@@ -689,8 +713,8 @@ export const Summary = () => {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className={`text-2xl font-bold mt-1 ${lastFullYear.dscr >= 1.25 ? 'text-green-600' : lastFullYear.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {lastFullYear.dscr.toFixed(2)}x
+                        <p className={`text-2xl font-bold mt-1 ${lastFullYear.dscr === 0 ? 'text-muted-foreground' : lastFullYear.dscr >= 1.25 ? 'text-green-600' : lastFullYear.dscr >= 1.15 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {lastFullYear.dscr === 0 ? 'N/A' : `${lastFullYear.dscr.toFixed(2)}x`}
                         </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-primary" />
@@ -780,30 +804,35 @@ export const Summary = () => {
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
-                              <p className="font-semibold mb-2">Debt Service Breakdown:</p>
+                              <p className="font-semibold mb-2">Total Proposed Debt Service:</p>
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between gap-4">
-                                  <span>Proposed Loan Payment:</span>
-                                  <span className="font-mono">${annualPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Existing Business Debt:</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.existingDebtPayment).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Existing Business Debts:</span>
-                                  <span className="font-mono">${interimPeriod.existingDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>+ New Loan Annual P&amp;I:</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.proposedDebtPayment).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Personal Debt Payments:</span>
-                                  <span className="font-mono">${interimPeriod.personalDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>+ SBA Annual Service Fee:</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.sbaAnnualServiceFee).toLocaleString()}</span>
                                 </div>
                                 <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
                                   <span>Total:</span>
-                                  <span className="font-mono">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.debtService).toLocaleString()}</span>
                                 </div>
                               </div>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary + Existing Debts + Personal Financial Statement tabs</p>
+                              <p className="text-xs mt-2 text-muted-foreground">New Loan P&amp;I uses the SBA 7(a) Loan amount as principal. Personal debt payments are subtracted from Net Cash Flow.</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className="text-2xl font-bold mt-1">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-2xl font-bold mt-1">${Math.round(interimPeriod.debtService).toLocaleString()}</p>
+                        <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                          <div className="flex justify-between"><span>Existing</span><span className="font-mono">${Math.round(interimPeriod.existingDebtPayment).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>+ New Loan P&amp;I</span><span className="font-mono">${Math.round(interimPeriod.proposedDebtPayment).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>+ SBA Service Fee</span><span className="font-mono">${Math.round(interimPeriod.sbaAnnualServiceFee).toLocaleString()}</span></div>
+                        </div>
                       </div>
                       <PieChart className="h-8 w-8 text-blue-600" />
                     </div>
@@ -879,8 +908,8 @@ export const Summary = () => {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.15 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {interimPeriod.dscr.toFixed(2)}x
+                        <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr === 0 ? 'text-muted-foreground' : interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.15 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {interimPeriod.dscr === 0 ? 'N/A' : `${interimPeriod.dscr.toFixed(2)}x`}
                         </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-primary" />
