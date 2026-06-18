@@ -150,23 +150,24 @@ export const Summary = () => {
   const meetsEquityMinimum = hasBusinessAcquisition && roundedEquityPercent >= 10;
 
   const calculateMonthlyPayment = (principal: number) => {
-    const rate = (parseFloat(interestRate) || 0) / 100 / 12;
-    const term = parseFloat(termMonths) || 1;
-    
-    if (rate === 0) return principal / term;
-    
-    const payment = principal * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
-    return payment;
+    const annual = computeNewLoanAnnualPayment(principal, interestRate, termMonths);
+    return annual / 12;
   };
 
-  const calculateAnnualPayment = (monthlyPayment: number) => {
-    return monthlyPayment * 12;
-  };
+  const calculateAnnualPayment = (monthlyPayment: number) => monthlyPayment * 12;
+
+  // Interest rate validation
+  const rateValue = parseFloat(interestRate);
+  const isRateMissing = !Number.isFinite(rateValue) || rateValue <= 0;
+  // Approximate SBA 7(a) max allowable (Prime + ~6.5%) for loans > $50K, 7+ year maturity.
+  // Prime is updated infrequently; we use 7.5% as a conservative cap reference.
+  const SBA_MAX_RATE = 14.0;
+  const isRateAboveMax = Number.isFinite(rateValue) && rateValue > SBA_MAX_RATE;
 
   const calculateDSCRForPeriod = (businessPeriodIndex: number, personalPeriodIndex: number) => {
     const businessPeriod = businessPeriods[businessPeriodIndex];
     const personalPeriod = personalPeriods[personalPeriodIndex];
-    
+
     if (!businessPeriod || !personalPeriod) {
       return {
         dscr: 0,
@@ -180,9 +181,11 @@ export const Summary = () => {
         existingDebtPayment: 0,
         personalDebtPayment: 0,
         personalExpenses: 0,
+        proposedDebtPayment: 0,
+        sbaAnnualServiceFee: 0,
       };
     }
-    
+
     const result = calculateDSCR({
       businessPeriod,
       personalPeriod,
@@ -197,8 +200,9 @@ export const Summary = () => {
       interestRate,
       termMonths,
       guaranteePercent,
+      equityInjection: injectionEquity,
     });
-    
+
     return {
       dscr: result.dscr,
       totalIncome: result.totalIncomeAvailable,
@@ -211,6 +215,8 @@ export const Summary = () => {
       existingDebtPayment: result.existingDebtPayment,
       personalDebtPayment: result.personalDebtPayment,
       personalExpenses: result.personalExpenses,
+      proposedDebtPayment: result.proposedDebtPayment,
+      sbaAnnualServiceFee: result.sbaAnnualServiceFee,
     };
   };
 
