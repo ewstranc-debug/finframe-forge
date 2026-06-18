@@ -14,8 +14,10 @@ export interface DSCRCalculationInput {
   interestRate: string;
   termMonths: string;
   guaranteePercent: string;
+  /** Equity injection ($) so SBA loan principal matches the Summary plug. */
+  equityInjection?: string;
   includeRentAddback?: boolean;
-  affiliateCashFlow?: number; // Optional: include affiliate cash flow in consolidated DSCR
+  affiliateCashFlow?: number;
 }
 
 export interface DSCRCalculationResult {
@@ -28,12 +30,14 @@ export interface DSCRCalculationResult {
   personalExpenses: number;
   estimatedTaxOnOfficersComp: number;
   netCashAvailable: number;
+  /** = existingDebtPayment + proposedDebtPayment + sbaAnnualServiceFee */
   annualDebtService: number;
   existingDebtPayment: number;
   personalDebtPayment: number;
   proposedDebtPayment: number;
+  sbaAnnualServiceFee: number;
+  sbaLoanAmount: number;
   rentAddback?: number;
-  // Enhanced breakdown fields
   depreciationAddback: number;
   amortizationAddback: number;
   section179Addback: number;
