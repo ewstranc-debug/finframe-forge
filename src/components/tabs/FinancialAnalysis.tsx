@@ -393,6 +393,7 @@ export const FinancialAnalysis = () => {
         interestRate,
         termMonths,
         guaranteePercent,
+        equityInjection: injectionEquity,
       });
       
       return {
