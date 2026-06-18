@@ -211,51 +211,101 @@ export const calculateAffiliateCashFlow = (period: AffiliateIncomeData, annualiz
 };
 
 /**
- * Calculate SBA Guarantee Fee based on FY 2026 tier structure
- * For loans with maturity > 12 months:
- * - 3.5% on the guaranteed portion up to $1,000,000
- * - 3.75% on the guaranteed portion over $1,000,000
+ * SBA 7(a) Upfront Guaranty Fee — FY 2026 tiered structure.
+ * Tier is selected based on the TOTAL loan amount, then the fee % is applied to
+ * the guaranteed portion. Loans with maturities > 12 months:
+ *   ≤ $150,000            → 2.00%
+ *   $150,001 – $1,000,000 → 3.00%
+ *   > $1,000,000          → 3.50% on guaranteed ≤ $1M + 3.75% on guaranteed > $1M
  */
 export const calculateSBAGuaranteeFee = (
   loanAmount: number,
   guaranteePercent: number
 ): number => {
-  const guaranteedAmount = loanAmount * (guaranteePercent / 100);
-  
-  if (guaranteedAmount <= 1000000) {
-    return guaranteedAmount * 0.035;
-  } else {
-    // 3.5% on first $1M + 3.75% on amount over $1M
-    return (1000000 * 0.035) + ((guaranteedAmount - 1000000) * 0.0375);
-  }
+  if (!Number.isFinite(loanAmount) || loanAmount <= 0) return 0;
+  const guaranteed = loanAmount * (guaranteePercent / 100);
+  if (loanAmount <= 150000) return guaranteed * 0.02;
+  if (loanAmount <= 1000000) return guaranteed * 0.03;
+  const guaranteedUpToCap = Math.min(guaranteed, 1000000);
+  const guaranteedOver = Math.max(0, guaranteed - 1000000);
+  return guaranteedUpToCap * 0.035 + guaranteedOver * 0.0375;
 };
 
 /**
- * Calculate SBA loan annual debt service based on loan parameters
- * Updated to match FY 2026 SBA fee structure
+ * SINGLE SOURCE OF TRUTH for the new SBA loan's annual P&I payment.
+ * Principal MUST be the SBA 7(a) Loan amount (the plug from Sources & Uses),
+ * NOT the primary request or total uses. Returns 0 when any input is missing
+ * or invalid so empty states can render as "N/A".
+ */
+export const computeNewLoanAnnualPayment = (
+  principal: number,
+  interestRate: string | number,
+  termMonths: string | number
+): number => {
+  const ratePct = parseFloat(String(interestRate ?? ""));
+  const term = parseFloat(String(termMonths ?? ""));
+  if (!Number.isFinite(ratePct) || ratePct <= 0) return 0;
+  if (!Number.isFinite(term) || term <= 0) return 0;
+  if (!Number.isFinite(principal) || principal <= 0) return 0;
+  const r = ratePct / 100 / 12;
+  const monthly = principal * (r * Math.pow(1 + r, term)) / (Math.pow(1 + r, term) - 1);
+  return monthly * 12;
+};
+
+/**
+ * Iteratively compute the SBA 7(a) Loan amount (the "plug") consistent with the
+ * Summary tab's Sources & Uses logic:
+ *   SBA Loan = Primary Request + SBA Upfront Fee(SBA Loan) - Equity Injection
+ */
+export const computeSBALoanAmount = (
+  uses: UseOfFunds[],
+  equityInjection: number,
+  guaranteePercent: number
+): number => {
+  const primaryRequest = uses.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+  const gp = Number.isFinite(guaranteePercent) ? guaranteePercent : 75;
+  const equity = Number.isFinite(equityInjection) ? equityInjection : 0;
+  let sba = Math.max(0, primaryRequest - equity);
+  for (let i = 0; i < 12; i++) {
+    const fee = calculateSBAGuaranteeFee(sba, gp);
+    const newSba = Math.max(0, primaryRequest + fee - equity);
+    if (Math.abs(newSba - sba) < 1) {
+      sba = newSba;
+      break;
+    }
+    sba = newSba;
+  }
+  return sba;
+};
+
+/**
+ * SBA annual service fee on the guaranteed portion (0.55%).
+ */
+export const computeSBAAnnualServiceFee = (
+  sbaLoanAmount: number,
+  guaranteePercent: number
+): number => {
+  if (!Number.isFinite(sbaLoanAmount) || sbaLoanAmount <= 0) return 0;
+  const gp = Number.isFinite(guaranteePercent) ? guaranteePercent : 75;
+  return sbaLoanAmount * (gp / 100) * 0.0055;
+};
+
+/**
+ * Annual P&I on the proposed loan, computed from the SBA Loan amount (plug).
+ * Every component must call this — or the lower-level computeNewLoanAnnualPayment —
+ * so the same dollar figure shows up everywhere.
  */
 export const calculateLoanAnnualDebtService = (
   uses: UseOfFunds[],
   interestRate: string,
   termMonths: string,
-  guaranteePercent: string
+  guaranteePercent: string,
+  equityInjection: string = "0"
 ): number => {
-  const primaryRequest = uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
+  const equity = parseFloat(equityInjection) || 0;
   const guaranteePct = parseFloat(guaranteePercent) || 75;
-  const term = parseFloat(termMonths) || 1;
-  
-  // Calculate SBA upfront fee using FY 2026 structure
-  const upfrontFee = calculateSBAGuaranteeFee(primaryRequest, guaranteePct);
-  
-  const finalLoanAmount = primaryRequest + upfrontFee;
-  const rate = (parseFloat(interestRate) || 0) / 100 / 12;
-  
-  if (rate === 0 || term === 0 || finalLoanAmount === 0) {
-    return finalLoanAmount / (term || 1) * 12;
-  }
-  
-  const monthlyPayment = finalLoanAmount * (rate * Math.pow(1 + rate, term)) / (Math.pow(1 + rate, term) - 1);
-  return monthlyPayment * 12;
+  const sbaLoan = computeSBALoanAmount(uses, equity, guaranteePct);
+  return computeNewLoanAnnualPayment(sbaLoan, interestRate, termMonths);
 };
 
 /**
