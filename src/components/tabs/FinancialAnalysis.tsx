@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
-import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, calculateFCCR, classifyPeriods, findLastFYEIndex, findInterimIndices, isLastFYEProjection } from "@/utils/financialCalculations";
+import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, calculateFCCR, classifyPeriods, findLastFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount } from "@/utils/financialCalculations";
 import { getDSCRColorClass } from "@/utils/dscrUtils";
 import { Textarea } from "@/components/ui/textarea";
 import { DocumentUpload } from "@/components/DocumentUpload";
