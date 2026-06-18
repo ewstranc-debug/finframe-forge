@@ -330,26 +330,23 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
     interestRate,
     termMonths,
     guaranteePercent,
+    equityInjection = "0",
     includeRentAddback = false,
     affiliateCashFlow = 0,
   } = input;
 
-  // Get period months for annualization
   const months = parseFloat(businessPeriod.periodMonths) || 12;
   const annualizationFactor = 12 / months;
 
-  // Calculate Business EBITDA (annualized) - excludes Officers Comp since we add it back
+  // EBITDA (annualized) — excludes Officers Comp (added back below)
   const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
-  const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) + 
+  const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) +
                           (parseFloat(businessPeriod.operatingExpenses) || 0) +
                           (parseFloat(businessPeriod.rentExpense) || 0) +
                           (parseFloat(businessPeriod.otherExpenses) || 0);
   const businessEbitda = (businessRevenue - businessExpenses) * annualizationFactor;
 
-  // Calculate Officers Compensation (annualized) - added back for SBA global DSCR
   const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
-
-  // Add back depreciation, amortization, section 179, and other addbacks (annualized)
   const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
   const amortizationAddback = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
   const section179Addback = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
@@ -357,63 +354,56 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
 
   const businessCashFlow = businessEbitda + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
 
-  // Calculate Personal W-2 Income (including retirement income)
-  const personalW2Income = (parseFloat(personalPeriod.salary) || 0) + 
+  const personalW2Income = (parseFloat(personalPeriod.salary) || 0) +
                           (parseFloat(personalPeriod.bonuses) || 0) +
                           (parseFloat(personalPeriod.investments) || 0) +
                           (parseFloat(personalPeriod.rentalIncome) || 0) +
                           (parseFloat(personalPeriod.retirementIncome) || 0) +
                           (parseFloat(personalPeriod.otherIncome) || 0);
 
-  // Calculate Schedule C Cash Flow
   const schedCRevenue = parseFloat(personalPeriod.schedCRevenue) || 0;
   const schedCExpenses = (parseFloat(personalPeriod.schedCCOGS) || 0) + (parseFloat(personalPeriod.schedCExpenses) || 0);
-  const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) + 
-                        (parseFloat(personalPeriod.schedCDepreciation) || 0) + 
+  const schedCAddbacks = (parseFloat(personalPeriod.schedCInterest) || 0) +
+                        (parseFloat(personalPeriod.schedCDepreciation) || 0) +
                         (parseFloat(personalPeriod.schedCAmortization) || 0) +
                         (parseFloat(personalPeriod.schedCOther) || 0);
   const schedCCashFlow = (schedCRevenue - schedCExpenses) + schedCAddbacks;
 
-  // Calculate Schedule E / K-1 Income (passive income)
   const schedEK1Income = (parseFloat(personalPeriod.schedENetRentalIncome) || 0) +
                          (parseFloat(personalPeriod.k1OrdinaryIncome) || 0) +
                          (parseFloat(personalPeriod.k1GuaranteedPayments) || 0);
 
-  // Calculate total income available (includes affiliate and Schedule E/K-1 if provided)
   const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow + schedEK1Income + affiliateCashFlow;
 
-  // Calculate personal expenses
   const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
-  
-  // Estimate tax on officers compensation (30% rate)
   const estimatedTaxOnOfficersComp = officersComp * 0.30;
-
-  // Calculate rent addback if requested
   const rentAddback = includeRentAddback ? (parseFloat(businessPeriod.rentExpense) || 0) * annualizationFactor : 0;
 
-  // Calculate net cash available
-  const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp + rentAddback;
-
-  // Calculate existing business debt payments
+  // Existing business debt (annual P&I from Existing Debts tab)
   const existingDebtPayment = debts.reduce((sum, debt) => {
     const payment = parseFloat(debt.payment) || 0;
     return sum + (payment * 12);
   }, 0);
 
-  // Calculate personal debt payments
-  const personalDebtPayment = 
+  // Personal debt service — subtracted from net cash (not in the denominator)
+  const personalDebtPayment =
     (parseFloat(personalLiabilitiesMonthly.creditCardsMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.mortgagesMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.vehicleLoansMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.otherLiabilitiesMonthly) || 0) * 12;
 
-  // Calculate proposed loan debt service
-  const proposedDebtPayment = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
+  // Net cash available for debt service
+  const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp + rentAddback - personalDebtPayment;
 
-  // Total annual debt service
-  const annualDebtService = existingDebtPayment + personalDebtPayment + proposedDebtPayment;
+  // Proposed-loan principal = SBA Loan plug (the same figure shown on Summary)
+  const equity = parseFloat(equityInjection) || 0;
+  const guaranteePct = parseFloat(guaranteePercent) || 75;
+  const sbaLoanAmount = computeSBALoanAmount(uses, equity, guaranteePct);
+  const proposedDebtPayment = computeNewLoanAnnualPayment(sbaLoanAmount, interestRate, termMonths);
+  const sbaAnnualServiceFee = computeSBAAnnualServiceFee(sbaLoanAmount, guaranteePct);
 
-  // Calculate DSCR
+  // DSCR denominator: 3 auditable line items
+  const annualDebtService = existingDebtPayment + proposedDebtPayment + sbaAnnualServiceFee;
   const dscr = annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
 
   return {
@@ -430,6 +420,8 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
     existingDebtPayment,
     personalDebtPayment,
     proposedDebtPayment,
+    sbaAnnualServiceFee,
+    sbaLoanAmount,
     rentAddback,
     depreciationAddback,
     amortizationAddback,
