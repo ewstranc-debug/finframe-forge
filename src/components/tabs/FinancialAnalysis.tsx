@@ -154,31 +154,36 @@ export const FinancialAnalysis = () => {
                                debts.reduce((sum, debt) => sum + (parseFloat(debt.payment) || 0), 0);
     const annualDebtService = monthlyDebtPayment * 12;
     
-    // Calculate proposed debt service
-    const calculateProposedDebtService = () => {
-      const loanAmount = uses.reduce((sum, use) => sum + (parseFloat(use.amount) || 0), 0);
-      const rate = parseFloat(interestRate) || 0;
-      const term = parseFloat(termMonths) || 0;
-      
-      if (rate === 0 || term === 0 || loanAmount === 0) return 0;
-      
-      const monthlyRate = rate / 100 / 12;
-      const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1);
-      return monthlyPayment * 12;
-    };
-    
-    const proposedAnnualDebtService = calculateProposedDebtService();
-    const totalProposedAnnualDebtService = annualDebtService + proposedAnnualDebtService;
-    
+    // Proposed loan annual P&I — single source of truth (SBA Loan amount as principal)
+    const proposedLoanAnnualPayment = calculateLoanAnnualDebtService(
+      uses,
+      interestRate,
+      termMonths,
+      guaranteePercent,
+      injectionEquity
+    );
+
+    // SBA Loan amount (plug) and annual service fee for transparent itemization
+    const sbaLoanAmount = computeSBALoanAmount(
+      uses,
+      parseFloat(injectionEquity) || 0,
+      parseFloat(guaranteePercent) || 75
+    );
+    const sbaAnnualServiceFee = computeSBAAnnualServiceFee(
+      sbaLoanAmount,
+      parseFloat(guaranteePercent) || 75
+    );
+
+    const proposedAnnualDebtService = proposedLoanAnnualPayment;
+    // Total Proposed Debt Service = Existing Business Debt + New Loan P&I + SBA Annual Service Fee
+    const totalProposedAnnualDebtService = annualDebtService + proposedLoanAnnualPayment + sbaAnnualServiceFee;
+
     const monthlyPersonalIncome = personalIncome / 12;
     const personalDebtToIncome = monthlyPersonalIncome > 0 ? (monthlyDebtPayment / monthlyPersonalIncome) * 100 : 0;
     const personalDebtToAssets = totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0;
     const personalSavingsRate = personalIncome > 0 ? ((personalIncome - personalExpenses) / personalIncome) * 100 : 0;
     const personalLiquidityRatio = totalPersonalLiabilities > 0 ? liquidAssets / totalPersonalLiabilities : 0;
     const personalCurrentRatio = totalPersonalLiabilities > 0 ? totalPersonalAssets / totalPersonalLiabilities : 0;
-    
-    // Calculate proposed loan annual debt service using centralized function
-    const proposedLoanAnnualPayment = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
     
     // BUSINESS METRICS - Calculate for each period
     const calcBusinessMetrics = (periodIndex: number) => {
