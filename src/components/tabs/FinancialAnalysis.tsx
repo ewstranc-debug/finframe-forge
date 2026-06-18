@@ -40,6 +40,7 @@ export const FinancialAnalysis = () => {
     interestRate,
     termMonths,
     guaranteePercent,
+    injectionEquity,
     financialAnalysis,
     setFinancialAnalysis,
     analystNotes,
