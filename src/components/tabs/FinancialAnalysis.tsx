@@ -480,18 +480,21 @@ export const FinancialAnalysis = () => {
       },
       dscr: {
         fullYear: fullYearMetrics,
-        interim: interimMetrics.length > 0 ? interimMetrics[interimMetrics.length - 1] : null, // Latest interim for backward compatibility
+        interim: interimMetrics.length > 0 ? interimMetrics[interimMetrics.length - 1] : null,
         interimPeriods: interimMetrics,
-        annualDebtService,
-        proposedAnnualDebtService,
-        totalProposedAnnualDebtService,
+        // Itemized denominator (3 lines)
+        annualDebtService,                  // Existing Business Debt
+        proposedAnnualDebtService,          // New Loan Annual P&I (SBA Loan principal)
+        sbaAnnualServiceFee,                // SBA Annual Service Fee
+        sbaLoanAmount,                      // For tooltips/audit
+        totalProposedAnnualDebtService,     // = sum of the three lines above
         globalFullYear: globalFullYearDscr,
         globalInterim: globalInterimDscr,
         fccr: fccrResult.fccr,
         fccrNumerator: fccrResult.numerator,
         fccrDenominator: fccrResult.denominator,
-        isProjection: isProjectionPeriod, // Track if the FYE is from a projection
-        lastFYEIndex, // Track which period index is used
+        isProjection: isProjectionPeriod,
+        lastFYEIndex,
       },
       global: {
         totalAssets: globalTotalAssets,
