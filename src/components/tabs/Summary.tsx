@@ -908,8 +908,8 @@ export const Summary = () => {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.15 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {interimPeriod.dscr.toFixed(2)}x
+                        <p className={`text-2xl font-bold mt-1 ${interimPeriod.dscr === 0 ? 'text-muted-foreground' : interimPeriod.dscr >= 1.25 ? 'text-green-600' : interimPeriod.dscr >= 1.15 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {interimPeriod.dscr === 0 ? 'N/A' : `${interimPeriod.dscr.toFixed(2)}x`}
                         </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-primary" />
