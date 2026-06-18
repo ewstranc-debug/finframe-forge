@@ -804,30 +804,35 @@ export const Summary = () => {
                               <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-sm">
-                              <p className="font-semibold mb-2">Debt Service Breakdown:</p>
+                              <p className="font-semibold mb-2">Total Proposed Debt Service:</p>
                               <div className="space-y-1 text-sm">
                                 <div className="flex justify-between gap-4">
-                                  <span>Proposed Loan Payment:</span>
-                                  <span className="font-mono">${annualPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>Existing Business Debt:</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.existingDebtPayment).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Existing Business Debts:</span>
-                                  <span className="font-mono">${interimPeriod.existingDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>+ New Loan Annual P&amp;I:</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.proposedDebtPayment).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between gap-4">
-                                  <span>Personal Debt Payments:</span>
-                                  <span className="font-mono">${interimPeriod.personalDebtPayment.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span>+ SBA Annual Service Fee:</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.sbaAnnualServiceFee).toLocaleString()}</span>
                                 </div>
                                 <div className="border-t border-border pt-1 mt-1 flex justify-between gap-4 font-semibold">
                                   <span>Total:</span>
-                                  <span className="font-mono">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                                  <span className="font-mono">${Math.round(interimPeriod.debtService).toLocaleString()}</span>
                                 </div>
                               </div>
-                              <p className="text-xs mt-2 text-muted-foreground">Sources: Summary + Existing Debts + Personal Financial Statement tabs</p>
+                              <p className="text-xs mt-2 text-muted-foreground">New Loan P&amp;I uses the SBA 7(a) Loan amount as principal. Personal debt payments are subtracted from Net Cash Flow.</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <p className="text-2xl font-bold mt-1">${interimPeriod.debtService.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                        <p className="text-2xl font-bold mt-1">${Math.round(interimPeriod.debtService).toLocaleString()}</p>
+                        <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                          <div className="flex justify-between"><span>Existing</span><span className="font-mono">${Math.round(interimPeriod.existingDebtPayment).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>+ New Loan P&amp;I</span><span className="font-mono">${Math.round(interimPeriod.proposedDebtPayment).toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>+ SBA Service Fee</span><span className="font-mono">${Math.round(interimPeriod.sbaAnnualServiceFee).toLocaleString()}</span></div>
+                        </div>
                       </div>
                       <PieChart className="h-8 w-8 text-blue-600" />
                     </div>
