@@ -491,12 +491,25 @@ export const Summary = () => {
             </div>
           </div>
 
+          {(isRateMissing || isRateAboveMax) && (
+            <div className={`mt-4 p-3 rounded-md border flex items-start gap-2 text-sm ${isRateMissing ? 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-500/40 text-yellow-700 dark:text-yellow-400' : 'bg-red-50 dark:bg-red-950/30 border-red-500/40 text-red-700 dark:text-red-400'}`}>
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                {isRateMissing ? (
+                  <span>Enter an interest rate to calculate the loan payment. The rate cannot be 0% — use a realistic SBA 7(a) rate (typically Prime + 2.75%–4.75%).</span>
+                ) : (
+                  <span>Interest rate of {rateValue.toFixed(2)}% exceeds the SBA 7(a) maximum allowable spread (~{SBA_MAX_RATE.toFixed(1)}%). Verify the rate.</span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="bg-primary/5">
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">Annual Payment</div>
                 <div className="text-2xl font-bold text-primary">
-                  ${annualPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  {isRateMissing ? '—' : `$${annualPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                 </div>
               </CardContent>
             </Card>
@@ -504,7 +517,7 @@ export const Summary = () => {
               <CardContent className="pt-6">
                 <div className="text-sm text-muted-foreground mb-1">Monthly Payment</div>
                 <div className="text-2xl font-bold text-primary">
-                  ${monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  {isRateMissing ? '—' : `$${monthlyPayment.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                 </div>
               </CardContent>
             </Card>
