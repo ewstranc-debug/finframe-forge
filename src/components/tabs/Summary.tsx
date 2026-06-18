@@ -3,7 +3,7 @@ import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw, AlertT
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection } from "@/utils/financialCalculations";
+import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection, computeNewLoanAnnualPayment, computeSBAAnnualServiceFee } from "@/utils/financialCalculations";
 import { useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
