@@ -265,8 +265,19 @@ export const FinancialAnalysis = () => {
     const fullYearMetrics = lastFYEIndex !== undefined ? calcBusinessMetrics(lastFYEIndex) : null;
     const interimMetrics = interimPeriodIndices.map(idx => calcBusinessMetrics(idx)).filter(Boolean);
     
-    // Use latest business period for overall business metrics
-    const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
+    // Source business EBITDA / margin cards from the same period DSCR uses (last FYE,
+    // which may be a 12-month projection). Falls back to the latest period with data.
+    const businessMetricsPeriodIndex = lastFYEIndex !== undefined
+      ? lastFYEIndex
+      : (() => {
+          for (let i = businessPeriods.length - 1; i >= 0; i--) {
+            const p = businessPeriods[i];
+            if (p && ((parseFloat(p.revenue) || 0) > 0 || (parseFloat(p.cogs) || 0) > 0)) return i;
+          }
+          return businessPeriods.length - 1;
+        })();
+    const latestBusinessPeriod = businessPeriods[businessMetricsPeriodIndex];
+    const latestBusinessPeriodLabel = businessPeriodLabels[businessMetricsPeriodIndex] || '';
     const businessRevenue = parseFloat(latestBusinessPeriod?.revenue) || 0;
     const businessCOGS = parseFloat(latestBusinessPeriod?.cogs) || 0;
     const businessOpEx = parseFloat(latestBusinessPeriod?.operatingExpenses) || 0;
