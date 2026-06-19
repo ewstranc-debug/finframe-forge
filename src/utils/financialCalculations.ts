@@ -216,23 +216,49 @@ export const calculateAffiliateCashFlow = (period: AffiliateIncomeData, annualiz
 
 /**
  * SBA 7(a) Upfront Guaranty Fee — FY 2026 tiered structure.
- * Tier is selected based on the TOTAL loan amount, then the fee % is applied to
- * the guaranteed portion. Loans with maturities > 12 months:
- *   ≤ $150,000            → 2.00%
- *   $150,001 – $1,000,000 → 3.00%
- *   > $1,000,000          → 3.50% on guaranteed ≤ $1M + 3.75% on guaranteed > $1M
+ *
+ * Tier is selected by TOTAL loan amount; the fee % applies to the GUARANTEED
+ * portion. Loans with maturities > 12 months. Tier table is exported so the
+ * SBA's annual revisions are a one-line change.
+ *
+ *   ≤ $150,000             → 2.00% × guaranteed
+ *   $150,001 – $700,000    → 3.00% × guaranteed
+ *   $700,001 – $1,000,000  → 3.50% × guaranteed
+ *   > $1,000,000           → 3.50% × guaranteed up to $1M
+ *                          + 3.75% × guaranteed above $1M
  */
+export interface SBAGuaranteeFeeTier {
+  /** Inclusive upper bound on TOTAL loan amount; Infinity = top tier. */
+  upTo: number;
+  /** Fee % applied to guaranteed portion at or below upToCap. */
+  rate: number;
+  /** Fee % applied to guaranteed portion above upToCap (top tier only). */
+  rateOver?: number;
+  /** Cap (on guaranteed portion) where `rate` ends and `rateOver` begins. */
+  upToCap?: number;
+}
+
+export const SBA_GUARANTEE_FEE_TIERS: SBAGuaranteeFeeTier[] = [
+  { upTo: 150_000, rate: 0.02 },
+  { upTo: 700_000, rate: 0.03 },
+  { upTo: 1_000_000, rate: 0.035 },
+  { upTo: Infinity, rate: 0.035, rateOver: 0.0375, upToCap: 1_000_000 },
+];
+
 export const calculateSBAGuaranteeFee = (
   loanAmount: number,
   guaranteePercent: number
 ): number => {
   if (!Number.isFinite(loanAmount) || loanAmount <= 0) return 0;
   const guaranteed = loanAmount * (guaranteePercent / 100);
-  if (loanAmount <= 150000) return guaranteed * 0.02;
-  if (loanAmount <= 1000000) return guaranteed * 0.03;
-  const guaranteedUpToCap = Math.min(guaranteed, 1000000);
-  const guaranteedOver = Math.max(0, guaranteed - 1000000);
-  return guaranteedUpToCap * 0.035 + guaranteedOver * 0.0375;
+  const tier = SBA_GUARANTEE_FEE_TIERS.find((t) => loanAmount <= t.upTo)
+    ?? SBA_GUARANTEE_FEE_TIERS[SBA_GUARANTEE_FEE_TIERS.length - 1];
+  if (tier.rateOver !== undefined && tier.upToCap !== undefined) {
+    const under = Math.min(guaranteed, tier.upToCap);
+    const over = Math.max(0, guaranteed - tier.upToCap);
+    return under * tier.rate + over * tier.rateOver;
+  }
+  return guaranteed * tier.rate;
 };
 
 /**
