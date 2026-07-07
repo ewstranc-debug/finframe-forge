@@ -367,6 +367,7 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
     termMonths,
     guaranteePercent,
     equityInjection = "0",
+    financeGuaranteeFee = true,
     includeRentAddback = false,
     affiliateCashFlow = 0,
   } = input;
@@ -434,7 +435,7 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
   // Proposed-loan principal = SBA Loan plug (the same figure shown on Summary)
   const equity = parseFloat(equityInjection) || 0;
   const guaranteePct = parseFloat(guaranteePercent) || 75;
-  const sbaLoanAmount = computeSBALoanAmount(uses, equity, guaranteePct);
+  const sbaLoanAmount = computeSBALoanAmount(uses, equity, guaranteePct, financeGuaranteeFee);
   const proposedDebtPayment = computeNewLoanAnnualPayment(sbaLoanAmount, interestRate, termMonths);
   const sbaAnnualServiceFee = computeSBAAnnualServiceFee(sbaLoanAmount, guaranteePct);
 
