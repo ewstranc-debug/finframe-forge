@@ -608,6 +608,7 @@ export const FinancialAnalysis = () => {
             liquidAssets: parseFloat(personalAssets.liquidAssets) || 0,
             debtToAssets: totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0,
             liquidityRatio: totalPersonalLiabilities > 0 ? (parseFloat(personalAssets.liquidAssets) || 0) / totalPersonalLiabilities : 0,
+            contingentBusinessDebt,
           },
           business: {
             revenue: businessRevenue,
