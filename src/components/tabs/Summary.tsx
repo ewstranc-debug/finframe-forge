@@ -27,6 +27,7 @@ export const Summary = () => {
     injectionEquity, setInjectionEquity,
     equityPercentage, setEquityPercentage,
     uses, setUses,
+    financeGuaranteeFee, setFinanceGuaranteeFee,
     businessPeriods,
     businessPeriodLabels,
     personalPeriods,
@@ -119,6 +120,10 @@ export const Summary = () => {
   // SBA Loan = Primary Request + SBA Fee(SBA Loan) - Equity
   // We need to solve iteratively since fee depends on loan amount
   const calculateSBALoanAmount = useMemo(() => {
+    if (!financeGuaranteeFee) {
+      // Fee is funded via a separate borrower injection source (not into loan)
+      return Math.max(0, primaryRequest - equityInjectionAmount);
+    }
     // Initial estimate: SBA Loan = Primary Request - Equity
     let sbaLoan = Math.max(0, primaryRequest - equityInjectionAmount);
     
@@ -133,14 +138,15 @@ export const Summary = () => {
     }
     
     return sbaLoan;
-  }, [primaryRequest, equityInjectionAmount, guaranteePercent]);
+  }, [primaryRequest, equityInjectionAmount, guaranteePercent, financeGuaranteeFee]);
 
   const sbaLoanAmount = calculateSBALoanAmount;
   const fees = calculateSBAFees(sbaLoanAmount);
+  const feeInjection = financeGuaranteeFee ? 0 : fees.upfrontFee;
   const totalUses = primaryRequest + fees.upfrontFee;
-  const totalSources = sbaLoanAmount + equityInjectionAmount; // Always equals totalUses
+  const totalSources = sbaLoanAmount + equityInjectionAmount + feeInjection; // Always equals totalUses
   
-  // Equity percentage of total project
+  // Equity percentage of total project (excludes fee-funding injection)
   const actualEquityPercent = totalUses > 0 ? (equityInjectionAmount / totalUses) * 100 : 0;
   
   // Equity injection warning: required if business acquisition and equity < 10%
