@@ -285,16 +285,22 @@ export const computeNewLoanAnnualPayment = (
 /**
  * Iteratively compute the SBA 7(a) Loan amount (the "plug") consistent with the
  * Summary tab's Sources & Uses logic:
- *   SBA Loan = Primary Request + SBA Upfront Fee(SBA Loan) - Equity Injection
+ *   financeFee = true  → SBA Loan = Primary Request + SBA Upfront Fee(SBA Loan) - Equity Injection
+ *   financeFee = false → SBA Loan = max(0, Primary Request - Equity Injection)
+ *                        (Fee is funded by a separate borrower injection source)
  */
 export const computeSBALoanAmount = (
   uses: UseOfFunds[],
   equityInjection: number,
-  guaranteePercent: number
+  guaranteePercent: number,
+  financeFee: boolean = true
 ): number => {
   const primaryRequest = uses.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
   const gp = Number.isFinite(guaranteePercent) ? guaranteePercent : 75;
   const equity = Number.isFinite(equityInjection) ? equityInjection : 0;
+  if (!financeFee) {
+    return Math.max(0, primaryRequest - equity);
+  }
   let sba = Math.max(0, primaryRequest - equity);
   for (let i = 0; i < 12; i++) {
     const fee = calculateSBAGuaranteeFee(sba, gp);
@@ -307,6 +313,7 @@ export const computeSBALoanAmount = (
   }
   return sba;
 };
+
 
 /**
  * SBA annual service fee on the guaranteed portion (0.55%).
@@ -330,11 +337,12 @@ export const calculateLoanAnnualDebtService = (
   interestRate: string,
   termMonths: string,
   guaranteePercent: string,
-  equityInjection: string = "0"
+  equityInjection: string = "0",
+  financeFee: boolean = true
 ): number => {
   const equity = parseFloat(equityInjection) || 0;
   const guaranteePct = parseFloat(guaranteePercent) || 75;
-  const sbaLoan = computeSBALoanAmount(uses, equity, guaranteePct);
+  const sbaLoan = computeSBALoanAmount(uses, equity, guaranteePct, financeFee);
   return computeNewLoanAnnualPayment(sbaLoan, interestRate, termMonths);
 };
 
