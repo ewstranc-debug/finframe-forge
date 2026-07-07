@@ -255,6 +255,33 @@ export const exportToPDF = (data: ExportData) => {
     yPos = (doc as any).lastAutoTable.finalY + 12;
   }
 
+  // Cash Conversion Cycle
+  const ccc = (data.ratios.business as any).cashConversion as Array<any> | undefined;
+  if (ccc && ccc.length > 0) {
+    checkPageBreak(60);
+    addSubHeader('Cash Conversion Cycle');
+    const fmt = (v: number | null) => v === null || !Number.isFinite(v) ? 'N/A' : v.toFixed(1);
+    const cccHead = ['Metric', ...ccc.map((r) => r.label + (r.endingBasis ? ' (ending)' : ''))];
+    const cccBody = [
+      ['DIO (Inventory Days)', ...ccc.map((r) => fmt(r.dio))],
+      ['Inventory Turns', ...ccc.map((r) => r.turns === null ? 'N/A' : `${r.turns.toFixed(1)}x`)],
+      ['DSO (A/R Days)', ...ccc.map((r) => fmt(r.dso))],
+      ['DPO (A/P Days)', ...ccc.map((r) => r.dpoNegative ? '0.0 (prepaid)' : fmt(r.dpo))],
+      ['Cash Conversion Cycle', ...ccc.map((r) => fmt(r.ccc))],
+    ];
+    autoTable(doc, {
+      startY: yPos,
+      head: [cccHead],
+      body: cccBody,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] },
+      margin: { left: 14, right: 14 },
+      styles: { fontSize: 9 },
+    });
+    yPos = (doc as any).lastAutoTable.finalY + 12;
+  }
+
+
   // ==================== LOAN REQUEST ====================
   if (data.uses && data.uses.length > 0) {
     checkPageBreak(60);
