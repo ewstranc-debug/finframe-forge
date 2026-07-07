@@ -1044,20 +1044,25 @@ export const FinancialAnalysis = () => {
                         </p>
                         <p
                           className={`text-2xl font-bold ${
-                            !ratios.dscr.fullYear || ratios.dscr.fullYear.existingDSCR === 0
+                            !ratios.dscr.fullYear || ratios.dscr.fullYear.dscr === 0
                               ? "text-muted-foreground"
-                              : ratios.dscr.fullYear.existingDSCR < 1.0
+                              : ratios.dscr.fullYear.dscr < 1.0
                               ? "text-destructive"
-                              : ratios.dscr.fullYear.existingDSCR < 1.15
+                              : ratios.dscr.fullYear.dscr < 1.15
                               ? "text-yellow-600"
                               : "text-green-600"
                           }`}
                         >
-                          {ratios.dscr.fullYear ? ratios.dscr.fullYear.existingDSCR.toFixed(2) : "N/A"}
+                          {ratios.dscr.fullYear && ratios.dscr.fullYear.dscr > 0 ? ratios.dscr.fullYear.dscr.toFixed(2) : "N/A"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Target: &gt;1.15 | {ratios.dscr.fullYear?.periodLabel || "No Data"}
                         </p>
+                        {ratios.dscr.fullYear && ratios.dscr.fullYear.existingDSCR > 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Existing basis: {ratios.dscr.fullYear.existingDSCR.toFixed(2)}
+                          </p>
+                        )}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
@@ -1080,10 +1085,13 @@ export const FinancialAnalysis = () => {
                               </p>
                             </div>
                             <div className="space-y-1 text-sm border-t pt-2">
-                              <p className="font-medium">Proposed Loan Annual Payment: ${(ratios.dscr.fullYear?.proposedLoanAnnualPayment || 0).toLocaleString()}</p>
+                              <p>Existing Business Debt: ${Math.round(ratios.dscr.fullYear.existingDebtPayment).toLocaleString()}</p>
+                              <p>+ New Loan Annual P&amp;I: ${Math.round(ratios.dscr.fullYear.proposedLoanAnnualPayment).toLocaleString()}</p>
+                              <p>+ SBA Annual Service Fee: ${Math.round(ratios.dscr.fullYear.sbaAnnualServiceFee).toLocaleString()}</p>
+                              <p className="font-medium border-t pt-1 mt-1">Total Proposed Debt Service: ${Math.round(ratios.dscr.fullYear.totalDebtService).toLocaleString()}</p>
                             </div>
                             <p className="font-semibold border-t pt-2 mt-2">
-                              DSCR = EBITDA / Proposed Loan Payment = {ratios.dscr.fullYear.dscr.toFixed(2)}
+                              DSCR = EBITDA / Total Proposed Debt Service = {ratios.dscr.fullYear.dscr.toFixed(2)}
                             </p>
                           </>
                         ) : (
