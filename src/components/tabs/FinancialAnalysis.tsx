@@ -337,6 +337,50 @@ export const FinancialAnalysis = () => {
     const businessROE = businessEquity > 0 ? (businessNetIncome / businessEquity) * 100 : 0;
     const businessAssetTurnover = businessTotalAssets > 0 ? businessRevenue / businessTotalAssets : 0;
     const businessWorkingCapital = businessCurrentAssets - businessCurrentLiabilities;
+
+    // CASH CONVERSION CYCLE per period (DIO, DSO, DPO, CCC, Turns)
+    const cashConversionByPeriod = businessPeriods.map((period, i) => {
+      const bs = businessBalanceSheetPeriods[i];
+      if (!bs) return null;
+      const months = parseFloat(period.periodMonths) || 12;
+      const rawCOGS = parseFloat(period.cogs) || 0;
+      const rawRev = parseFloat(period.revenue) || 0;
+      const annualizedCOGS = months > 0 ? (rawCOGS * 12) / months : 0;
+      const annualizedRevenue = months > 0 ? (rawRev * 12) / months : 0;
+      const priorBs = i > 0 ? businessBalanceSheetPeriods[i - 1] : null;
+      const curInv = parseFloat(bs.inventory) || 0;
+      const curAR = parseFloat(bs.accountsReceivable) || 0;
+      const curAP = parseFloat(bs.accountsPayable) || 0;
+      const avgInv = priorBs ? ((parseFloat(priorBs.inventory) || 0) + curInv) / 2 : curInv;
+      const avgAR = priorBs ? ((parseFloat(priorBs.accountsReceivable) || 0) + curAR) / 2 : curAR;
+      const avgAP = priorBs ? ((parseFloat(priorBs.accountsPayable) || 0) + curAP) / 2 : curAP;
+      const endingBasis = !priorBs;
+      const dio = annualizedCOGS > 0 ? (avgInv / annualizedCOGS) * 365 : null;
+      const dso = annualizedRevenue > 0 ? (avgAR / annualizedRevenue) * 365 : null;
+      const dpoNegative = avgAP < 0;
+      const dpo = dpoNegative
+        ? 0
+        : annualizedCOGS > 0
+          ? (avgAP / annualizedCOGS) * 365
+          : null;
+      const ccc = dio !== null && dso !== null && dpo !== null ? dio + dso - dpo : null;
+      const turns = dio !== null && dio > 0 ? 365 / dio : null;
+      return {
+        label: businessPeriodLabels[i] || `Period ${i + 1}`,
+        months,
+        dio, dso, dpo, ccc, turns,
+        endingBasis, dpoNegative,
+        avgInv, avgAR, avgAP,
+        annualizedCOGS, annualizedRevenue,
+      };
+    }).filter(Boolean) as Array<{
+      label: string; months: number;
+      dio: number | null; dso: number | null; dpo: number | null; ccc: number | null; turns: number | null;
+      endingBasis: boolean; dpoNegative: boolean;
+      avgInv: number; avgAR: number; avgAP: number;
+      annualizedCOGS: number; annualizedRevenue: number;
+    }>;
+
     
     // GLOBAL/CONSOLIDATED METRICS
     const globalTotalAssets = totalPersonalAssets + businessTotalAssets;
