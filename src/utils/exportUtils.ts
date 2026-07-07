@@ -127,6 +127,7 @@ export const exportToPDF = (data: ExportData) => {
     ['Net Worth', `$${data.ratios.personal.netWorth.toLocaleString()}`],
     ['Total Assets', `$${data.ratios.personal.totalAssets.toLocaleString()}`],
     ['Total Liabilities', `$${data.ratios.personal.totalLiabilities.toLocaleString()}`],
+    ['Contingent Liabilities (Guaranteed Business Debt)', `$${((data.ratios.personal as any).contingentLiabilities || 0).toLocaleString()}`],
     ['Liquid Assets', `$${data.ratios.personal.liquidAssets.toLocaleString()}`],
     ['Annual Income', `$${data.ratios.personal.totalIncome.toLocaleString()}`],
     ['Annual Expenses', `$${data.ratios.personal.totalExpenses.toLocaleString()}`],
