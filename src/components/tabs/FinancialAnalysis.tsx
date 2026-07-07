@@ -1683,7 +1683,7 @@ export const FinancialAnalysis = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Global DSCR</p>
+                        <p className="text-sm text-muted-foreground">Business DSCR (Proposed)</p>
                         <p className={`text-xl font-bold ${ratios.global.dscr < 1.0 ? 'text-destructive' : ratios.global.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
                           {ratios.global.dscr.toFixed(2)}
                         </p>
@@ -1711,7 +1711,7 @@ export const FinancialAnalysis = () => {
                           <p className="font-medium text-sm">Annual Debt Service:</p>
                           <p className="text-sm">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                         </div>
-                        <p className="border-t pt-1 mt-1 font-semibold">Global DSCR = Total Available / Annual Debt Service = {ratios.global.dscr.toFixed(2)}</p>
+                        <p className="border-t pt-1 mt-1 font-semibold">Business DSCR (Proposed) = Business EBITDA / Total Proposed Debt Service = {ratios.global.dscr.toFixed(2)}</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
