@@ -41,6 +41,7 @@ export const FinancialAnalysis = () => {
     termMonths,
     guaranteePercent,
     injectionEquity,
+    financeGuaranteeFee,
     financialAnalysis,
     setFinancialAnalysis,
     analystNotes,
@@ -170,14 +171,16 @@ export const FinancialAnalysis = () => {
       interestRate,
       termMonths,
       guaranteePercent,
-      injectionEquity
+      injectionEquity,
+      financeGuaranteeFee
     );
 
     // SBA Loan amount (plug) and annual service fee for transparent itemization
     const sbaLoanAmount = computeSBALoanAmount(
       uses,
       parseFloat(injectionEquity) || 0,
-      parseFloat(guaranteePercent) || 75
+      parseFloat(guaranteePercent) || 75,
+      financeGuaranteeFee
     );
     const sbaAnnualServiceFee = computeSBAAnnualServiceFee(
       sbaLoanAmount,
@@ -348,7 +351,7 @@ export const FinancialAnalysis = () => {
     
     // Helper to calculate annual debt service for the SBA / proposed loan
     // Uses the centralized FY2026 fee calculation from financialCalculations.ts
-    const loanAnnualDebtService = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
+    const loanAnnualDebtService = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent, injectionEquity, financeGuaranteeFee);
     
     const calculateGlobalDscrForPeriod = (businessPeriodIndex?: number) => {
       if (businessPeriodIndex === undefined) {
@@ -409,6 +412,7 @@ export const FinancialAnalysis = () => {
         termMonths,
         guaranteePercent,
         equityInjection: injectionEquity,
+        financeGuaranteeFee,
       });
       
       return {
