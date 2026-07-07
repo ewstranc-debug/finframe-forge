@@ -207,6 +207,7 @@ export const Summary = () => {
       termMonths,
       guaranteePercent,
       equityInjection: injectionEquity,
+      financeGuaranteeFee,
     });
 
     return {
