@@ -1350,8 +1350,82 @@ export const FinancialAnalysis = () => {
                   </Tooltip>
                 </div>
 
+                {/* Cash Conversion Cycle */}
+                {(ratios.business as any).cashConversion && (ratios.business as any).cashConversion.length > 0 && (
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-base">Cash Conversion Cycle</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        DIO + DSO − DPO, per period. Uses average balance sheet balances (or ending basis for the first period). Flows annualized for interim periods.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      {(() => {
+                        const rows = (ratios.business as any).cashConversion as Array<any>;
+                        const fmt = (v: number | null, suffix = '') =>
+                          v === null || !Number.isFinite(v) ? 'N/A' : `${v.toFixed(1)}${suffix}`;
+                        const prevCCC = (idx: number) => (idx > 0 ? rows[idx - 1]?.ccc : null);
+                        const cccClass = (curr: number | null, prev: number | null) => {
+                          if (curr === null || prev === null) return '';
+                          if (curr < prev) return 'text-green-600';
+                          if (curr > prev) return 'text-destructive';
+                          return '';
+                        };
+                        return (
+                          <table className="min-w-full text-sm">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left p-2 font-medium">Metric</th>
+                                {rows.map((r, i) => (
+                                  <th key={i} className="text-right p-2 font-medium">
+                                    {r.label}
+                                    {r.endingBasis && <span className="block text-[10px] text-muted-foreground font-normal">(ending basis)</span>}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">Inventory Days (DIO)</td>
+                                {rows.map((r, i) => <td key={i} className="text-right p-2 font-mono">{fmt(r.dio)}</td>)}
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">Inventory Turns</td>
+                                {rows.map((r, i) => <td key={i} className="text-right p-2 font-mono">{r.turns === null ? 'N/A' : `${r.turns.toFixed(1)}x`}</td>)}
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">A/R Days (DSO)</td>
+                                {rows.map((r, i) => <td key={i} className="text-right p-2 font-mono">{fmt(r.dso)}</td>)}
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">A/P Days (DPO)</td>
+                                {rows.map((r, i) => (
+                                  <td key={i} className="text-right p-2 font-mono">
+                                    {r.dpoNegative ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild><span className="underline decoration-dotted cursor-help">0.0</span></TooltipTrigger>
+                                        <TooltipContent><p className="text-xs">A/P is a net negative (prepaid) balance</p></TooltipContent>
+                                      </Tooltip>
+                                    ) : fmt(r.dpo)}
+                                  </td>
+                                ))}
+                              </tr>
+                              <tr className="font-semibold bg-muted/30">
+                                <td className="p-2">Cash Conversion Cycle</td>
+                                {rows.map((r, i) => (
+                                  <td key={i} className={`text-right p-2 font-mono ${cccClass(r.ccc, prevCCC(i))}`}>{fmt(r.ccc)}</td>
+                                ))}
+                              </tr>
+                            </tbody>
+                          </table>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Other Business Metrics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
