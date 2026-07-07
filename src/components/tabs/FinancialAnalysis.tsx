@@ -541,6 +541,7 @@ export const FinancialAnalysis = () => {
         otherIncome: businessOtherIncome,
         otherExpenses: businessOtherExpenses,
         addbacks: businessAddbacks,
+        cashConversion: cashConversionByPeriod,
       },
       dscr: {
         fullYear: fullYearMetrics,
