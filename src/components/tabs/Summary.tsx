@@ -6,6 +6,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection, computeNewLoanAnnualPayment, computeSBAAnnualServiceFee } from "@/utils/financialCalculations";
 import { useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +29,7 @@ export const Summary = () => {
     injectionEquity, setInjectionEquity,
     equityPercentage, setEquityPercentage,
     uses, setUses,
+    financeGuaranteeFee, setFinanceGuaranteeFee,
     businessPeriods,
     businessPeriodLabels,
     personalPeriods,
@@ -119,6 +122,10 @@ export const Summary = () => {
   // SBA Loan = Primary Request + SBA Fee(SBA Loan) - Equity
   // We need to solve iteratively since fee depends on loan amount
   const calculateSBALoanAmount = useMemo(() => {
+    if (!financeGuaranteeFee) {
+      // Fee is funded via a separate borrower injection source (not into loan)
+      return Math.max(0, primaryRequest - equityInjectionAmount);
+    }
     // Initial estimate: SBA Loan = Primary Request - Equity
     let sbaLoan = Math.max(0, primaryRequest - equityInjectionAmount);
     
@@ -133,14 +140,15 @@ export const Summary = () => {
     }
     
     return sbaLoan;
-  }, [primaryRequest, equityInjectionAmount, guaranteePercent]);
+  }, [primaryRequest, equityInjectionAmount, guaranteePercent, financeGuaranteeFee]);
 
   const sbaLoanAmount = calculateSBALoanAmount;
   const fees = calculateSBAFees(sbaLoanAmount);
+  const feeInjection = financeGuaranteeFee ? 0 : fees.upfrontFee;
   const totalUses = primaryRequest + fees.upfrontFee;
-  const totalSources = sbaLoanAmount + equityInjectionAmount; // Always equals totalUses
+  const totalSources = sbaLoanAmount + equityInjectionAmount + feeInjection; // Always equals totalUses
   
-  // Equity percentage of total project
+  // Equity percentage of total project (excludes fee-funding injection)
   const actualEquityPercent = totalUses > 0 ? (equityInjectionAmount / totalUses) * 100 : 0;
   
   // Equity injection warning: required if business acquisition and equity < 10%
@@ -201,6 +209,7 @@ export const Summary = () => {
       termMonths,
       guaranteePercent,
       equityInjection: injectionEquity,
+      financeGuaranteeFee,
     });
 
     return {
@@ -358,8 +367,20 @@ export const Summary = () => {
                   <div className="p-3 border-r border-border">Primary Request</div>
                   <div className="p-3">${primaryRequest.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
-                <div className="grid grid-cols-2">
-                  <div className="p-3 border-r border-border">SBA Guarantee Fee (Upfront)</div>
+                <div className="grid grid-cols-2 border-b border-border">
+                  <div className="p-3 border-r border-border flex items-center justify-between gap-2">
+                    <span>SBA Guarantee Fee (Upfront)</span>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="finance-fee-toggle" className="text-xs font-normal text-muted-foreground cursor-pointer">
+                        Finance fee into loan
+                      </Label>
+                      <Switch
+                        id="finance-fee-toggle"
+                        checked={financeGuaranteeFee}
+                        onCheckedChange={setFinanceGuaranteeFee}
+                      />
+                    </div>
+                  </div>
                   <div className="p-3">${fees.upfrontFee.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
                 <div className="grid grid-cols-2 font-bold bg-primary/20">
@@ -440,6 +461,22 @@ export const Summary = () => {
                     />
                   </div>
                 </div>
+                {!financeGuaranteeFee && (
+                  <div className="grid grid-cols-2 border-b border-border">
+                    <div className="p-3 border-r border-border bg-secondary/30 flex items-center gap-2">
+                      Borrower Injection — Guarantee Fee
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-sm">Fee is paid at close by the borrower (not financed into the loan).</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="p-3">${feeInjection.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 font-bold bg-primary/20">
                   <div className="p-3 border-r border-border">Total Sources</div>
                   <div className="p-3">${totalSources.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>

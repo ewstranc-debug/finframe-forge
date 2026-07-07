@@ -41,6 +41,7 @@ export const FinancialAnalysis = () => {
     termMonths,
     guaranteePercent,
     injectionEquity,
+    financeGuaranteeFee,
     financialAnalysis,
     setFinancialAnalysis,
     analystNotes,
@@ -170,14 +171,16 @@ export const FinancialAnalysis = () => {
       interestRate,
       termMonths,
       guaranteePercent,
-      injectionEquity
+      injectionEquity,
+      financeGuaranteeFee
     );
 
     // SBA Loan amount (plug) and annual service fee for transparent itemization
     const sbaLoanAmount = computeSBALoanAmount(
       uses,
       parseFloat(injectionEquity) || 0,
-      parseFloat(guaranteePercent) || 75
+      parseFloat(guaranteePercent) || 75,
+      financeGuaranteeFee
     );
     const sbaAnnualServiceFee = computeSBAAnnualServiceFee(
       sbaLoanAmount,
@@ -334,6 +337,50 @@ export const FinancialAnalysis = () => {
     const businessROE = businessEquity > 0 ? (businessNetIncome / businessEquity) * 100 : 0;
     const businessAssetTurnover = businessTotalAssets > 0 ? businessRevenue / businessTotalAssets : 0;
     const businessWorkingCapital = businessCurrentAssets - businessCurrentLiabilities;
+
+    // CASH CONVERSION CYCLE per period (DIO, DSO, DPO, CCC, Turns)
+    const cashConversionByPeriod = businessPeriods.map((period, i) => {
+      const bs = businessBalanceSheetPeriods[i];
+      if (!bs) return null;
+      const months = parseFloat(period.periodMonths) || 12;
+      const rawCOGS = parseFloat(period.cogs) || 0;
+      const rawRev = parseFloat(period.revenue) || 0;
+      const annualizedCOGS = months > 0 ? (rawCOGS * 12) / months : 0;
+      const annualizedRevenue = months > 0 ? (rawRev * 12) / months : 0;
+      const priorBs = i > 0 ? businessBalanceSheetPeriods[i - 1] : null;
+      const curInv = parseFloat(bs.inventory) || 0;
+      const curAR = parseFloat(bs.accountsReceivable) || 0;
+      const curAP = parseFloat(bs.accountsPayable) || 0;
+      const avgInv = priorBs ? ((parseFloat(priorBs.inventory) || 0) + curInv) / 2 : curInv;
+      const avgAR = priorBs ? ((parseFloat(priorBs.accountsReceivable) || 0) + curAR) / 2 : curAR;
+      const avgAP = priorBs ? ((parseFloat(priorBs.accountsPayable) || 0) + curAP) / 2 : curAP;
+      const endingBasis = !priorBs;
+      const dio = annualizedCOGS > 0 ? (avgInv / annualizedCOGS) * 365 : null;
+      const dso = annualizedRevenue > 0 ? (avgAR / annualizedRevenue) * 365 : null;
+      const dpoNegative = avgAP < 0;
+      const dpo = dpoNegative
+        ? 0
+        : annualizedCOGS > 0
+          ? (avgAP / annualizedCOGS) * 365
+          : null;
+      const ccc = dio !== null && dso !== null && dpo !== null ? dio + dso - dpo : null;
+      const turns = dio !== null && dio > 0 ? 365 / dio : null;
+      return {
+        label: businessPeriodLabels[i] || `Period ${i + 1}`,
+        months,
+        dio, dso, dpo, ccc, turns,
+        endingBasis, dpoNegative,
+        avgInv, avgAR, avgAP,
+        annualizedCOGS, annualizedRevenue,
+      };
+    }).filter(Boolean) as Array<{
+      label: string; months: number;
+      dio: number | null; dso: number | null; dpo: number | null; ccc: number | null; turns: number | null;
+      endingBasis: boolean; dpoNegative: boolean;
+      avgInv: number; avgAR: number; avgAP: number;
+      annualizedCOGS: number; annualizedRevenue: number;
+    }>;
+
     
     // GLOBAL/CONSOLIDATED METRICS
     const globalTotalAssets = totalPersonalAssets + businessTotalAssets;
@@ -348,7 +395,7 @@ export const FinancialAnalysis = () => {
     
     // Helper to calculate annual debt service for the SBA / proposed loan
     // Uses the centralized FY2026 fee calculation from financialCalculations.ts
-    const loanAnnualDebtService = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent);
+    const loanAnnualDebtService = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent, injectionEquity, financeGuaranteeFee);
     
     const calculateGlobalDscrForPeriod = (businessPeriodIndex?: number) => {
       if (businessPeriodIndex === undefined) {
@@ -409,6 +456,7 @@ export const FinancialAnalysis = () => {
         termMonths,
         guaranteePercent,
         equityInjection: injectionEquity,
+        financeGuaranteeFee,
       });
       
       return {
@@ -493,6 +541,7 @@ export const FinancialAnalysis = () => {
         otherIncome: businessOtherIncome,
         otherExpenses: businessOtherExpenses,
         addbacks: businessAddbacks,
+        cashConversion: cashConversionByPeriod,
       },
       dscr: {
         fullYear: fullYearMetrics,
@@ -621,6 +670,7 @@ export const FinancialAnalysis = () => {
             currentRatio: businessCurrentLiabilities > 0 ? businessCurrentAssets / businessCurrentLiabilities : 0,
             debtToEquity: (businessTotalAssets - businessTotalLiabilities) > 0 ? 
                          businessTotalLiabilities / (businessTotalAssets - businessTotalLiabilities) : 0,
+            cashConversion: (ratios.business as any).cashConversion,
           },
           combined: {
             totalAssets: totalPersonalAssets + businessTotalAssets,
@@ -710,6 +760,7 @@ export const FinancialAnalysis = () => {
     termMonths,
     guaranteePercent,
     injectionEquity,
+    financeGuaranteeFee,
   ]);
 
   return (
@@ -1039,20 +1090,25 @@ export const FinancialAnalysis = () => {
                         </p>
                         <p
                           className={`text-2xl font-bold ${
-                            !ratios.dscr.fullYear || ratios.dscr.fullYear.existingDSCR === 0
+                            !ratios.dscr.fullYear || ratios.dscr.fullYear.dscr === 0
                               ? "text-muted-foreground"
-                              : ratios.dscr.fullYear.existingDSCR < 1.0
+                              : ratios.dscr.fullYear.dscr < 1.0
                               ? "text-destructive"
-                              : ratios.dscr.fullYear.existingDSCR < 1.15
+                              : ratios.dscr.fullYear.dscr < 1.15
                               ? "text-yellow-600"
                               : "text-green-600"
                           }`}
                         >
-                          {ratios.dscr.fullYear ? ratios.dscr.fullYear.existingDSCR.toFixed(2) : "N/A"}
+                          {ratios.dscr.fullYear && ratios.dscr.fullYear.dscr > 0 ? ratios.dscr.fullYear.dscr.toFixed(2) : "N/A"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Target: &gt;1.15 | {ratios.dscr.fullYear?.periodLabel || "No Data"}
                         </p>
+                        {ratios.dscr.fullYear && ratios.dscr.fullYear.existingDSCR > 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Existing basis: {ratios.dscr.fullYear.existingDSCR.toFixed(2)}
+                          </p>
+                        )}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
@@ -1075,10 +1131,13 @@ export const FinancialAnalysis = () => {
                               </p>
                             </div>
                             <div className="space-y-1 text-sm border-t pt-2">
-                              <p className="font-medium">Proposed Loan Annual Payment: ${(ratios.dscr.fullYear?.proposedLoanAnnualPayment || 0).toLocaleString()}</p>
+                              <p>Existing Business Debt: ${Math.round(ratios.dscr.fullYear.existingDebtPayment).toLocaleString()}</p>
+                              <p>+ New Loan Annual P&amp;I: ${Math.round(ratios.dscr.fullYear.proposedLoanAnnualPayment).toLocaleString()}</p>
+                              <p>+ SBA Annual Service Fee: ${Math.round(ratios.dscr.fullYear.sbaAnnualServiceFee).toLocaleString()}</p>
+                              <p className="font-medium border-t pt-1 mt-1">Total Proposed Debt Service: ${Math.round(ratios.dscr.fullYear.totalDebtService).toLocaleString()}</p>
                             </div>
                             <p className="font-semibold border-t pt-2 mt-2">
-                              DSCR = EBITDA / Proposed Loan Payment = {ratios.dscr.fullYear.dscr.toFixed(2)}
+                              DSCR = EBITDA / Total Proposed Debt Service = {ratios.dscr.fullYear.dscr.toFixed(2)}
                             </p>
                           </>
                         ) : (
@@ -1095,20 +1154,25 @@ export const FinancialAnalysis = () => {
                         <p className="text-sm text-muted-foreground font-semibold">Business DSCR - Interim</p>
                         <p
                           className={`text-2xl font-bold ${
-                            !ratios.dscr.interim || !(ratios.dscr.interim.existingDSCR > 0)
+                            !ratios.dscr.interim || !(ratios.dscr.interim.dscr > 0)
                               ? "text-muted-foreground"
-                              : ratios.dscr.interim.existingDSCR < 1.0
+                              : ratios.dscr.interim.dscr < 1.0
                               ? "text-destructive"
-                              : ratios.dscr.interim.existingDSCR < 1.15
+                              : ratios.dscr.interim.dscr < 1.15
                               ? "text-yellow-600"
                               : "text-green-600"
                           }`}
                         >
-                          {ratios.dscr.interim && ratios.dscr.interim.existingDSCR > 0 ? ratios.dscr.interim.existingDSCR.toFixed(2) : "N/A"}
+                          {ratios.dscr.interim && ratios.dscr.interim.dscr > 0 ? ratios.dscr.interim.dscr.toFixed(2) : "N/A"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Target: &gt;1.15 | {ratios.dscr.interim ? `${ratios.dscr.interim.periodLabel} (${ratios.dscr.interim.periodMonths}mo)` : "No Data"}
                         </p>
+                        {ratios.dscr.interim && ratios.dscr.interim.existingDSCR > 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Existing basis: {ratios.dscr.interim.existingDSCR.toFixed(2)}
+                          </p>
+                        )}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
@@ -1131,10 +1195,13 @@ export const FinancialAnalysis = () => {
                               </p>
                             </div>
                             <div className="space-y-1 text-sm border-t pt-2">
-                              <p className="font-medium">Proposed Loan Annual Payment: ${(ratios.dscr.interim?.proposedLoanAnnualPayment || 0).toLocaleString()}</p>
+                              <p>Existing Business Debt: ${Math.round(ratios.dscr.interim.existingDebtPayment).toLocaleString()}</p>
+                              <p>+ New Loan Annual P&amp;I: ${Math.round(ratios.dscr.interim.proposedLoanAnnualPayment).toLocaleString()}</p>
+                              <p>+ SBA Annual Service Fee: ${Math.round(ratios.dscr.interim.sbaAnnualServiceFee).toLocaleString()}</p>
+                              <p className="font-medium border-t pt-1 mt-1">Total Proposed Debt Service: ${Math.round(ratios.dscr.interim.totalDebtService).toLocaleString()}</p>
                             </div>
                             <p className="font-semibold border-t pt-2 mt-2">
-                              DSCR = EBITDA / Proposed Loan Payment = {ratios.dscr.interim.existingDSCR.toFixed(2)}
+                              DSCR = EBITDA / Total Proposed Debt Service = {ratios.dscr.interim.dscr.toFixed(2)}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">Note: Interim EBITDA annualized for comparison</p>
                           </>
@@ -1284,8 +1351,82 @@ export const FinancialAnalysis = () => {
                   </Tooltip>
                 </div>
 
+                {/* Cash Conversion Cycle */}
+                {(ratios.business as any).cashConversion && (ratios.business as any).cashConversion.length > 0 && (
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-base">Cash Conversion Cycle</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        DIO + DSO − DPO, per period. Uses average balance sheet balances (or ending basis for the first period). Flows annualized for interim periods.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      {(() => {
+                        const rows = (ratios.business as any).cashConversion as Array<any>;
+                        const fmt = (v: number | null, suffix = '') =>
+                          v === null || !Number.isFinite(v) ? 'N/A' : `${v.toFixed(1)}${suffix}`;
+                        const prevCCC = (idx: number) => (idx > 0 ? rows[idx - 1]?.ccc : null);
+                        const cccClass = (curr: number | null, prev: number | null) => {
+                          if (curr === null || prev === null) return '';
+                          if (curr < prev) return 'text-green-600';
+                          if (curr > prev) return 'text-destructive';
+                          return '';
+                        };
+                        return (
+                          <table className="min-w-full text-sm">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left p-2 font-medium">Metric</th>
+                                {rows.map((r, i) => (
+                                  <th key={i} className="text-right p-2 font-medium">
+                                    {r.label}
+                                    {r.endingBasis && <span className="block text-[10px] text-muted-foreground font-normal">(ending basis)</span>}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">Inventory Days (DIO)</td>
+                                {rows.map((r, i) => <td key={i} className="text-right p-2 font-mono">{fmt(r.dio)}</td>)}
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">Inventory Turns</td>
+                                {rows.map((r, i) => <td key={i} className="text-right p-2 font-mono">{r.turns === null ? 'N/A' : `${r.turns.toFixed(1)}x`}</td>)}
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">A/R Days (DSO)</td>
+                                {rows.map((r, i) => <td key={i} className="text-right p-2 font-mono">{fmt(r.dso)}</td>)}
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-2 text-muted-foreground">A/P Days (DPO)</td>
+                                {rows.map((r, i) => (
+                                  <td key={i} className="text-right p-2 font-mono">
+                                    {r.dpoNegative ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild><span className="underline decoration-dotted cursor-help">0.0</span></TooltipTrigger>
+                                        <TooltipContent><p className="text-xs">A/P is a net negative (prepaid) balance</p></TooltipContent>
+                                      </Tooltip>
+                                    ) : fmt(r.dpo)}
+                                  </td>
+                                ))}
+                              </tr>
+                              <tr className="font-semibold bg-muted/30">
+                                <td className="p-2">Cash Conversion Cycle</td>
+                                {rows.map((r, i) => (
+                                  <td key={i} className={`text-right p-2 font-mono ${cccClass(r.ccc, prevCCC(i))}`}>{fmt(r.ccc)}</td>
+                                ))}
+                              </tr>
+                            </tbody>
+                          </table>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Other Business Metrics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
@@ -1662,7 +1803,7 @@ export const FinancialAnalysis = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Global DSCR</p>
+                        <p className="text-sm text-muted-foreground">Business DSCR (Proposed)</p>
                         <p className={`text-xl font-bold ${ratios.global.dscr < 1.0 ? 'text-destructive' : ratios.global.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
                           {ratios.global.dscr.toFixed(2)}
                         </p>
@@ -1690,7 +1831,7 @@ export const FinancialAnalysis = () => {
                           <p className="font-medium text-sm">Annual Debt Service:</p>
                           <p className="text-sm">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
                         </div>
-                        <p className="border-t pt-1 mt-1 font-semibold">Global DSCR = Total Available / Annual Debt Service = {ratios.global.dscr.toFixed(2)}</p>
+                        <p className="border-t pt-1 mt-1 font-semibold">Business DSCR (Proposed) = Business EBITDA / Total Proposed Debt Service = {ratios.global.dscr.toFixed(2)}</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
