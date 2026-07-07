@@ -998,8 +998,31 @@ export const FinancialAnalysis = () => {
                       </div>
                     </TooltipContent>
                   </Tooltip>
+
+                  {/* Contingent Liabilities (Guaranteed Business Debt) — display-only.
+                      Sum of Existing Debts balances. NOT netted into Personal Net Worth
+                      or any personal ratio. */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="space-y-1 cursor-help">
+                        <p className="text-sm text-muted-foreground">Contingent Liabilities</p>
+                        <p className="text-xl font-bold text-foreground">
+                          ${(ratios.personal.contingentLiabilities || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Guaranteed Business Debt</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="space-y-1">
+                        <p className="font-semibold">Contingent Liabilities</p>
+                        <p>Sum of outstanding balances on business debts personally guaranteed by the borrower.</p>
+                        <p className="border-t pt-1 mt-1 text-muted-foreground">Display-only. Excluded from Personal Net Worth and personal ratios.</p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
+
 
               {/* BUSINESS METRICS */}
               <div className="mb-8 pt-6 border-t">
