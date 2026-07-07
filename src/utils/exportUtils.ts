@@ -511,6 +511,24 @@ export const exportToExcel = (allData: ExportData) => {
     XLSX.utils.book_append_sheet(wb, wsBusiness, 'Business Financial Spreads');
   }
 
+  // Cash Conversion Cycle sheet
+  const cccX = (allData.ratios.business as any).cashConversion as Array<any> | undefined;
+  if (cccX && cccX.length > 0) {
+    const fmtN = (v: number | null) => v === null || !Number.isFinite(v) ? 'N/A' : Number(v.toFixed(1));
+    const headerRow = ['Metric', ...cccX.map((r) => r.label + (r.endingBasis ? ' (ending)' : ''))];
+    const rows = [
+      headerRow,
+      ['DIO (Inventory Days)', ...cccX.map((r) => fmtN(r.dio))],
+      ['Inventory Turns', ...cccX.map((r) => r.turns === null ? 'N/A' : Number(r.turns.toFixed(1)))],
+      ['DSO (A/R Days)', ...cccX.map((r) => fmtN(r.dso))],
+      ['DPO (A/P Days)', ...cccX.map((r) => r.dpoNegative ? '0.0 (prepaid)' : fmtN(r.dpo))],
+      ['Cash Conversion Cycle', ...cccX.map((r) => fmtN(r.ccc))],
+    ];
+    const wsCCC = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, wsCCC, 'Cash Conversion Cycle');
+  }
+
+
   // ==================== ASSETS & LIABILITIES ====================
   const alData = [
     ['PERSONAL ASSETS'],
