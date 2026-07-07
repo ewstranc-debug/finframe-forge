@@ -161,6 +161,8 @@ interface SpreadsheetContextType {
   setEquityPercentage: (val: string) => void;
   uses: UseOfFunds[];
   setUses: (uses: UseOfFunds[]) => void;
+  financeGuaranteeFee: boolean;
+  setFinanceGuaranteeFee: (val: boolean) => void;
   
   // Personal Financials state
   personalPeriods: PersonalPeriodData[];
@@ -246,6 +248,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
     { id: "7", description: "Contingency", amount: "0" },
     { id: "8", description: "Interest Reserve", amount: "0" },
   ]);
+  const [financeGuaranteeFee, setFinanceGuaranteeFee, financeGuaranteeFeeStatus] = useLocalStorage<boolean>("financialTool_financeGuaranteeFee", true);
 
   // Personal Financials state
   const [personalPeriods, setPersonalPeriods, personalPeriodsStatus] = useLocalStorage<PersonalPeriodData[]>("financialTool_personalPeriods", [
