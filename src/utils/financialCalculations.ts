@@ -16,6 +16,8 @@ export interface DSCRCalculationInput {
   guaranteePercent: string;
   /** Equity injection ($) so SBA loan principal matches the Summary plug. */
   equityInjection?: string;
+  /** Whether the SBA guarantee fee is financed into the loan (default true). */
+  financeGuaranteeFee?: boolean;
   includeRentAddback?: boolean;
   affiliateCashFlow?: number;
 }
