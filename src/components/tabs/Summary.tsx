@@ -461,6 +461,22 @@ export const Summary = () => {
                     />
                   </div>
                 </div>
+                {!financeGuaranteeFee && (
+                  <div className="grid grid-cols-2 border-b border-border">
+                    <div className="p-3 border-r border-border bg-secondary/30 flex items-center gap-2">
+                      Borrower Injection — Guarantee Fee
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-sm">Fee is paid at close by the borrower (not financed into the loan).</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="p-3">${feeInjection.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 font-bold bg-primary/20">
                   <div className="p-3 border-r border-border">Total Sources</div>
                   <div className="p-3">${totalSources.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
