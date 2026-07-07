@@ -670,6 +670,7 @@ export const FinancialAnalysis = () => {
             currentRatio: businessCurrentLiabilities > 0 ? businessCurrentAssets / businessCurrentLiabilities : 0,
             debtToEquity: (businessTotalAssets - businessTotalLiabilities) > 0 ? 
                          businessTotalLiabilities / (businessTotalAssets - businessTotalLiabilities) : 0,
+            cashConversion: (ratios.business as any).cashConversion,
           },
           combined: {
             totalAssets: totalPersonalAssets + businessTotalAssets,
