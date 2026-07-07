@@ -499,7 +499,7 @@ export const FinancialAnalysis = () => {
         interim: interimMetrics.length > 0 ? interimMetrics[interimMetrics.length - 1] : null,
         interimPeriods: interimMetrics,
         // Itemized denominator (3 lines)
-        annualDebtService,                  // Existing Business Debt
+        annualDebtService: businessExistingAnnualDebtService,  // Existing Business Debt (annual)
         proposedAnnualDebtService,          // New Loan Annual P&I (SBA Loan principal)
         sbaAnnualServiceFee,                // SBA Annual Service Fee
         sbaLoanAmount,                      // For tooltips/audit
