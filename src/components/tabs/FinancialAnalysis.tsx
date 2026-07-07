@@ -229,11 +229,16 @@ export const FinancialAnalysis = () => {
       const netIncome = ebit - interest - taxes;
       const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
       
-      // Business DSCR uses the 3-line Total Proposed Debt Service as the denominator
-      // (Existing Business Debt + New Loan P&I + SBA Annual Service Fee)
+      // Business DSCR — BUSINESS-level debt service only.
+      // Denominator = Existing Business Debt + New Loan P&I + SBA Annual Service Fee.
+      // Personal debt is intentionally excluded here.
       const totalDebtService = totalProposedAnnualDebtService;
       const businessDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
-      const existingDSCR = businessDSCR;
+      // existing = numerator / existing business DS only
+      const existingDSCR = businessExistingAnnualDebtService > 0
+        ? ebitda / businessExistingAnnualDebtService
+        : 0;
+      // proposed = numerator / total (existing + new loan + SBA fee)
       const proposedDSCR = businessDSCR;
 
       return {
@@ -260,7 +265,7 @@ export const FinancialAnalysis = () => {
         periodLabel: businessPeriodLabels[periodIndex] || `Period ${periodIndex + 1}`,
         periodMonths: period.periodMonths,
         proposedLoanAnnualPayment,
-        existingDebtPayment: annualDebtService,
+        existingDebtPayment: businessExistingAnnualDebtService,
         sbaAnnualServiceFee,
         totalDebtService,
       };
