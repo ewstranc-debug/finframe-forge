@@ -367,8 +367,20 @@ export const Summary = () => {
                   <div className="p-3 border-r border-border">Primary Request</div>
                   <div className="p-3">${primaryRequest.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
-                <div className="grid grid-cols-2">
-                  <div className="p-3 border-r border-border">SBA Guarantee Fee (Upfront)</div>
+                <div className="grid grid-cols-2 border-b border-border">
+                  <div className="p-3 border-r border-border flex items-center justify-between gap-2">
+                    <span>SBA Guarantee Fee (Upfront)</span>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="finance-fee-toggle" className="text-xs font-normal text-muted-foreground cursor-pointer">
+                        Finance fee into loan
+                      </Label>
+                      <Switch
+                        id="finance-fee-toggle"
+                        checked={financeGuaranteeFee}
+                        onCheckedChange={setFinanceGuaranteeFee}
+                      />
+                    </div>
+                  </div>
                   <div className="p-3">${fees.upfrontFee.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
                 </div>
                 <div className="grid grid-cols-2 font-bold bg-primary/20">
