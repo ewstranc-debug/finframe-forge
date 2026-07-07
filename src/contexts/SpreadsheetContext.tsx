@@ -528,6 +528,7 @@ export const SpreadsheetProvider = ({ children }: { children: ReactNode }) => {
       injectionEquity, setInjectionEquity,
       equityPercentage, setEquityPercentage,
       uses, setUses,
+      financeGuaranteeFee, setFinanceGuaranteeFee,
       personalPeriods, setPersonalPeriods,
       personalPeriodLabels, setPersonalPeriodLabels,
       businessPeriods, setBusinessPeriods,
