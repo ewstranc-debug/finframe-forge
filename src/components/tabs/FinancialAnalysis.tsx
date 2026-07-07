@@ -128,16 +128,20 @@ export const FinancialAnalysis = () => {
 
   // Calculate comprehensive financial ratios for Personal, Business, and Global
   const calculateFinancialRatios = () => {
-    // PERSONAL METRICS
+    // PERSONAL METRICS — Personal Statement inputs ONLY. Business Existing
+    // Debts are NOT netted into personal liabilities/net worth/DTI/etc.
     const totalPersonalAssets = Object.values(personalAssets).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-    const totalPersonalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) + 
+    const totalPersonalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) +
                             (parseFloat(personalLiabilities.mortgages) || 0) +
                             (parseFloat(personalLiabilities.vehicleLoans) || 0) +
-                            (parseFloat(personalLiabilities.otherLiabilities) || 0) +
-                            debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
+                            (parseFloat(personalLiabilities.otherLiabilities) || 0);
     const liquidAssets = parseFloat(personalAssets.liquidAssets) || 0;
     const personalNetWorth = totalPersonalAssets - totalPersonalLiabilities;
-    
+
+    // Display-only: guaranteed business debt (contingent liability). Never
+    // netted into personal net worth or personal ratios.
+    const contingentLiabilities = debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
+
     const latestPersonalPeriod = personalPeriods[2] || personalPeriods[1] || personalPeriods[0];
     const personalIncome = (parseFloat(latestPersonalPeriod?.salary) || 0) + 
                           (parseFloat(latestPersonalPeriod?.bonuses) || 0) + 
@@ -145,15 +149,21 @@ export const FinancialAnalysis = () => {
                           (parseFloat(latestPersonalPeriod?.rentalIncome) || 0);
     const personalExpenses = (parseFloat(latestPersonalPeriod?.costOfLiving) || 0) + 
                             (parseFloat(latestPersonalPeriod?.personalTaxes) || 0);
-    
-    // Calculate total annual debt service
+
+    // Personal monthly debt = Personal Statement monthlies ONLY.
     const monthlyDebtPayment = (parseFloat(personalLiabilities.creditCardsMonthly) || 0) +
                                (parseFloat(personalLiabilities.mortgagesMonthly) || 0) +
                                (parseFloat(personalLiabilities.vehicleLoansMonthly) || 0) +
-                               (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0) +
-                               debts.reduce((sum, debt) => sum + (parseFloat(debt.payment) || 0), 0);
+                               (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0);
     const annualDebtService = monthlyDebtPayment * 12;
-    
+
+    // BUSINESS existing debt service (from Existing Debts tab) — used as part of
+    // the Business/Proposed DSCR denominator, NOT the personal ratios.
+    const businessExistingAnnualDebtService = debts.reduce(
+      (sum, debt) => sum + (parseFloat(debt.payment) || 0) * 12,
+      0
+    );
+
     // Proposed loan annual P&I — single source of truth (SBA Loan amount as principal)
     const proposedLoanAnnualPayment = calculateLoanAnnualDebtService(
       uses,
@@ -175,8 +185,8 @@ export const FinancialAnalysis = () => {
     );
 
     const proposedAnnualDebtService = proposedLoanAnnualPayment;
-    // Total Proposed Debt Service = Existing Business Debt + New Loan P&I + SBA Annual Service Fee
-    const totalProposedAnnualDebtService = annualDebtService + proposedLoanAnnualPayment + sbaAnnualServiceFee;
+    // Total Proposed Debt Service (BUSINESS) = Existing Business Debt + New Loan P&I + SBA Annual Service Fee
+    const totalProposedAnnualDebtService = businessExistingAnnualDebtService + proposedLoanAnnualPayment + sbaAnnualServiceFee;
 
     const monthlyPersonalIncome = personalIncome / 12;
     const personalDebtToIncome = monthlyPersonalIncome > 0 ? (monthlyDebtPayment / monthlyPersonalIncome) * 100 : 0;
