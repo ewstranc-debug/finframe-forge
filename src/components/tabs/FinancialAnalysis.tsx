@@ -459,6 +459,7 @@ export const FinancialAnalysis = () => {
         savingsRate: personalSavingsRate,
         liquidityRatio: personalLiquidityRatio,
         currentRatio: personalCurrentRatio,
+        contingentLiabilities,
       },
       business: {
         revenue: businessRevenue,
