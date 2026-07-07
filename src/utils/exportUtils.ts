@@ -356,6 +356,7 @@ export const exportToExcel = (allData: ExportData) => {
     ['Net Worth', allData.ratios.personal.netWorth],
     ['Total Assets', allData.ratios.personal.totalAssets],
     ['Total Liabilities', allData.ratios.personal.totalLiabilities],
+    ['Contingent Liabilities (Guaranteed Business Debt)', (allData.ratios.personal as any).contingentLiabilities || 0],
     ['Liquid Assets', allData.ratios.personal.liquidAssets],
     ['Annual Income', allData.ratios.personal.totalIncome],
     ['Debt-to-Income %', allData.ratios.personal.debtToIncome],
