@@ -533,11 +533,13 @@ export const FinancialAnalysis = () => {
     try {
       // Calculate comprehensive metrics for analysis
       const totalPersonalAssets = Object.values(personalAssets).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-      const totalPersonalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) + 
+      // Personal liabilities exclude business Existing Debts (those are a
+      // contingent guaranteed liability, tracked separately).
+      const totalPersonalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) +
                                        (parseFloat(personalLiabilities.mortgages) || 0) +
                                        (parseFloat(personalLiabilities.vehicleLoans) || 0) +
-                                       (parseFloat(personalLiabilities.otherLiabilities) || 0) +
-                                       debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
+                                       (parseFloat(personalLiabilities.otherLiabilities) || 0);
+      const contingentBusinessDebt = debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
       
       // Calculate business metrics
       const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
