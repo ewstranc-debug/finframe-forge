@@ -1140,6 +1140,10 @@ export const FinancialAnalysis = () => {
                         <p className="text-sm text-muted-foreground font-semibold">
                           Business DSCR - {ratios.dscr.isProjection ? 'Projected' : 'FYE'}
                         </p>
+                        <p className="text-[10px] text-muted-foreground italic">
+                          Pro forma: last FY cash flow vs post-close debt service
+                        </p>
+
                         <p
                           className={`text-2xl font-bold ${
                             !ratios.dscr.fullYear || ratios.dscr.fullYear.dscr === 0
