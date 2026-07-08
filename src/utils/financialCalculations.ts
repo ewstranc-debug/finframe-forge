@@ -124,12 +124,28 @@ export const calculateBusinessEBITDA = (period: BusinessPeriodData, annualize: b
                    (parseFloat(period.rentExpense) || 0) +
                    (parseFloat(period.officersComp) || 0) +
                    (parseFloat(period.otherExpenses) || 0);
-  // Non-recurring adjustment flows into EBITDA/CFADS for DSCR/FCCR. Does NOT
-  // affect gross profit or net income per books (those are computed from raw
-  // P&L lines directly in the Business Financials tab).
-  const nonRecurring = parseFloat(period.nonRecurringAdjustment || "0") || 0;
-  return (revenue - expenses + nonRecurring) * factor;
+  return (revenue - expenses) * factor;
 };
+
+/**
+ * Non-recurring adjustment (annualized when annualize=true). Positive value
+ * ADDS to EBITDA/CFADS (removes one-time expense); negative value SUBTRACTS
+ * (removes one-time income). Does NOT affect Net Income per books, Gross
+ * Profit, or CCC.
+ */
+export const getNonRecurringAdjustment = (period: BusinessPeriodData, annualize: boolean = false): number => {
+  const months = parseFloat(period.periodMonths) || 12;
+  const factor = annualize ? (12 / months) : 1;
+  return (parseFloat(period.nonRecurringAdjustment || "0") || 0) * factor;
+};
+
+/**
+ * Adjusted EBITDA = EBITDA + Non-recurring adjustment. Used for DSCR/FCCR/CFADS.
+ */
+export const calculateAdjustedBusinessEBITDA = (period: BusinessPeriodData, annualize: boolean = false): number => {
+  return calculateBusinessEBITDA(period, annualize) + getNonRecurringAdjustment(period, annualize);
+};
+
 
 
 /**
