@@ -401,7 +401,10 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
                           (parseFloat(businessPeriod.operatingExpenses) || 0) +
                           (parseFloat(businessPeriod.rentExpense) || 0) +
                           (parseFloat(businessPeriod.otherExpenses) || 0);
-  const businessEbitda = (businessRevenue - businessExpenses) * annualizationFactor;
+  // Non-recurring adjustment (positive removes one-time expense, negative
+  // removes one-time income). Flows into EBITDA/CFADS/DSCR/FCCR only.
+  const nonRecurringAdj = (parseFloat(businessPeriod.nonRecurringAdjustment || "0") || 0) * annualizationFactor;
+  const businessEbitda = (businessRevenue - businessExpenses) * annualizationFactor + nonRecurringAdj;
 
   const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
   const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
@@ -436,31 +439,29 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
   const estimatedTaxOnOfficersComp = officersComp * 0.30;
   const rentAddback = includeRentAddback ? (parseFloat(businessPeriod.rentExpense) || 0) * annualizationFactor : 0;
 
-  // Existing business debt (annual P&I from Existing Debts tab)
+  // Existing business debt (annual P&I) — only debts flagged includeInDSCR (undefined defaults to true).
   const existingDebtPayment = debts.reduce((sum, debt) => {
+    if (debt.includeInDSCR === false) return sum;
     const payment = parseFloat(debt.payment) || 0;
     return sum + (payment * 12);
   }, 0);
 
-  // Personal debt service — subtracted from net cash (not in the denominator)
   const personalDebtPayment =
     (parseFloat(personalLiabilitiesMonthly.creditCardsMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.mortgagesMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.vehicleLoansMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.otherLiabilitiesMonthly) || 0) * 12;
 
-  // Net cash available for debt service
   const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp + rentAddback - personalDebtPayment;
 
-  // Proposed-loan principal = SBA Loan plug (the same figure shown on Summary)
   const equity = parseFloat(equityInjection) || 0;
   const guaranteePct = parseFloat(guaranteePercent) || 75;
   const sbaLoanAmount = computeSBALoanAmount(uses, equity, guaranteePct, financeGuaranteeFee);
   const proposedDebtPayment = computeNewLoanAnnualPayment(sbaLoanAmount, interestRate, termMonths);
   const sbaAnnualServiceFee = computeSBAAnnualServiceFee(sbaLoanAmount, guaranteePct);
 
-  // DSCR denominator: 3 auditable line items
   const annualDebtService = existingDebtPayment + proposedDebtPayment + sbaAnnualServiceFee;
+
   const dscr = annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
 
   return {
