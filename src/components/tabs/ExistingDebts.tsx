@@ -57,6 +57,11 @@ export const ExistingDebts = () => {
     }));
   }, [debts, setDebts, calculateMonthlyPayment]);
 
+  const setDebtInclude = useCallback((id: string, include: boolean) => {
+    setDebts(debts.map(d => d.id === id ? { ...d, includeInDSCR: include } : d));
+  }, [debts, setDebts]);
+
+
   // Calculate maturity date and remaining term for each debt
   const debtMetrics = useMemo(() => {
     return debts.map(debt => {
