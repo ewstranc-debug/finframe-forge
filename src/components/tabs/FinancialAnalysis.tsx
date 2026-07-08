@@ -237,6 +237,7 @@ export const FinancialAnalysis = () => {
       const otherIncome = parseFloat(period.otherIncome) || 0;
       const otherExpenses = parseFloat(period.otherExpenses) || 0;
       const addbacks = parseFloat(period.addbacks) || 0;
+      const nonRecurringAdj = parseFloat(period.nonRecurringAdjustment || "0") || 0;
       
       const grossProfit = revenue - cogs;
       const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
@@ -245,25 +246,22 @@ export const FinancialAnalysis = () => {
       const periodMonths = parseFloat(period.periodMonths) || 12;
       const annualizationFactor = 12 / periodMonths;
       
-      // EBITDA = Revenue + Other Income - COGS - OpEx - Rent - Officers Comp - Other Expenses + Addbacks
-      // For interim periods, annualize the EBITDA
-      const rawEbitda = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks;
+      // EBITDA (adjusted) = Revenue + Other Income - COGS - OpEx - Rent - Officers Comp - Other Expenses + Addbacks + Non-recurring Adjustment
+      // For interim periods, annualize the EBITDA.
+      const rawEbitda = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks + nonRecurringAdj;
       const ebitda = rawEbitda * annualizationFactor;
       
-      const ebit = rawEbitda - depreciation - amortization;
+      // Net income per books EXCLUDES the non-recurring adjustment.
+      const rawEbitdaBook = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks;
+      const ebit = rawEbitdaBook - depreciation - amortization;
       const netIncome = ebit - interest - taxes;
       const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
       
-      // Business DSCR — BUSINESS-level debt service only.
-      // Denominator = Existing Business Debt + New Loan P&I + SBA Annual Service Fee.
-      // Personal debt is intentionally excluded here.
       const totalDebtService = totalProposedAnnualDebtService;
       const businessDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
-      // existing = numerator / existing business DS only
       const existingDSCR = businessExistingAnnualDebtService > 0
         ? ebitda / businessExistingAnnualDebtService
         : 0;
-      // proposed = numerator / total (existing + new loan + SBA fee)
       const proposedDSCR = businessDSCR;
 
       return {
@@ -287,6 +285,7 @@ export const FinancialAnalysis = () => {
         otherIncome,
         otherExpenses,
         addbacks,
+        nonRecurringAdjustment: nonRecurringAdj * annualizationFactor,
         periodLabel: businessPeriodLabels[periodIndex] || `Period ${periodIndex + 1}`,
         periodMonths: period.periodMonths,
         proposedLoanAnnualPayment,
@@ -295,6 +294,7 @@ export const FinancialAnalysis = () => {
         totalDebtService,
       };
     };
+
     
     // Use centralized period classification to ensure consistency with Summary tab
     const periodClassifications = classifyPeriods(businessPeriods, businessPeriodLabels);
