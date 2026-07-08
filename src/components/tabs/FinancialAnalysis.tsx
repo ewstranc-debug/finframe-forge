@@ -330,13 +330,18 @@ export const FinancialAnalysis = () => {
     const businessOtherIncome = parseFloat(latestBusinessPeriod?.otherIncome) || 0;
     const businessOtherExpenses = parseFloat(latestBusinessPeriod?.otherExpenses) || 0;
     const businessAddbacks = parseFloat(latestBusinessPeriod?.addbacks) || 0;
+    const businessNonRecurring = parseFloat(latestBusinessPeriod?.nonRecurringAdjustment || "0") || 0;
     
     const businessGrossProfit = businessRevenue - businessCOGS;
     const businessGrossMargin = businessRevenue > 0 ? (businessGrossProfit / businessRevenue) * 100 : 0;
-    const businessEBITDA = (businessRevenue + businessOtherIncome) - businessCOGS - businessOpEx - businessRentExpense - businessOfficersComp - businessOtherExpenses + businessAddbacks;
-    const businessEBIT = businessEBITDA - businessDepreciation - businessAmortization;
+    // Book EBITDA (excludes non-recurring adj) — used ONLY for net income per books.
+    const businessEBITDABook = (businessRevenue + businessOtherIncome) - businessCOGS - businessOpEx - businessRentExpense - businessOfficersComp - businessOtherExpenses + businessAddbacks;
+    // Adjusted EBITDA — used for cards/FCCR/DSCR/CFADS.
+    const businessEBITDA = businessEBITDABook + businessNonRecurring;
+    const businessEBIT = businessEBITDABook - businessDepreciation - businessAmortization;
     const businessNetIncome = businessEBIT - businessInterest - businessTaxes;
     const businessNetMargin = businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0;
+
     
     const latestBalanceSheet = businessBalanceSheetPeriods[2] || businessBalanceSheetPeriods[1] || businessBalanceSheetPeriods[0];
     const businessCash = parseFloat(latestBalanceSheet?.cash) || 0;
