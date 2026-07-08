@@ -16,7 +16,9 @@ export const ExistingDebts = () => {
     payment: "0",
     rate: "0",
     term: "0",
+    includeInDSCR: true,
   };
+
 
   const { addItem, removeItem, canRemove } = useFinancialList({
     items: debts,
