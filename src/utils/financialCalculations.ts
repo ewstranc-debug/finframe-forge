@@ -124,9 +124,13 @@ export const calculateBusinessEBITDA = (period: BusinessPeriodData, annualize: b
                    (parseFloat(period.rentExpense) || 0) +
                    (parseFloat(period.officersComp) || 0) +
                    (parseFloat(period.otherExpenses) || 0);
-  
-  return (revenue - expenses) * factor;
+  // Non-recurring adjustment flows into EBITDA/CFADS for DSCR/FCCR. Does NOT
+  // affect gross profit or net income per books (those are computed from raw
+  // P&L lines directly in the Business Financials tab).
+  const nonRecurring = parseFloat(period.nonRecurringAdjustment || "0") || 0;
+  return (revenue - expenses + nonRecurring) * factor;
 };
+
 
 /**
  * Calculate EBIT (EBITDA less D&A)
