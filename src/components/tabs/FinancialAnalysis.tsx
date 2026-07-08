@@ -1041,7 +1041,7 @@ export const FinancialAnalysis = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Savings Rate</p>
+                        <p className="text-sm text-muted-foreground">Cash Retention Rate</p>
                         <p className={`text-xl font-bold ${ratios.personal.savingsRate < 10 ? 'text-destructive' : ratios.personal.savingsRate < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
                           {ratios.personal.savingsRate.toFixed(1)}%
                         </p>
@@ -1050,10 +1050,11 @@ export const FinancialAnalysis = () => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
-                        <p className="font-semibold">Personal Savings Rate:</p>
-                        <p>Annual Income: ${ratios.personal.totalIncome.toLocaleString()}</p>
-                        <p>Annual Expenses: ${ratios.personal.totalExpenses.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Savings = ((Income - Expenses) / Income) × 100</p>
+                        <p className="font-semibold">Cash Retention Rate:</p>
+                        <p>Total Cash Income: ${((ratios.personal as any).totalCashIncome || 0).toLocaleString()}</p>
+                        <p>− Personal Taxes: ${((ratios.personal as any).personalTaxes || 0).toLocaleString()}</p>
+                        <p>− Cost of Living: ${((ratios.personal as any).costOfLiving || 0).toLocaleString()}</p>
+                        <p className="border-t pt-1 mt-1">Rate = (Cash Income − Taxes − COL) / Cash Income</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -1063,11 +1064,14 @@ export const FinancialAnalysis = () => {
                       <div className="space-y-1 cursor-help">
                         <p className="text-sm text-muted-foreground">Liquidity Ratio</p>
                         <p className={`text-xl font-bold ${ratios.personal.liquidityRatio < 0.5 ? 'text-destructive' : ratios.personal.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.personal.liquidityRatio.toFixed(2)}
+                          {ratios.personal.liquidityRatio > 0 && ratios.personal.liquidityRatio < 0.1
+                            ? ratios.personal.liquidityRatio.toFixed(3)
+                            : ratios.personal.liquidityRatio.toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
                       </div>
                     </TooltipTrigger>
+
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-semibold">Personal Liquidity:</p>
