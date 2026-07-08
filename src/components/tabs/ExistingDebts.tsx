@@ -168,7 +168,7 @@ export const ExistingDebts = () => {
         </CardHeader>
         <CardContent>
           <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
-            <div className="grid grid-cols-8 bg-muted font-medium text-sm min-w-[900px]">
+            <div className="grid grid-cols-9 bg-muted font-medium text-sm min-w-[980px]">
               <div className="p-3 border-r border-border">Creditor</div>
               <div className="p-3 border-r border-border">Balance</div>
               <div className="p-3 border-r border-border">Monthly Pmt</div>
@@ -196,70 +196,96 @@ export const ExistingDebts = () => {
                 </div>
               </div>
               <div className="p-3 border-r border-border">Maturity</div>
+              <div className="p-3 border-r border-border">
+                <div className="flex items-center gap-1 justify-center">
+                  In DSCR?
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      When unchecked, this debt's payment is EXCLUDED from Existing Annual Debt Service, Business/Global DSCR, FCCR, and the DSCR build-up. Balance still counts in totals and Contingent Liabilities.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </div>
               <div className="p-3">Actions</div>
             </div>
 
-            {debts.map((debt, index) => (
-              <div key={debt.id} className="grid grid-cols-8 border-b border-border min-w-[900px]">
-                <div className="border-r border-border bg-secondary/30">
-                  <EditableCell
-                    value={debt.creditor}
-                    onChange={(val) => updateDebt(debt.id, "creditor", val)}
-                    type="text"
-                  />
+            {debts.map((debt, index) => {
+              const included = debt.includeInDSCR !== false;
+              return (
+                <div
+                  key={debt.id}
+                  className={`grid grid-cols-9 border-b border-border min-w-[980px] ${included ? '' : 'opacity-70'}`}
+                >
+                  <div className="border-r border-border bg-secondary/30">
+                    <EditableCell
+                      value={debt.creditor}
+                      onChange={(val) => updateDebt(debt.id, "creditor", val)}
+                      type="text"
+                    />
+                  </div>
+                  <div className="border-r border-border">
+                    <EditableCell
+                      value={debt.balance}
+                      onChange={(val) => updateDebt(debt.id, "balance", val)}
+                      type="currency"
+                    />
+                  </div>
+                  <div className="border-r border-border">
+                    <EditableCell
+                      value={debt.payment}
+                      onChange={(val) => updateDebt(debt.id, "payment", val)}
+                      type="currency"
+                    />
+                  </div>
+                  <div className="border-r border-border">
+                    <EditableCell
+                      value={debt.rate}
+                      onChange={(val) => updateDebt(debt.id, "rate", val)}
+                      type="percentage"
+                    />
+                  </div>
+                  <div className="border-r border-border">
+                    <EditableCell
+                      value={debt.term}
+                      onChange={(val) => updateDebt(debt.id, "term", val)}
+                      type="number"
+                    />
+                  </div>
+                  <div className="p-3 border-r border-border text-muted-foreground text-center">
+                    {debtMetrics[index]?.remainingTerm > 0
+                      ? `${debtMetrics[index].remainingTerm} mo`
+                      : '-'}
+                  </div>
+                  <div className="p-3 border-r border-border text-muted-foreground text-center">
+                    {debtMetrics[index]?.maturityDate}
+                  </div>
+                  <div className="p-3 border-r border-border flex items-center justify-center">
+                    <Checkbox
+                      checked={included}
+                      onCheckedChange={(v) => setDebtInclude(debt.id, v === true)}
+                      aria-label="Include in DSCR"
+                    />
+                  </div>
+                  <div className="p-2 flex justify-center">
+                    {canRemove && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(debt.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="border-r border-border">
-                  <EditableCell
-                    value={debt.balance}
-                    onChange={(val) => updateDebt(debt.id, "balance", val)}
-                    type="currency"
-                  />
-                </div>
-                <div className="border-r border-border">
-                  <EditableCell
-                    value={debt.payment}
-                    onChange={(val) => updateDebt(debt.id, "payment", val)}
-                    type="currency"
-                  />
-                </div>
-                <div className="border-r border-border">
-                  <EditableCell
-                    value={debt.rate}
-                    onChange={(val) => updateDebt(debt.id, "rate", val)}
-                    type="percentage"
-                  />
-                </div>
-                <div className="border-r border-border">
-                  <EditableCell
-                    value={debt.term}
-                    onChange={(val) => updateDebt(debt.id, "term", val)}
-                    type="number"
-                  />
-                </div>
-                <div className="p-3 border-r border-border text-muted-foreground text-center">
-                  {debtMetrics[index]?.remainingTerm > 0 
-                    ? `${debtMetrics[index].remainingTerm} mo`
-                    : '-'}
-                </div>
-                <div className="p-3 border-r border-border text-muted-foreground text-center">
-                  {debtMetrics[index]?.maturityDate}
-                </div>
-                <div className="p-2 flex justify-center">
-                  {canRemove && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeItem(debt.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
-            <div className="grid grid-cols-8 bg-destructive/10 min-w-[900px]">
+            <div className="grid grid-cols-9 bg-destructive/10 min-w-[980px]">
               <div className="p-3 border-r border-border font-bold">Total</div>
               <div className="p-3 border-r border-border font-bold">
                 {formatCurrency(totals.totalBalance)}
@@ -273,22 +299,40 @@ export const ExistingDebts = () => {
               <div className="p-3 border-r border-border"></div>
               <div className="p-3 border-r border-border"></div>
               <div className="p-3 border-r border-border"></div>
+              <div className="p-3 border-r border-border"></div>
               <div className="p-3"></div>
             </div>
           </div>
 
-          {/* Annual Debt Service Summary */}
-          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="font-medium">Total Annual Debt Service:</span>
-              <span className="text-lg font-bold text-destructive">
-                {formatCurrency(totals.totalAnnualDebtService)}
-              </span>
+          {/* Totals Summary */}
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total Balance (all rows):</span>
+                <span className="text-lg font-bold">
+                  {formatCurrency(totals.totalBalance)}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Included in Contingent Liabilities regardless of DSCR flag.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Monthly payment × 12 months. This amount is included in DSCR calculations.
-            </p>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Annual Debt Service (DSCR rows only):</span>
+                <span className="text-lg font-bold text-destructive">
+                  {formatCurrency(totals.dscrAnnualDebtService)}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Monthly payment × 12, DSCR-flagged rows only.
+                {totals.excludedCount > 0 && (
+                  <> {totals.excludedCount} of {debts.length} row{debts.length === 1 ? '' : 's'} excluded from DSCR.</>
+                )}
+              </p>
+            </div>
           </div>
+
         </CardContent>
       </Card>
     </div>
