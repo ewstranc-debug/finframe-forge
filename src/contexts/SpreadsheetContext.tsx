@@ -88,7 +88,10 @@ export interface Debt {
   payment: string;
   rate: string;
   term: string;
+  /** When false, this debt is excluded from Existing Annual DS, Business/Global DSCR, FCCR, and DSCR build-up. Balance still counts toward totals + Contingent Liabilities. Missing/undefined = included (default true). */
+  includeInDSCR?: boolean;
 }
+
 
 export interface AffiliateIncomeData {
   revenue: string;
