@@ -180,8 +180,10 @@ export const BusinessFinancials = () => {
                           (parseFloat(period.section179) || 0) +
                           (parseFloat(period.interest) || 0) +
                           (parseFloat(period.addbacks) || 0);
-    return netIncome + addbacksTotal;
+    const nonRecurring = parseFloat(period.nonRecurringAdjustment || "0") || 0;
+    return netIncome + addbacksTotal + nonRecurring;
   };
+
 
   const calculateEBT = (periodIndex: number) => {
     // Line 15 = Line 5 (Total Income) - Line 14 (Total Deductions)
