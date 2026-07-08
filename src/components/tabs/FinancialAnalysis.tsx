@@ -1817,7 +1817,10 @@ export const FinancialAnalysis = () => {
                       <div className="space-y-1 cursor-help">
                         <p className="text-sm text-muted-foreground">Global Liquidity</p>
                         <p className={`text-xl font-bold ${ratios.global.liquidityRatio < 0.5 ? 'text-destructive' : ratios.global.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.liquidityRatio.toFixed(2)}
+                          {ratios.global.liquidityRatio > 0 && ratios.global.liquidityRatio < 0.1
+                            ? ratios.global.liquidityRatio.toFixed(3)
+                            : ratios.global.liquidityRatio.toFixed(2)}
+
                         </p>
                         <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
                       </div>
