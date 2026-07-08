@@ -2,10 +2,12 @@ import { useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, HelpCircle } from "lucide-react";
 import { useSpreadsheet, type Debt } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFinancialList } from "@/hooks/useFinancialList";
+
 
 export const ExistingDebts = () => {
   const { debts, setDebts } = useSpreadsheet();
