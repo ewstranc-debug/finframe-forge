@@ -1981,6 +1981,8 @@ export const FinancialAnalysis = () => {
                     </CardHeader>
                     <CardContent>
                       {(() => {
+                        const fyNonRec = (ratios.dscr.fullYear as any)?.nonRecurringAdjustment || 0;
+                        const intNonRec = (ratios.dscr.interim as any)?.nonRecurringAdjustment || 0;
                         const ebitdaChartData = [
                           ratios.dscr.fullYear ? {
                             name: ratios.dscr.fullYear.periodLabel || 'Full Year',
@@ -1992,6 +1994,7 @@ export const FinancialAnalysis = () => {
                             'Officers Comp': -ratios.dscr.fullYear.officersComp,
                             'Other Exp': -ratios.dscr.fullYear.otherExpenses,
                             'Addbacks': ratios.dscr.fullYear.addbacks,
+                            'Non-Recurring Adj': fyNonRec,
                             'EBITDA': ratios.dscr.fullYear.ebitda,
                           } : null,
                           ratios.dscr.interim ? {
@@ -2004,11 +2007,13 @@ export const FinancialAnalysis = () => {
                             'Officers Comp': -ratios.dscr.interim.officersComp,
                             'Other Exp': -ratios.dscr.interim.otherExpenses,
                             'Addbacks': ratios.dscr.interim.addbacks,
+                            'Non-Recurring Adj': intNonRec,
                             'EBITDA': ratios.dscr.interim.ebitda,
                           } : null
                         ].filter(Boolean);
                         
                         if (ebitdaChartData.length === 0) return null;
+                        const showNonRec = fyNonRec !== 0 || intNonRec !== 0;
                         
                         return (
                           <div style={{ width: '100%', height: 350 }}>
@@ -2027,11 +2032,13 @@ export const FinancialAnalysis = () => {
                                 <Bar dataKey="Officers Comp" fill="#fbbf24" />
                                 <Bar dataKey="Other Exp" fill="#dc2626" />
                                 <Bar dataKey="Addbacks" fill="#3b82f6" />
+                                {showNonRec && <Bar dataKey="Non-Recurring Adj" fill="#a855f7" />}
                                 <Bar dataKey="EBITDA" fill="#8b5cf6" strokeWidth={2} />
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
                         );
+
                       })()}
                     </CardContent>
                   </Card>
