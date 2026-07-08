@@ -144,12 +144,25 @@ export const FinancialAnalysis = () => {
     const contingentLiabilities = debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
 
     const latestPersonalPeriod = personalPeriods[2] || personalPeriods[1] || personalPeriods[0];
-    const personalIncome = (parseFloat(latestPersonalPeriod?.salary) || 0) + 
-                          (parseFloat(latestPersonalPeriod?.bonuses) || 0) + 
+    // W-2 income (salary + bonuses) — narrow measure for the W-2 card.
+    const personalW2Income = (parseFloat(latestPersonalPeriod?.salary) || 0) +
+                             (parseFloat(latestPersonalPeriod?.bonuses) || 0);
+    // Total Personal Cash Income — salary + bonuses + investments + rental +
+    // retirement + other + K-1 distributions. Used for Cash Retention Rate and
+    // as the wider Total Cash Income card denominator.
+    const personalTotalCashIncome = personalW2Income +
+                                    (parseFloat(latestPersonalPeriod?.investments) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.rentalIncome) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.retirementIncome) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.otherIncome) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.k1Distributions) || 0);
+    // Personal income used for DTI: salary+bonuses+investments+rental (kept as-is).
+    const personalIncome = personalW2Income +
                           (parseFloat(latestPersonalPeriod?.investments) || 0) +
                           (parseFloat(latestPersonalPeriod?.rentalIncome) || 0);
-    const personalExpenses = (parseFloat(latestPersonalPeriod?.costOfLiving) || 0) + 
-                            (parseFloat(latestPersonalPeriod?.personalTaxes) || 0);
+    const personalCostOfLiving = parseFloat(latestPersonalPeriod?.costOfLiving) || 0;
+    const personalTaxesPaid = parseFloat(latestPersonalPeriod?.personalTaxes) || 0;
+    const personalExpenses = personalCostOfLiving + personalTaxesPaid;
 
     // Personal monthly debt = Personal Statement monthlies ONLY.
     const monthlyDebtPayment = (parseFloat(personalLiabilities.creditCardsMonthly) || 0) +
@@ -158,10 +171,14 @@ export const FinancialAnalysis = () => {
                                (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0);
     const annualDebtService = monthlyDebtPayment * 12;
 
-    // BUSINESS existing debt service (from Existing Debts tab) — used as part of
-    // the Business/Proposed DSCR denominator, NOT the personal ratios.
+    // BUSINESS existing debt service — Existing Debts flagged includeInDSCR only.
+    // Rows with includeInDSCR === false are EXCLUDED here (but still count toward
+    // Contingent Liabilities balance).
     const businessExistingAnnualDebtService = debts.reduce(
-      (sum, debt) => sum + (parseFloat(debt.payment) || 0) * 12,
+      (sum, debt) => {
+        if (debt.includeInDSCR === false) return sum;
+        return sum + (parseFloat(debt.payment) || 0) * 12;
+      },
       0
     );
 
@@ -188,15 +205,20 @@ export const FinancialAnalysis = () => {
     );
 
     const proposedAnnualDebtService = proposedLoanAnnualPayment;
-    // Total Proposed Debt Service (BUSINESS) = Existing Business Debt + New Loan P&I + SBA Annual Service Fee
+    // Total Proposed Debt Service (BUSINESS) = Existing Business Debt (DSCR-flagged only) + New Loan P&I + SBA Annual Service Fee
     const totalProposedAnnualDebtService = businessExistingAnnualDebtService + proposedLoanAnnualPayment + sbaAnnualServiceFee;
 
     const monthlyPersonalIncome = personalIncome / 12;
     const personalDebtToIncome = monthlyPersonalIncome > 0 ? (monthlyDebtPayment / monthlyPersonalIncome) * 100 : 0;
     const personalDebtToAssets = totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0;
-    const personalSavingsRate = personalIncome > 0 ? ((personalIncome - personalExpenses) / personalIncome) * 100 : 0;
+    // Cash Retention Rate = (Total Cash Income - Personal Taxes - Cost of Living) / Total Cash Income
+    // (Replaces the old "Savings Rate" which mismatched numerator/denominator scopes.)
+    const personalSavingsRate = personalTotalCashIncome > 0
+      ? ((personalTotalCashIncome - personalTaxesPaid - personalCostOfLiving) / personalTotalCashIncome) * 100
+      : 0;
     const personalLiquidityRatio = totalPersonalLiabilities > 0 ? liquidAssets / totalPersonalLiabilities : 0;
     const personalCurrentRatio = totalPersonalLiabilities > 0 ? totalPersonalAssets / totalPersonalLiabilities : 0;
+
     
     // BUSINESS METRICS - Calculate for each period
     const calcBusinessMetrics = (periodIndex: number) => {
