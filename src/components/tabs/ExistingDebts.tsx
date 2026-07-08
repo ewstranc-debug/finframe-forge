@@ -101,11 +101,17 @@ export const ExistingDebts = () => {
     });
   }, [debts]);
 
-  // Memoize totals
+  // Memoize totals — total balance covers ALL debts, but DSCR-eligible annual
+  // debt service EXCLUDES debts where includeInDSCR === false.
   const totals = useMemo(() => {
     const totalBalance = debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
     const totalMonthlyPayment = debts.reduce((sum, debt) => sum + (parseFloat(debt.payment) || 0), 0);
-    const totalAnnualDebtService = totalMonthlyPayment * 12;
+    const dscrMonthlyPayment = debts.reduce((sum, debt) => {
+      if (debt.includeInDSCR === false) return sum;
+      return sum + (parseFloat(debt.payment) || 0);
+    }, 0);
+    const dscrAnnualDebtService = dscrMonthlyPayment * 12;
+    const excludedCount = debts.filter((d) => d.includeInDSCR === false).length;
     const weightedAvgRate = totalBalance > 0 
       ? debts.reduce((sum, debt) => {
           const balance = parseFloat(debt.balance) || 0;
@@ -117,10 +123,12 @@ export const ExistingDebts = () => {
     return {
       totalBalance,
       totalMonthlyPayment,
-      totalAnnualDebtService,
+      dscrAnnualDebtService,
+      excludedCount,
       weightedAvgRate,
     };
   }, [debts]);
+
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { 
