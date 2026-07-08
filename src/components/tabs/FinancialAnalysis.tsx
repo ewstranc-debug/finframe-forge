@@ -958,16 +958,31 @@ export const FinancialAnalysis = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Annual Income</p>
+                        <p className="text-sm text-muted-foreground">W-2 Income (latest yr)</p>
                         <p className="text-xl font-bold text-foreground">
-                          ${ratios.personal.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          ${((ratios.personal as any).w2Income || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </p>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Total personal income from salary, bonuses, investments, and rental income</p>
+                      <p>W-2 income (salary + bonuses) from the latest personal period.</p>
                     </TooltipContent>
                   </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="space-y-1 cursor-help">
+                        <p className="text-sm text-muted-foreground">Total Cash Income</p>
+                        <p className="text-xl font-bold text-foreground">
+                          ${((ratios.personal as any).totalCashIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Salary + Bonuses + Investments + Rental + Retirement + Other + K-1 Distributions (latest period).</p>
+                    </TooltipContent>
+                  </Tooltip>
+
 
                   <Tooltip>
                     <TooltipTrigger asChild>
