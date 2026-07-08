@@ -525,17 +525,23 @@ export const FinancialAnalysis = () => {
         totalLiabilities: totalPersonalLiabilities,
         liquidAssets,
         totalIncome: personalIncome,
+        w2Income: personalW2Income,
+        totalCashIncome: personalTotalCashIncome,
         totalExpenses: personalExpenses,
+        costOfLiving: personalCostOfLiving,
+        personalTaxes: personalTaxesPaid,
         monthlyIncome: monthlyPersonalIncome,
         monthlyDebtPayment,
         annualDebtService,
         debtToIncome: personalDebtToIncome,
         debtToAssets: personalDebtToAssets,
+        // Cash Retention Rate (kept under savingsRate key for backward compat)
         savingsRate: personalSavingsRate,
         liquidityRatio: personalLiquidityRatio,
         currentRatio: personalCurrentRatio,
         contingentLiabilities,
       },
+
       business: {
         revenue: businessRevenue,
         cogs: businessCOGS,
