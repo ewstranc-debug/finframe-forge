@@ -55,7 +55,10 @@ export interface BusinessPeriodData {
   periodMonths: string;
   totalDeductionsInput: string;
   isProjection: boolean;
+  /** Non-recurring income (-) / expense (+) adjustment. Adds to CFADS/EBITDA for DSCR/FCCR; does NOT affect gross profit, net income per books, or CCC. Defaults to "0". */
+  nonRecurringAdjustment?: string;
 }
+
 
 export interface AssetData {
   liquidAssets: string;
