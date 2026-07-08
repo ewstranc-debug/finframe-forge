@@ -180,8 +180,10 @@ export const BusinessFinancials = () => {
                           (parseFloat(period.section179) || 0) +
                           (parseFloat(period.interest) || 0) +
                           (parseFloat(period.addbacks) || 0);
-    return netIncome + addbacksTotal;
+    const nonRecurring = parseFloat(period.nonRecurringAdjustment || "0") || 0;
+    return netIncome + addbacksTotal + nonRecurring;
   };
+
 
   const calculateEBT = (periodIndex: number) => {
     // Line 15 = Line 5 (Total Income) - Line 14 (Total Deductions)
@@ -731,6 +733,27 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
+                <tr>
+                  <td className="border border-border p-2 pl-6 sticky left-0 bg-background">
+                    <span title="Positive = add back a one-time expense. Negative = remove non-recurring income. Flows into CFADS/EBITDA/DSCR/FCCR only; does not affect gross profit, net income per books, or CCC.">
+                      Non-recurring income (−) / expense (+) adjustment
+                    </span>
+                  </td>
+                  {businessPeriods.map((_, i) => (
+                    <td key={i} className="border border-border">
+                      <EditableCell
+                        value={businessPeriods[i].nonRecurringAdjustment || "0"}
+                        onChange={(val) => updateField(i, "nonRecurringAdjustment", val)}
+                        type="currency"
+                        dataField={`nonRecurringAdjustment-${i}`}
+                        navScope="business-pl"
+                        navRow={12}
+                        navCol={i}
+                      />
+                    </td>
+                  ))}
+                </tr>
+
                 <tr className="bg-primary/20 font-bold">
                   <td className="border border-border p-2 sticky left-0 bg-primary/20">18. Cash Flow (for DSCR)</td>
                   {businessPeriods.map((_, i) => (

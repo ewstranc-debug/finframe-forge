@@ -55,7 +55,10 @@ export interface BusinessPeriodData {
   periodMonths: string;
   totalDeductionsInput: string;
   isProjection: boolean;
+  /** Non-recurring income (-) / expense (+) adjustment. Adds to CFADS/EBITDA for DSCR/FCCR; does NOT affect gross profit, net income per books, or CCC. Defaults to "0". */
+  nonRecurringAdjustment?: string;
 }
+
 
 export interface AssetData {
   liquidAssets: string;
@@ -85,7 +88,10 @@ export interface Debt {
   payment: string;
   rate: string;
   term: string;
+  /** When false, this debt is excluded from Existing Annual DS, Business/Global DSCR, FCCR, and DSCR build-up. Balance still counts toward totals + Contingent Liabilities. Missing/undefined = included (default true). */
+  includeInDSCR?: boolean;
 }
+
 
 export interface AffiliateIncomeData {
   revenue: string;

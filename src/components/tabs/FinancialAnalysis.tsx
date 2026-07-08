@@ -144,12 +144,25 @@ export const FinancialAnalysis = () => {
     const contingentLiabilities = debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
 
     const latestPersonalPeriod = personalPeriods[2] || personalPeriods[1] || personalPeriods[0];
-    const personalIncome = (parseFloat(latestPersonalPeriod?.salary) || 0) + 
-                          (parseFloat(latestPersonalPeriod?.bonuses) || 0) + 
+    // W-2 income (salary + bonuses) — narrow measure for the W-2 card.
+    const personalW2Income = (parseFloat(latestPersonalPeriod?.salary) || 0) +
+                             (parseFloat(latestPersonalPeriod?.bonuses) || 0);
+    // Total Personal Cash Income — salary + bonuses + investments + rental +
+    // retirement + other + K-1 distributions. Used for Cash Retention Rate and
+    // as the wider Total Cash Income card denominator.
+    const personalTotalCashIncome = personalW2Income +
+                                    (parseFloat(latestPersonalPeriod?.investments) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.rentalIncome) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.retirementIncome) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.otherIncome) || 0) +
+                                    (parseFloat(latestPersonalPeriod?.k1Distributions) || 0);
+    // Personal income used for DTI: salary+bonuses+investments+rental (kept as-is).
+    const personalIncome = personalW2Income +
                           (parseFloat(latestPersonalPeriod?.investments) || 0) +
                           (parseFloat(latestPersonalPeriod?.rentalIncome) || 0);
-    const personalExpenses = (parseFloat(latestPersonalPeriod?.costOfLiving) || 0) + 
-                            (parseFloat(latestPersonalPeriod?.personalTaxes) || 0);
+    const personalCostOfLiving = parseFloat(latestPersonalPeriod?.costOfLiving) || 0;
+    const personalTaxesPaid = parseFloat(latestPersonalPeriod?.personalTaxes) || 0;
+    const personalExpenses = personalCostOfLiving + personalTaxesPaid;
 
     // Personal monthly debt = Personal Statement monthlies ONLY.
     const monthlyDebtPayment = (parseFloat(personalLiabilities.creditCardsMonthly) || 0) +
@@ -158,10 +171,14 @@ export const FinancialAnalysis = () => {
                                (parseFloat(personalLiabilities.otherLiabilitiesMonthly) || 0);
     const annualDebtService = monthlyDebtPayment * 12;
 
-    // BUSINESS existing debt service (from Existing Debts tab) — used as part of
-    // the Business/Proposed DSCR denominator, NOT the personal ratios.
+    // BUSINESS existing debt service — Existing Debts flagged includeInDSCR only.
+    // Rows with includeInDSCR === false are EXCLUDED here (but still count toward
+    // Contingent Liabilities balance).
     const businessExistingAnnualDebtService = debts.reduce(
-      (sum, debt) => sum + (parseFloat(debt.payment) || 0) * 12,
+      (sum, debt) => {
+        if (debt.includeInDSCR === false) return sum;
+        return sum + (parseFloat(debt.payment) || 0) * 12;
+      },
       0
     );
 
@@ -188,15 +205,20 @@ export const FinancialAnalysis = () => {
     );
 
     const proposedAnnualDebtService = proposedLoanAnnualPayment;
-    // Total Proposed Debt Service (BUSINESS) = Existing Business Debt + New Loan P&I + SBA Annual Service Fee
+    // Total Proposed Debt Service (BUSINESS) = Existing Business Debt (DSCR-flagged only) + New Loan P&I + SBA Annual Service Fee
     const totalProposedAnnualDebtService = businessExistingAnnualDebtService + proposedLoanAnnualPayment + sbaAnnualServiceFee;
 
     const monthlyPersonalIncome = personalIncome / 12;
     const personalDebtToIncome = monthlyPersonalIncome > 0 ? (monthlyDebtPayment / monthlyPersonalIncome) * 100 : 0;
     const personalDebtToAssets = totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0;
-    const personalSavingsRate = personalIncome > 0 ? ((personalIncome - personalExpenses) / personalIncome) * 100 : 0;
+    // Cash Retention Rate = (Total Cash Income - Personal Taxes - Cost of Living) / Total Cash Income
+    // (Replaces the old "Savings Rate" which mismatched numerator/denominator scopes.)
+    const personalSavingsRate = personalTotalCashIncome > 0
+      ? ((personalTotalCashIncome - personalTaxesPaid - personalCostOfLiving) / personalTotalCashIncome) * 100
+      : 0;
     const personalLiquidityRatio = totalPersonalLiabilities > 0 ? liquidAssets / totalPersonalLiabilities : 0;
     const personalCurrentRatio = totalPersonalLiabilities > 0 ? totalPersonalAssets / totalPersonalLiabilities : 0;
+
     
     // BUSINESS METRICS - Calculate for each period
     const calcBusinessMetrics = (periodIndex: number) => {
@@ -215,6 +237,7 @@ export const FinancialAnalysis = () => {
       const otherIncome = parseFloat(period.otherIncome) || 0;
       const otherExpenses = parseFloat(period.otherExpenses) || 0;
       const addbacks = parseFloat(period.addbacks) || 0;
+      const nonRecurringAdj = parseFloat(period.nonRecurringAdjustment || "0") || 0;
       
       const grossProfit = revenue - cogs;
       const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
@@ -223,25 +246,22 @@ export const FinancialAnalysis = () => {
       const periodMonths = parseFloat(period.periodMonths) || 12;
       const annualizationFactor = 12 / periodMonths;
       
-      // EBITDA = Revenue + Other Income - COGS - OpEx - Rent - Officers Comp - Other Expenses + Addbacks
-      // For interim periods, annualize the EBITDA
-      const rawEbitda = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks;
+      // EBITDA (adjusted) = Revenue + Other Income - COGS - OpEx - Rent - Officers Comp - Other Expenses + Addbacks + Non-recurring Adjustment
+      // For interim periods, annualize the EBITDA.
+      const rawEbitda = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks + nonRecurringAdj;
       const ebitda = rawEbitda * annualizationFactor;
       
-      const ebit = rawEbitda - depreciation - amortization;
+      // Net income per books EXCLUDES the non-recurring adjustment.
+      const rawEbitdaBook = (revenue + otherIncome) - cogs - opEx - rentExpense - officersComp - otherExpenses + addbacks;
+      const ebit = rawEbitdaBook - depreciation - amortization;
       const netIncome = ebit - interest - taxes;
       const netMargin = revenue > 0 ? (netIncome / revenue) * 100 : 0;
       
-      // Business DSCR — BUSINESS-level debt service only.
-      // Denominator = Existing Business Debt + New Loan P&I + SBA Annual Service Fee.
-      // Personal debt is intentionally excluded here.
       const totalDebtService = totalProposedAnnualDebtService;
       const businessDSCR = totalDebtService > 0 ? ebitda / totalDebtService : 0;
-      // existing = numerator / existing business DS only
       const existingDSCR = businessExistingAnnualDebtService > 0
         ? ebitda / businessExistingAnnualDebtService
         : 0;
-      // proposed = numerator / total (existing + new loan + SBA fee)
       const proposedDSCR = businessDSCR;
 
       return {
@@ -265,6 +285,7 @@ export const FinancialAnalysis = () => {
         otherIncome,
         otherExpenses,
         addbacks,
+        nonRecurringAdjustment: nonRecurringAdj * annualizationFactor,
         periodLabel: businessPeriodLabels[periodIndex] || `Period ${periodIndex + 1}`,
         periodMonths: period.periodMonths,
         proposedLoanAnnualPayment,
@@ -273,6 +294,7 @@ export const FinancialAnalysis = () => {
         totalDebtService,
       };
     };
+
     
     // Use centralized period classification to ensure consistency with Summary tab
     const periodClassifications = classifyPeriods(businessPeriods, businessPeriodLabels);
@@ -308,13 +330,18 @@ export const FinancialAnalysis = () => {
     const businessOtherIncome = parseFloat(latestBusinessPeriod?.otherIncome) || 0;
     const businessOtherExpenses = parseFloat(latestBusinessPeriod?.otherExpenses) || 0;
     const businessAddbacks = parseFloat(latestBusinessPeriod?.addbacks) || 0;
+    const businessNonRecurring = parseFloat(latestBusinessPeriod?.nonRecurringAdjustment || "0") || 0;
     
     const businessGrossProfit = businessRevenue - businessCOGS;
     const businessGrossMargin = businessRevenue > 0 ? (businessGrossProfit / businessRevenue) * 100 : 0;
-    const businessEBITDA = (businessRevenue + businessOtherIncome) - businessCOGS - businessOpEx - businessRentExpense - businessOfficersComp - businessOtherExpenses + businessAddbacks;
-    const businessEBIT = businessEBITDA - businessDepreciation - businessAmortization;
+    // Book EBITDA (excludes non-recurring adj) — used ONLY for net income per books.
+    const businessEBITDABook = (businessRevenue + businessOtherIncome) - businessCOGS - businessOpEx - businessRentExpense - businessOfficersComp - businessOtherExpenses + businessAddbacks;
+    // Adjusted EBITDA — used for cards/FCCR/DSCR/CFADS.
+    const businessEBITDA = businessEBITDABook + businessNonRecurring;
+    const businessEBIT = businessEBITDABook - businessDepreciation - businessAmortization;
     const businessNetIncome = businessEBIT - businessInterest - businessTaxes;
     const businessNetMargin = businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0;
+
     
     const latestBalanceSheet = businessBalanceSheetPeriods[2] || businessBalanceSheetPeriods[1] || businessBalanceSheetPeriods[0];
     const businessCash = parseFloat(latestBalanceSheet?.cash) || 0;
@@ -498,17 +525,23 @@ export const FinancialAnalysis = () => {
         totalLiabilities: totalPersonalLiabilities,
         liquidAssets,
         totalIncome: personalIncome,
+        w2Income: personalW2Income,
+        totalCashIncome: personalTotalCashIncome,
         totalExpenses: personalExpenses,
+        costOfLiving: personalCostOfLiving,
+        personalTaxes: personalTaxesPaid,
         monthlyIncome: monthlyPersonalIncome,
         monthlyDebtPayment,
         annualDebtService,
         debtToIncome: personalDebtToIncome,
         debtToAssets: personalDebtToAssets,
+        // Cash Retention Rate (kept under savingsRate key for backward compat)
         savingsRate: personalSavingsRate,
         liquidityRatio: personalLiquidityRatio,
         currentRatio: personalCurrentRatio,
         contingentLiabilities,
       },
+
       business: {
         revenue: businessRevenue,
         cogs: businessCOGS,
@@ -925,16 +958,31 @@ export const FinancialAnalysis = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Annual Income</p>
+                        <p className="text-sm text-muted-foreground">W-2 Income (latest yr)</p>
                         <p className="text-xl font-bold text-foreground">
-                          ${ratios.personal.totalIncome.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          ${((ratios.personal as any).w2Income || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </p>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Total personal income from salary, bonuses, investments, and rental income</p>
+                      <p>W-2 income (salary + bonuses) from the latest personal period.</p>
                     </TooltipContent>
                   </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="space-y-1 cursor-help">
+                        <p className="text-sm text-muted-foreground">Total Cash Income</p>
+                        <p className="text-xl font-bold text-foreground">
+                          ${((ratios.personal as any).totalCashIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Salary + Bonuses + Investments + Rental + Retirement + Other + K-1 Distributions (latest period).</p>
+                    </TooltipContent>
+                  </Tooltip>
+
 
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -993,7 +1041,7 @@ export const FinancialAnalysis = () => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Savings Rate</p>
+                        <p className="text-sm text-muted-foreground">Cash Retention Rate</p>
                         <p className={`text-xl font-bold ${ratios.personal.savingsRate < 10 ? 'text-destructive' : ratios.personal.savingsRate < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
                           {ratios.personal.savingsRate.toFixed(1)}%
                         </p>
@@ -1002,10 +1050,11 @@ export const FinancialAnalysis = () => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="space-y-1">
-                        <p className="font-semibold">Personal Savings Rate:</p>
-                        <p>Annual Income: ${ratios.personal.totalIncome.toLocaleString()}</p>
-                        <p>Annual Expenses: ${ratios.personal.totalExpenses.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Savings = ((Income - Expenses) / Income) × 100</p>
+                        <p className="font-semibold">Cash Retention Rate:</p>
+                        <p>Total Cash Income: ${((ratios.personal as any).totalCashIncome || 0).toLocaleString()}</p>
+                        <p>− Personal Taxes: ${((ratios.personal as any).personalTaxes || 0).toLocaleString()}</p>
+                        <p>− Cost of Living: ${((ratios.personal as any).costOfLiving || 0).toLocaleString()}</p>
+                        <p className="border-t pt-1 mt-1">Rate = (Cash Income − Taxes − COL) / Cash Income</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -1015,11 +1064,14 @@ export const FinancialAnalysis = () => {
                       <div className="space-y-1 cursor-help">
                         <p className="text-sm text-muted-foreground">Liquidity Ratio</p>
                         <p className={`text-xl font-bold ${ratios.personal.liquidityRatio < 0.5 ? 'text-destructive' : ratios.personal.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.personal.liquidityRatio.toFixed(2)}
+                          {ratios.personal.liquidityRatio > 0 && ratios.personal.liquidityRatio < 0.1
+                            ? ratios.personal.liquidityRatio.toFixed(3)
+                            : ratios.personal.liquidityRatio.toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
                       </div>
                     </TooltipTrigger>
+
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-semibold">Personal Liquidity:</p>
@@ -1088,6 +1140,10 @@ export const FinancialAnalysis = () => {
                         <p className="text-sm text-muted-foreground font-semibold">
                           Business DSCR - {ratios.dscr.isProjection ? 'Projected' : 'FYE'}
                         </p>
+                        <p className="text-[10px] text-muted-foreground italic">
+                          Pro forma: last FY cash flow vs post-close debt service
+                        </p>
+
                         <p
                           className={`text-2xl font-bold ${
                             !ratios.dscr.fullYear || ratios.dscr.fullYear.dscr === 0
@@ -1765,7 +1821,10 @@ export const FinancialAnalysis = () => {
                       <div className="space-y-1 cursor-help">
                         <p className="text-sm text-muted-foreground">Global Liquidity</p>
                         <p className={`text-xl font-bold ${ratios.global.liquidityRatio < 0.5 ? 'text-destructive' : ratios.global.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.liquidityRatio.toFixed(2)}
+                          {ratios.global.liquidityRatio > 0 && ratios.global.liquidityRatio < 0.1
+                            ? ratios.global.liquidityRatio.toFixed(3)
+                            : ratios.global.liquidityRatio.toFixed(2)}
+
                         </p>
                         <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
                       </div>
@@ -1922,6 +1981,8 @@ export const FinancialAnalysis = () => {
                     </CardHeader>
                     <CardContent>
                       {(() => {
+                        const fyNonRec = (ratios.dscr.fullYear as any)?.nonRecurringAdjustment || 0;
+                        const intNonRec = (ratios.dscr.interim as any)?.nonRecurringAdjustment || 0;
                         const ebitdaChartData = [
                           ratios.dscr.fullYear ? {
                             name: ratios.dscr.fullYear.periodLabel || 'Full Year',
@@ -1933,6 +1994,7 @@ export const FinancialAnalysis = () => {
                             'Officers Comp': -ratios.dscr.fullYear.officersComp,
                             'Other Exp': -ratios.dscr.fullYear.otherExpenses,
                             'Addbacks': ratios.dscr.fullYear.addbacks,
+                            'Non-Recurring Adj': fyNonRec,
                             'EBITDA': ratios.dscr.fullYear.ebitda,
                           } : null,
                           ratios.dscr.interim ? {
@@ -1945,11 +2007,13 @@ export const FinancialAnalysis = () => {
                             'Officers Comp': -ratios.dscr.interim.officersComp,
                             'Other Exp': -ratios.dscr.interim.otherExpenses,
                             'Addbacks': ratios.dscr.interim.addbacks,
+                            'Non-Recurring Adj': intNonRec,
                             'EBITDA': ratios.dscr.interim.ebitda,
                           } : null
                         ].filter(Boolean);
                         
                         if (ebitdaChartData.length === 0) return null;
+                        const showNonRec = fyNonRec !== 0 || intNonRec !== 0;
                         
                         return (
                           <div style={{ width: '100%', height: 350 }}>
@@ -1968,11 +2032,13 @@ export const FinancialAnalysis = () => {
                                 <Bar dataKey="Officers Comp" fill="#fbbf24" />
                                 <Bar dataKey="Other Exp" fill="#dc2626" />
                                 <Bar dataKey="Addbacks" fill="#3b82f6" />
+                                {showNonRec && <Bar dataKey="Non-Recurring Adj" fill="#a855f7" />}
                                 <Bar dataKey="EBITDA" fill="#8b5cf6" strokeWidth={2} />
                               </BarChart>
                             </ResponsiveContainer>
                           </div>
                         );
+
                       })()}
                     </CardContent>
                   </Card>
