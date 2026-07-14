@@ -892,18 +892,8 @@ export const BusinessFinancials = () => {
                     </td>
                   ))}
                 </tr>
-                <tr className="bg-accent/20">
-                  <td className="border border-border p-2 font-semibold sticky left-0 bg-accent/20">DSCR with Rent Addback</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className={`border border-border p-2 text-center font-semibold ${
-                      calculateDSCRWithRent(i) >= 1.25 ? 'text-green-600' : 
-                      calculateDSCRWithRent(i) >= 1.15 ? 'text-yellow-600' : 
-                      'text-red-600'
-                    }`}>
-                      {calculateDSCRWithRent(i).toFixed(2)}x
-                    </td>
-                  ))}
-                </tr>
+                {/* "DSCR with Rent Addback" row removed — the formula was
+                    ambiguous and did not tie to a documented debt service. */}
               </tbody>
             </table>
           </div>
