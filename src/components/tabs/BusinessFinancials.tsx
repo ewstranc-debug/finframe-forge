@@ -246,61 +246,33 @@ export const BusinessFinancials = () => {
     return Math.max(0, personalPeriods.length - 1);
   };
 
-  // Use centralized DSCR calculation (includes existing debts + personal debts + proposed loan)
-  const calculateDSCR = (businessPeriodIndex: number) => {
-    const personalPeriodIndex = getPersonalPeriodIndex(businessPeriodIndex);
-    const businessPeriod = businessPeriods[businessPeriodIndex];
-    const personalPeriod = personalPeriods[personalPeriodIndex];
-    
-    if (!businessPeriod || !personalPeriod) return 0;
-    
-    const result = calculateDSCRCentralized({
-      businessPeriod,
-      personalPeriod,
-      debts,
-      personalLiabilitiesMonthly: {
-        creditCardsMonthly: personalLiabilities.creditCardsMonthly,
-        mortgagesMonthly: personalLiabilities.mortgagesMonthly,
-        vehicleLoansMonthly: personalLiabilities.vehicleLoansMonthly,
-        otherLiabilitiesMonthly: personalLiabilities.otherLiabilitiesMonthly,
-      },
-      uses,
-      interestRate,
-      termMonths,
-      guaranteePercent,
-      includeRentAddback: false,
-    });
-    
-    return result.dscr;
+  // Per-period DSCR row: annualized CFADS / Total Proposed Debt Service
+  // (denominator is IDENTICAL for every period column). Uses the app-wide
+  // Loan Terms so every payment figure ties to Summary.
+  const totalProposedDebtService = (() => {
+    const proposed = calculateLoanAnnualDebtService(uses, interestRate, termMonths, guaranteePercent, injectionEquity, financeGuaranteeFee);
+    const equity = parseFloat(injectionEquity) || 0;
+    const gp = parseFloat(guaranteePercent) || 75;
+    const sbaLoan = computeSBALoanAmount(uses, equity, gp, financeGuaranteeFee);
+    const svcFee = computeSBAAnnualServiceFee(sbaLoan, gp);
+    const existing = debts.reduce((s, d) => {
+      if (d.includeInDSCR === false) return s;
+      return s + (parseFloat(d.payment) || 0) * 12;
+    }, 0);
+    return existing + proposed + svcFee;
+  })();
+
+  const calculateDSCR = (businessPeriodIndex: number): number => {
+    const cfadsAnnualized = (() => {
+      const period = businessPeriods[businessPeriodIndex];
+      if (!period) return 0;
+      const months = parseFloat(period.periodMonths) || 12;
+      const factor = months > 0 ? 12 / months : 1;
+      return calculateCashFlow(businessPeriodIndex) * factor;
+    })();
+    return totalProposedDebtService > 0 ? cfadsAnnualized / totalProposedDebtService : 0;
   };
 
-  // Calculate DSCR with Rent addback (for FCCR-style analysis)
-  const calculateDSCRWithRent = (businessPeriodIndex: number) => {
-    const personalPeriodIndex = getPersonalPeriodIndex(businessPeriodIndex);
-    const businessPeriod = businessPeriods[businessPeriodIndex];
-    const personalPeriod = personalPeriods[personalPeriodIndex];
-    
-    if (!businessPeriod || !personalPeriod) return 0;
-    
-    const result = calculateDSCRCentralized({
-      businessPeriod,
-      personalPeriod,
-      debts,
-      personalLiabilitiesMonthly: {
-        creditCardsMonthly: personalLiabilities.creditCardsMonthly,
-        mortgagesMonthly: personalLiabilities.mortgagesMonthly,
-        vehicleLoansMonthly: personalLiabilities.vehicleLoansMonthly,
-        otherLiabilitiesMonthly: personalLiabilities.otherLiabilitiesMonthly,
-      },
-      uses,
-      interestRate,
-      termMonths,
-      guaranteePercent,
-      includeRentAddback: true,
-    });
-    
-    return result.dscr;
-  };
 
   return (
     <div className="p-6 space-y-6">
