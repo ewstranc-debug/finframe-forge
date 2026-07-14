@@ -347,6 +347,49 @@ export const computeSBALoanAmount = (
   return sba;
 };
 
+/**
+ * Iteratively solve for down-payment ($) and resulting SBA loan given a
+ * "% of total project cost" target. Total project cost = primaryRequest + fee
+ * (when fee is financed) OR primaryRequest (when not financed but fee is a
+ * separate injection — total project still includes it, so we always use
+ * primaryRequest + fee for the % basis, matching how the Summary displays it).
+ *   equity = pct × (primaryRequest + fee(loan))
+ *   loan   = primaryRequest + fee(loan) − equity   (if financeFee)
+ *          = primaryRequest − equity               (if !financeFee)
+ * Fee tier is piecewise, so we iterate to convergence.
+ */
+export const computeDownPaymentAndLoan = (
+  uses: UseOfFunds[],
+  downPaymentPct: number,
+  guaranteePercent: number,
+  financeFee: boolean = true
+): { equity: number; loan: number; fee: number; totalProject: number } => {
+  const primaryRequest = uses.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+  const gp = Number.isFinite(guaranteePercent) ? guaranteePercent : 75;
+  const pct = Math.max(0, Math.min(100, downPaymentPct || 0)) / 100;
+  if (primaryRequest <= 0) return { equity: 0, loan: 0, fee: 0, totalProject: 0 };
+  let equity = pct * primaryRequest;
+  let loan = 0;
+  let fee = 0;
+  for (let i = 0; i < 20; i++) {
+    loan = financeFee
+      ? Math.max(0, primaryRequest + fee - equity)
+      : Math.max(0, primaryRequest - equity);
+    const newFee = calculateSBAGuaranteeFee(loan, gp);
+    const totalProject = primaryRequest + newFee;
+    const newEquity = pct * totalProject;
+    if (Math.abs(newFee - fee) < 0.5 && Math.abs(newEquity - equity) < 0.5) {
+      fee = newFee;
+      equity = newEquity;
+      loan = financeFee ? Math.max(0, primaryRequest + fee - equity) : Math.max(0, primaryRequest - equity);
+      break;
+    }
+    fee = newFee;
+    equity = newEquity;
+  }
+  return { equity: Math.round(equity), loan, fee, totalProject: primaryRequest + fee };
+};
+
 
 /**
  * SBA annual service fee on the guaranteed portion (0.55%).
