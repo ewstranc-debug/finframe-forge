@@ -1520,84 +1520,89 @@ export const FinancialAnalysis = () => {
                     </TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Debt-to-Equity</p>
-                        <p className={`text-xl font-bold ${ratios.business.debtToEquity > 2 ? 'text-destructive' : ratios.business.debtToEquity > 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.business.debtToEquity.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &lt;1.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Debt-to-Equity Ratio:</p>
-                        <p>Total Debt: ${ratios.business.totalLiabilities.toLocaleString()}</p>
-                        <p>Equity: ${ratios.business.equity.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">D/E = Total Debt / Equity</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Debt-to-Equity, ROA, ROE, Asset Turnover cards removed per
+                      underwriter review. New coverage metrics render below. */}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">ROA</p>
-                        <p className={`text-xl font-bold ${ratios.business.roa < 5 ? 'text-destructive' : ratios.business.roa < 10 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.business.roa.toFixed(1)}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;10%</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Return on Assets:</p>
-                        <p>Net Income: ${ratios.business.netIncome.toLocaleString()}</p>
-                        <p>Total Assets: ${ratios.business.totalAssets.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">ROA = (Net Income / Total Assets) × 100</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Funded Debt / EBITDA */}
+                  {(() => {
+                    const fundedBusinessDebt = debts.reduce((s, d) => s + (parseFloat(d.balance) || 0), 0);
+                    const sbaLoan = (ratios.dscr as any).sbaLoanAmount || 0;
+                    const denom = ratios.business.ebitda;
+                    const val = denom > 0 ? (fundedBusinessDebt + sbaLoan) / denom : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Funded Debt / EBITDA</p>
+                            <p className={`text-xl font-bold ${val === 0 ? 'text-muted-foreground' : val > 4 ? 'text-destructive' : val > 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {val > 0 ? `${val.toFixed(2)}x` : 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Target: &lt;3.0x</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>(Existing Business Debt + Proposed SBA Loan) / Business EBITDA (last FYE)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">ROE</p>
-                        <p className={`text-xl font-bold ${ratios.business.roe < 10 ? 'text-destructive' : ratios.business.roe < 15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.business.roe.toFixed(1)}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;15%</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Return on Equity:</p>
-                        <p>Net Income: ${ratios.business.netIncome.toLocaleString()}</p>
-                        <p>Equity: ${ratios.business.equity.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">ROE = (Net Income / Equity) × 100</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* EBITDA Margin */}
+                  {(() => {
+                    const val = ratios.business.revenue > 0 ? (ratios.business.ebitda / ratios.business.revenue) * 100 : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">EBITDA Margin</p>
+                            <p className={`text-xl font-bold ${val === 0 ? 'text-muted-foreground' : val < 10 ? 'text-destructive' : val < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {ratios.business.revenue > 0 ? `${val.toFixed(1)}%` : 'N/A'}
+                            </p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>EBITDA / Revenue (last FYE)</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Asset Turnover</p>
-                        <p className="text-xl font-bold text-foreground">
-                          {ratios.business.assetTurnover.toFixed(2)}x
-                        </p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Asset Turnover Ratio:</p>
-                        <p>Revenue: ${ratios.business.revenue.toLocaleString()}</p>
-                        <p>Total Assets: ${ratios.business.totalAssets.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Asset Turnover = Revenue / Total Assets</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Interest Coverage */}
+                  {(() => {
+                    const val = ratios.business.interest > 0 ? ratios.business.ebitda / ratios.business.interest : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Interest Coverage</p>
+                            <p className={`text-xl font-bold ${val === 0 ? 'text-muted-foreground' : val < 2 ? 'text-destructive' : val < 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {ratios.business.interest > 0 ? `${val.toFixed(2)}x` : 'N/A'}
+                            </p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>EBITDA / Interest Expense (last FYE)</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
+
+                  {/* Cash Flow Cushion % */}
+                  {(() => {
+                    const cfads = ratios.dscr.fullYear?.ebitda || 0;
+                    const ds = ratios.dscr.totalProposedAnnualDebtService || 0;
+                    const val = ds > 0 ? ((cfads - ds) / ds) * 100 : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Cash Flow Cushion</p>
+                            <p className={`text-xl font-bold ${ds === 0 ? 'text-muted-foreground' : val < 0 ? 'text-destructive' : val < 15 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {ds > 0 ? `${val.toFixed(1)}%` : 'N/A'}
+                            </p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>(CFADS − Proposed Debt Service) / Proposed Debt Service</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
+
 
                   <Tooltip>
                     <TooltipTrigger asChild>
