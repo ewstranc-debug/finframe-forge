@@ -511,13 +511,8 @@ export const FinancialAnalysis = () => {
     // Global DSCR using combined EBITDA only (legacy)
     const globalDSCR = totalProposedAnnualDebtService > 0 ? businessEBITDA / totalProposedAnnualDebtService : 0;
     
-    // Calculate FCCR (Fixed Charge Coverage Ratio)
-    // FCCR = (EBITDA + Rent) / (Total Debt Service + Rent)
-    const fccrResult = calculateFCCR(
-      businessEBITDA,
-      businessRentExpense,
-      totalProposedAnnualDebtService
-    );
+    // FCCR removed per underwriter review. DSCR is the sole coverage metric.
+
     return {
       personal: {
         netWorth: personalNetWorth,
