@@ -4,7 +4,7 @@ import { useSpreadsheet, BusinessPeriodData } from "@/contexts/SpreadsheetContex
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { calculateDSCR as calculateDSCRCentralized, calculateLoanAnnualDebtService, validateM1TieOut, calculateYoYChange } from "@/utils/financialCalculations";
+import { calculateDSCR as calculateDSCRCentralized, calculateLoanAnnualDebtService, computeSBAAnnualServiceFee, computeSBALoanAmount, validateM1TieOut, calculateYoYChange } from "@/utils/financialCalculations";
 
 export const BusinessFinancials = () => {
   const {
