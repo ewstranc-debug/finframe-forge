@@ -95,6 +95,17 @@ export const findLastFYEIndex = (classifications: PeriodClassification[]): numbe
 };
 
 /**
+ * Find the last HISTORICAL full year end (12-mo, not projection, not interim).
+ * This is what all "Business/Global DSCR" and metric cards should key off — the
+ * Projections column must never drive underwriting cards.
+ */
+export const findLastHistoricalFYEIndex = (classifications: PeriodClassification[]): number | undefined => {
+  const fyePeriods = classifications.filter(p => p.isFYE && !p.isProjection);
+  if (fyePeriods.length === 0) return undefined;
+  return fyePeriods.sort((a, b) => b.index - a.index)[0].index;
+};
+
+/**
  * Check if the last FYE period is a projection
  */
 export const isLastFYEProjection = (classifications: PeriodClassification[]): boolean => {
