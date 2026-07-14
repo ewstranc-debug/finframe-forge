@@ -346,23 +346,44 @@ export const FinancialAnalysis = () => {
     const businessNetMargin = businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0;
 
     
-    const latestBalanceSheet = businessBalanceSheetPeriods[2] || businessBalanceSheetPeriods[1] || businessBalanceSheetPeriods[0];
+    // Balance sheet selection must not default to Projections/Interim. Pull the
+    // BS row matching the last historical FYE index; fall back to the last row
+    // with any populated data.
+    const pickLatestBalanceSheet = () => {
+      if (lastFYEIndex !== undefined && businessBalanceSheetPeriods[lastFYEIndex]) {
+        return businessBalanceSheetPeriods[lastFYEIndex];
+      }
+      for (let i = businessBalanceSheetPeriods.length - 1; i >= 0; i--) {
+        const bs = businessBalanceSheetPeriods[i];
+        if (bs && Object.values(bs).some(v => (parseFloat(String(v)) || 0) > 0)) return bs;
+      }
+      return businessBalanceSheetPeriods[0];
+    };
+    const latestBalanceSheet = pickLatestBalanceSheet();
     const businessCash = parseFloat(latestBalanceSheet?.cash) || 0;
     const businessAR = parseFloat(latestBalanceSheet?.accountsReceivable) || 0;
     const businessInventory = parseFloat(latestBalanceSheet?.inventory) || 0;
     const businessCurrentAssets = businessCash + businessAR + businessInventory + (parseFloat(latestBalanceSheet?.otherCurrentAssets) || 0);
     const businessRealEstate = parseFloat(latestBalanceSheet?.realEstate) || 0;
     const businessAccumDepr = parseFloat(latestBalanceSheet?.accumulatedDepreciation) || 0;
-    const businessTotalAssets = businessCurrentAssets + businessRealEstate - businessAccumDepr;
-    const businessCurrentLiabilities = parseFloat(latestBalanceSheet?.currentLiabilities) || 0;
+    const businessIntangibles = parseFloat((latestBalanceSheet as any)?.intangiblesOtherAssets ?? "0") || 0;
+    const businessTotalAssets = businessCurrentAssets + businessRealEstate - businessAccumDepr + businessIntangibles;
+    // Correct current liabilities: A/P + Accrued + Short-Term Debt + Other CL
+    const businessCurrentLiabilities =
+      (parseFloat(latestBalanceSheet?.accountsPayable) || 0) +
+      (parseFloat(latestBalanceSheet?.accruedExpenses) || 0) +
+      (parseFloat(latestBalanceSheet?.shortTermDebt) || 0) +
+      (parseFloat(latestBalanceSheet?.currentLiabilities) || 0);
     const businessLongTermDebt = parseFloat(latestBalanceSheet?.longTermDebt) || 0;
     const businessTotalLiabilities = businessCurrentLiabilities + businessLongTermDebt;
     const businessEquity = businessTotalAssets - businessTotalLiabilities;
-    
+
     const businessCurrentRatio = businessCurrentLiabilities > 0 ? businessCurrentAssets / businessCurrentLiabilities : 0;
     const businessQuickRatio = businessCurrentLiabilities > 0 ? (businessCurrentAssets - businessInventory) / businessCurrentLiabilities : 0;
     const businessDebtToEquity = businessEquity > 0 ? businessTotalLiabilities / businessEquity : 0;
     const businessDebtToAssets = businessTotalAssets > 0 ? (businessTotalLiabilities / businessTotalAssets) * 100 : 0;
+    // ROA/ROE/AssetTurnover retained internally for backward compat but no
+    // longer displayed as cards (removed per underwriter review).
     const businessROA = businessTotalAssets > 0 ? (businessNetIncome / businessTotalAssets) * 100 : 0;
     const businessROE = businessEquity > 0 ? (businessNetIncome / businessEquity) * 100 : 0;
     const businessAssetTurnover = businessTotalAssets > 0 ? businessRevenue / businessTotalAssets : 0;
