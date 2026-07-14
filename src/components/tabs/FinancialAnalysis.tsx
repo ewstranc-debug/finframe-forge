@@ -298,10 +298,13 @@ export const FinancialAnalysis = () => {
     
     // Use centralized period classification to ensure consistency with Summary tab
     const periodClassifications = classifyPeriods(businessPeriods, businessPeriodLabels);
-    const lastFYEIndex = findLastFYEIndex(periodClassifications);
+    // Business/Global DSCR and metric cards key off the LAST HISTORICAL FYE.
+    // The Projections column is EXCLUDED here — projections may only feed
+    // elements explicitly labeled "Projections".
+    const lastFYEIndex = findLastHistoricalFYEIndex(periodClassifications);
     const interimPeriodIndices = findInterimIndices(periodClassifications);
-    const isProjectionPeriod = isLastFYEProjection(periodClassifications);
-    
+    const isProjectionPeriod = false;
+
     const fullYearMetrics = lastFYEIndex !== undefined ? calcBusinessMetrics(lastFYEIndex) : null;
     const interimMetrics = interimPeriodIndices.map(idx => calcBusinessMetrics(idx)).filter(Boolean);
     
