@@ -186,6 +186,23 @@ export const BusinessBalanceSheet = () => {
               ))}
             </div>
 
+            {/* Intangibles & Other Assets — goodwill, financed loan fees, non-competes, deposits.
+                Included in Total Assets and Equity, EXCLUDED from Current Assets/WC/Current Ratio/Quick Ratio. */}
+            <div className="grid grid-cols-5 border-b border-border min-w-[800px]">
+              <div className="p-3 border-r border-border bg-secondary/30 font-medium">
+                Intangibles &amp; Other Assets
+              </div>
+              {periods.map((period, i) => (
+                <div key={i} className="border-r border-border last:border-r-0">
+                  <EditableCell
+                    value={(period as any).intangiblesOtherAssets || "0"}
+                    onChange={(val) => updateField(i, "intangiblesOtherAssets" as any, val)}
+                    type="currency"
+                  />
+                </div>
+              ))}
+            </div>
+
             <div className="grid grid-cols-5 border-b-2 border-border bg-primary/10 min-w-[800px]">
               <div className="p-3 border-r border-border font-bold text-lg">Total Assets</div>
               {balanceSheetMetrics.map((metrics, i) => (
