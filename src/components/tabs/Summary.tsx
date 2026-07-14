@@ -45,8 +45,10 @@ export const Summary = () => {
     [businessPeriods, businessPeriodLabels]
   );
 
-  const lastFYEIndex = useMemo(() => 
-    findLastFYEIndex(periodClassifications),
+  // Cards / Financial Overview key off the LAST HISTORICAL FYE — Projections
+  // may only drive elements explicitly labeled "Projections".
+  const lastFYEIndex = useMemo(() =>
+    findLastHistoricalFYEIndex(periodClassifications),
     [periodClassifications]
   );
 
