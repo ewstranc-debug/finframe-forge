@@ -1075,48 +1075,10 @@ export const FinancialAnalysis = () => {
                     </TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Liquidity Ratio</p>
-                        <p className={`text-xl font-bold ${ratios.personal.liquidityRatio < 0.5 ? 'text-destructive' : ratios.personal.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.personal.liquidityRatio > 0 && ratios.personal.liquidityRatio < 0.1
-                            ? ratios.personal.liquidityRatio.toFixed(3)
-                            : ratios.personal.liquidityRatio.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
-                      </div>
-                    </TooltipTrigger>
+                  {/* Personal Liquidity Ratio and Personal Current Ratio cards
+                      removed per underwriter review. Replaced by the Personal
+                      Liquidity Coverage card below. */}
 
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Personal Liquidity:</p>
-                        <p>Liquid Assets: ${ratios.personal.liquidAssets.toLocaleString()}</p>
-                        <p>Total Liabilities: ${ratios.personal.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Liquidity = Liquid Assets / Total Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Current Ratio</p>
-                        <p className={`text-xl font-bold ${ratios.personal.currentRatio < 1 ? 'text-destructive' : ratios.personal.currentRatio < 2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.personal.currentRatio.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;2.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Personal Current Ratio:</p>
-                        <p>Total Assets: ${ratios.personal.totalAssets.toLocaleString()}</p>
-                        <p>Total Liabilities: ${ratios.personal.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Current Ratio = Assets / Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
 
                   {/* Contingent Liabilities (Guaranteed Business Debt) — display-only.
                       Sum of Existing Debts balances. NOT netted into Personal Net Worth
