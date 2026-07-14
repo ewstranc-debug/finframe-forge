@@ -239,13 +239,19 @@ export const Summary = () => {
     return Math.max(0, personalPeriods.length - 1);
   };
 
+  // Bug 3 fix: Down-payment % is now a % of TOTAL PROJECT COST
+  // (primaryRequest + financed guarantee fee). Because the fee depends on the
+  // loan, and the loan depends on the down payment, we solve iteratively via
+  // computeDownPaymentAndLoan.
   const handleEquityPercentageChange = (value: string) => {
     setEquityPercentage(value);
-    const calculatedEquity = (parseFloat(value) || 0) / 100 * totalUses;
-    setInjectionEquity(Math.round(calculatedEquity).toString());
+    const pct = parseFloat(value) || 0;
+    const gp = parseFloat(guaranteePercent) || 75;
+    const { equity } = computeDownPaymentAndLoan(uses, pct, gp, financeGuaranteeFee);
+    setInjectionEquity(equity.toString());
   };
 
-  // Bug 3 fix: Auto-recalculate down payment when totalUses changes
+  // Auto-recompute down payment when totalUses/uses/rate change.
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -253,11 +259,12 @@ export const Summary = () => {
       return;
     }
     const pct = parseFloat(equityPercentage) || 0;
-    if (pct > 0 && totalUses > 0) {
-      const calculatedEquity = Math.round(pct / 100 * totalUses);
-      setInjectionEquity(calculatedEquity.toString());
+    if (pct > 0 && primaryRequest > 0) {
+      const gp = parseFloat(guaranteePercent) || 75;
+      const { equity } = computeDownPaymentAndLoan(uses, pct, gp, financeGuaranteeFee);
+      setInjectionEquity(equity.toString());
     }
-  }, [totalUses]);
+  }, [primaryRequest, guaranteePercent, financeGuaranteeFee]);
 
   // Final loan amount for payment calculation = SBA Loan (which already includes the upfront fee in the total uses balance)
   const finalLoanAmount = sbaLoanAmount;
