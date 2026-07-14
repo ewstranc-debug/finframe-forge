@@ -107,14 +107,16 @@ export const calculateDebtToAssets = (period: BusinessBalanceSheetPeriodData): n
 export const calculateBalanceSheetMetrics = (period: BusinessBalanceSheetPeriodData): BalanceSheetMetrics => {
   const currentAssets = calculateCurrentAssets(period);
   const netFixedAssets = calculateNetFixedAssets(period);
-  const totalAssets = currentAssets + netFixedAssets;
-  
+  const intangibles = calculateIntangiblesOtherAssets(period);
+  const totalAssets = currentAssets + netFixedAssets + intangibles;
+
   // Calculate current liabilities from separate fields
   const accountsPayable = parseFloat(period.accountsPayable) || 0;
   const accruedExpenses = parseFloat(period.accruedExpenses) || 0;
   const shortTermDebt = parseFloat(period.shortTermDebt) || 0;
   const otherCurrentLiab = parseFloat(period.currentLiabilities) || 0;
   const currentLiabilities = accountsPayable + accruedExpenses + shortTermDebt + otherCurrentLiab;
+
   
   const longTermDebt = parseFloat(period.longTermDebt) || 0;
   const totalLiabilities = currentLiabilities + longTermDebt;
