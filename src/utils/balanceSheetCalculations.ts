@@ -21,10 +21,19 @@ export const calculateNetFixedAssets = (period: BusinessBalanceSheetPeriodData):
 };
 
 /**
+ * Calculate intangibles & other non-current assets (goodwill, financed loan
+ * fees, non-competes, deposits). NOT part of current assets or working capital.
+ */
+export const calculateIntangiblesOtherAssets = (period: BusinessBalanceSheetPeriodData): number => {
+  return parseFloat((period as any).intangiblesOtherAssets ?? "0") || 0;
+};
+
+/**
  * Calculate total assets for a balance sheet period
+ * Includes intangibles/other non-current assets.
  */
 export const calculateTotalAssets = (period: BusinessBalanceSheetPeriodData): number => {
-  return calculateCurrentAssets(period) + calculateNetFixedAssets(period);
+  return calculateCurrentAssets(period) + calculateNetFixedAssets(period) + calculateIntangiblesOtherAssets(period);
 };
 
 /**
@@ -98,14 +107,16 @@ export const calculateDebtToAssets = (period: BusinessBalanceSheetPeriodData): n
 export const calculateBalanceSheetMetrics = (period: BusinessBalanceSheetPeriodData): BalanceSheetMetrics => {
   const currentAssets = calculateCurrentAssets(period);
   const netFixedAssets = calculateNetFixedAssets(period);
-  const totalAssets = currentAssets + netFixedAssets;
-  
+  const intangibles = calculateIntangiblesOtherAssets(period);
+  const totalAssets = currentAssets + netFixedAssets + intangibles;
+
   // Calculate current liabilities from separate fields
   const accountsPayable = parseFloat(period.accountsPayable) || 0;
   const accruedExpenses = parseFloat(period.accruedExpenses) || 0;
   const shortTermDebt = parseFloat(period.shortTermDebt) || 0;
   const otherCurrentLiab = parseFloat(period.currentLiabilities) || 0;
   const currentLiabilities = accountsPayable + accruedExpenses + shortTermDebt + otherCurrentLiab;
+
   
   const longTermDebt = parseFloat(period.longTermDebt) || 0;
   const totalLiabilities = currentLiabilities + longTermDebt;

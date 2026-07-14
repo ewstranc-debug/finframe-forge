@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
-import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, calculateFCCR, classifyPeriods, findLastFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount } from "@/utils/financialCalculations";
+import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, classifyPeriods, findLastFYEIndex, findLastHistoricalFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount, computeNewLoanAnnualPayment } from "@/utils/financialCalculations";
 import { getDSCRColorClass } from "@/utils/dscrUtils";
 import { Textarea } from "@/components/ui/textarea";
 import { DocumentUpload } from "@/components/DocumentUpload";
@@ -298,10 +298,13 @@ export const FinancialAnalysis = () => {
     
     // Use centralized period classification to ensure consistency with Summary tab
     const periodClassifications = classifyPeriods(businessPeriods, businessPeriodLabels);
-    const lastFYEIndex = findLastFYEIndex(periodClassifications);
+    // Business/Global DSCR and metric cards key off the LAST HISTORICAL FYE.
+    // The Projections column is EXCLUDED here — projections may only feed
+    // elements explicitly labeled "Projections".
+    const lastFYEIndex = findLastHistoricalFYEIndex(periodClassifications);
     const interimPeriodIndices = findInterimIndices(periodClassifications);
-    const isProjectionPeriod = isLastFYEProjection(periodClassifications);
-    
+    const isProjectionPeriod = false;
+
     const fullYearMetrics = lastFYEIndex !== undefined ? calcBusinessMetrics(lastFYEIndex) : null;
     const interimMetrics = interimPeriodIndices.map(idx => calcBusinessMetrics(idx)).filter(Boolean);
     
@@ -343,23 +346,44 @@ export const FinancialAnalysis = () => {
     const businessNetMargin = businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0;
 
     
-    const latestBalanceSheet = businessBalanceSheetPeriods[2] || businessBalanceSheetPeriods[1] || businessBalanceSheetPeriods[0];
+    // Balance sheet selection must not default to Projections/Interim. Pull the
+    // BS row matching the last historical FYE index; fall back to the last row
+    // with any populated data.
+    const pickLatestBalanceSheet = () => {
+      if (lastFYEIndex !== undefined && businessBalanceSheetPeriods[lastFYEIndex]) {
+        return businessBalanceSheetPeriods[lastFYEIndex];
+      }
+      for (let i = businessBalanceSheetPeriods.length - 1; i >= 0; i--) {
+        const bs = businessBalanceSheetPeriods[i];
+        if (bs && Object.values(bs).some(v => (parseFloat(String(v)) || 0) > 0)) return bs;
+      }
+      return businessBalanceSheetPeriods[0];
+    };
+    const latestBalanceSheet = pickLatestBalanceSheet();
     const businessCash = parseFloat(latestBalanceSheet?.cash) || 0;
     const businessAR = parseFloat(latestBalanceSheet?.accountsReceivable) || 0;
     const businessInventory = parseFloat(latestBalanceSheet?.inventory) || 0;
     const businessCurrentAssets = businessCash + businessAR + businessInventory + (parseFloat(latestBalanceSheet?.otherCurrentAssets) || 0);
     const businessRealEstate = parseFloat(latestBalanceSheet?.realEstate) || 0;
     const businessAccumDepr = parseFloat(latestBalanceSheet?.accumulatedDepreciation) || 0;
-    const businessTotalAssets = businessCurrentAssets + businessRealEstate - businessAccumDepr;
-    const businessCurrentLiabilities = parseFloat(latestBalanceSheet?.currentLiabilities) || 0;
+    const businessIntangibles = parseFloat((latestBalanceSheet as any)?.intangiblesOtherAssets ?? "0") || 0;
+    const businessTotalAssets = businessCurrentAssets + businessRealEstate - businessAccumDepr + businessIntangibles;
+    // Correct current liabilities: A/P + Accrued + Short-Term Debt + Other CL
+    const businessCurrentLiabilities =
+      (parseFloat(latestBalanceSheet?.accountsPayable) || 0) +
+      (parseFloat(latestBalanceSheet?.accruedExpenses) || 0) +
+      (parseFloat(latestBalanceSheet?.shortTermDebt) || 0) +
+      (parseFloat(latestBalanceSheet?.currentLiabilities) || 0);
     const businessLongTermDebt = parseFloat(latestBalanceSheet?.longTermDebt) || 0;
     const businessTotalLiabilities = businessCurrentLiabilities + businessLongTermDebt;
     const businessEquity = businessTotalAssets - businessTotalLiabilities;
-    
+
     const businessCurrentRatio = businessCurrentLiabilities > 0 ? businessCurrentAssets / businessCurrentLiabilities : 0;
     const businessQuickRatio = businessCurrentLiabilities > 0 ? (businessCurrentAssets - businessInventory) / businessCurrentLiabilities : 0;
     const businessDebtToEquity = businessEquity > 0 ? businessTotalLiabilities / businessEquity : 0;
     const businessDebtToAssets = businessTotalAssets > 0 ? (businessTotalLiabilities / businessTotalAssets) * 100 : 0;
+    // ROA/ROE/AssetTurnover retained internally for backward compat but no
+    // longer displayed as cards (removed per underwriter review).
     const businessROA = businessTotalAssets > 0 ? (businessNetIncome / businessTotalAssets) * 100 : 0;
     const businessROE = businessEquity > 0 ? (businessNetIncome / businessEquity) * 100 : 0;
     const businessAssetTurnover = businessTotalAssets > 0 ? businessRevenue / businessTotalAssets : 0;
@@ -511,13 +535,8 @@ export const FinancialAnalysis = () => {
     // Global DSCR using combined EBITDA only (legacy)
     const globalDSCR = totalProposedAnnualDebtService > 0 ? businessEBITDA / totalProposedAnnualDebtService : 0;
     
-    // Calculate FCCR (Fixed Charge Coverage Ratio)
-    // FCCR = (EBITDA + Rent) / (Total Debt Service + Rent)
-    const fccrResult = calculateFCCR(
-      businessEBITDA,
-      businessRentExpense,
-      totalProposedAnnualDebtService
-    );
+    // FCCR removed per underwriter review. DSCR is the sole coverage metric.
+
     return {
       personal: {
         netWorth: personalNetWorth,
@@ -588,9 +607,6 @@ export const FinancialAnalysis = () => {
         totalProposedAnnualDebtService,     // = sum of the three lines above
         globalFullYear: globalFullYearDscr,
         globalInterim: globalInterimDscr,
-        fccr: fccrResult.fccr,
-        fccrNumerator: fccrResult.numerator,
-        fccrDenominator: fccrResult.denominator,
         isProjection: isProjectionPeriod,
         lastFYEIndex,
       },
@@ -1059,48 +1075,10 @@ export const FinancialAnalysis = () => {
                     </TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Liquidity Ratio</p>
-                        <p className={`text-xl font-bold ${ratios.personal.liquidityRatio < 0.5 ? 'text-destructive' : ratios.personal.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.personal.liquidityRatio > 0 && ratios.personal.liquidityRatio < 0.1
-                            ? ratios.personal.liquidityRatio.toFixed(3)
-                            : ratios.personal.liquidityRatio.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
-                      </div>
-                    </TooltipTrigger>
+                  {/* Personal Liquidity Ratio and Personal Current Ratio cards
+                      removed per underwriter review. Replaced by the Personal
+                      Liquidity Coverage card below. */}
 
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Personal Liquidity:</p>
-                        <p>Liquid Assets: ${ratios.personal.liquidAssets.toLocaleString()}</p>
-                        <p>Total Liabilities: ${ratios.personal.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Liquidity = Liquid Assets / Total Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Current Ratio</p>
-                        <p className={`text-xl font-bold ${ratios.personal.currentRatio < 1 ? 'text-destructive' : ratios.personal.currentRatio < 2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.personal.currentRatio.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;2.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Personal Current Ratio:</p>
-                        <p>Total Assets: ${ratios.personal.totalAssets.toLocaleString()}</p>
-                        <p>Total Liabilities: ${ratios.personal.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Current Ratio = Assets / Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
 
                   {/* Contingent Liabilities (Guaranteed Business Debt) — display-only.
                       Sum of Existing Debts balances. NOT netted into Personal Net Worth
@@ -1369,43 +1347,8 @@ export const FinancialAnalysis = () => {
                   </Tooltip>
                 </div>
 
-                {/* FCCR Card */}
-                <div className="mt-4">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help bg-muted/30 p-3 rounded-lg border border-border inline-block">
-                        <p className="text-sm text-muted-foreground font-semibold">Fixed Charge Coverage Ratio (FCCR)</p>
-                        <p
-                          className={`text-2xl font-bold ${
-                            ratios.dscr.fccr === 0
-                              ? "text-muted-foreground"
-                              : ratios.dscr.fccr < 1.15
-                              ? "text-destructive"
-                              : ratios.dscr.fccr < 1.25
-                              ? "text-yellow-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {ratios.dscr.fccr > 0 ? ratios.dscr.fccr.toFixed(2) : "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.15</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-sm">
-                      <div className="space-y-2 text-sm">
-                        <p className="font-semibold">Fixed Charge Coverage Ratio:</p>
-                        <p>Measures ability to cover fixed charges including rent/lease payments.</p>
-                        <div className="border-t pt-2 mt-2 space-y-1">
-                          <p>EBITDA + Rent: ${ratios.dscr.fccrNumerator?.toLocaleString()}</p>
-                          <p>Total Debt Service + Rent: ${ratios.dscr.fccrDenominator?.toLocaleString()}</p>
-                        </div>
-                        <p className="font-semibold border-t pt-2 mt-2">
-                          FCCR = (EBITDA + Rent) / (Debt Service + Rent) = {ratios.dscr.fccr?.toFixed(2) || 'N/A'}
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                {/* FCCR removed per underwriter review. */}
+
 
                 {/* Cash Conversion Cycle */}
                 {(ratios.business as any).cashConversion && (ratios.business as any).cashConversion.length > 0 && (
@@ -1577,84 +1520,89 @@ export const FinancialAnalysis = () => {
                     </TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Debt-to-Equity</p>
-                        <p className={`text-xl font-bold ${ratios.business.debtToEquity > 2 ? 'text-destructive' : ratios.business.debtToEquity > 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.business.debtToEquity.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &lt;1.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Debt-to-Equity Ratio:</p>
-                        <p>Total Debt: ${ratios.business.totalLiabilities.toLocaleString()}</p>
-                        <p>Equity: ${ratios.business.equity.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">D/E = Total Debt / Equity</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Debt-to-Equity, ROA, ROE, Asset Turnover cards removed per
+                      underwriter review. New coverage metrics render below. */}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">ROA</p>
-                        <p className={`text-xl font-bold ${ratios.business.roa < 5 ? 'text-destructive' : ratios.business.roa < 10 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.business.roa.toFixed(1)}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;10%</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Return on Assets:</p>
-                        <p>Net Income: ${ratios.business.netIncome.toLocaleString()}</p>
-                        <p>Total Assets: ${ratios.business.totalAssets.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">ROA = (Net Income / Total Assets) × 100</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Funded Debt / EBITDA */}
+                  {(() => {
+                    const fundedBusinessDebt = debts.reduce((s, d) => s + (parseFloat(d.balance) || 0), 0);
+                    const sbaLoan = (ratios.dscr as any).sbaLoanAmount || 0;
+                    const denom = ratios.business.ebitda;
+                    const val = denom > 0 ? (fundedBusinessDebt + sbaLoan) / denom : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Funded Debt / EBITDA</p>
+                            <p className={`text-xl font-bold ${val === 0 ? 'text-muted-foreground' : val > 4 ? 'text-destructive' : val > 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {val > 0 ? `${val.toFixed(2)}x` : 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Target: &lt;3.0x</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>(Existing Business Debt + Proposed SBA Loan) / Business EBITDA (last FYE)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">ROE</p>
-                        <p className={`text-xl font-bold ${ratios.business.roe < 10 ? 'text-destructive' : ratios.business.roe < 15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.business.roe.toFixed(1)}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;15%</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Return on Equity:</p>
-                        <p>Net Income: ${ratios.business.netIncome.toLocaleString()}</p>
-                        <p>Equity: ${ratios.business.equity.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">ROE = (Net Income / Equity) × 100</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* EBITDA Margin */}
+                  {(() => {
+                    const val = ratios.business.revenue > 0 ? (ratios.business.ebitda / ratios.business.revenue) * 100 : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">EBITDA Margin</p>
+                            <p className={`text-xl font-bold ${val === 0 ? 'text-muted-foreground' : val < 10 ? 'text-destructive' : val < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {ratios.business.revenue > 0 ? `${val.toFixed(1)}%` : 'N/A'}
+                            </p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>EBITDA / Revenue (last FYE)</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Asset Turnover</p>
-                        <p className="text-xl font-bold text-foreground">
-                          {ratios.business.assetTurnover.toFixed(2)}x
-                        </p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Asset Turnover Ratio:</p>
-                        <p>Revenue: ${ratios.business.revenue.toLocaleString()}</p>
-                        <p>Total Assets: ${ratios.business.totalAssets.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Asset Turnover = Revenue / Total Assets</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Interest Coverage */}
+                  {(() => {
+                    const val = ratios.business.interest > 0 ? ratios.business.ebitda / ratios.business.interest : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Interest Coverage</p>
+                            <p className={`text-xl font-bold ${val === 0 ? 'text-muted-foreground' : val < 2 ? 'text-destructive' : val < 3 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {ratios.business.interest > 0 ? `${val.toFixed(2)}x` : 'N/A'}
+                            </p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>EBITDA / Interest Expense (last FYE)</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
+
+                  {/* Cash Flow Cushion % */}
+                  {(() => {
+                    const cfads = ratios.dscr.fullYear?.ebitda || 0;
+                    const ds = ratios.dscr.totalProposedAnnualDebtService || 0;
+                    const val = ds > 0 ? ((cfads - ds) / ds) * 100 : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Cash Flow Cushion</p>
+                            <p className={`text-xl font-bold ${ds === 0 ? 'text-muted-foreground' : val < 0 ? 'text-destructive' : val < 15 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {ds > 0 ? `${val.toFixed(1)}%` : 'N/A'}
+                            </p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>(CFADS − Proposed Debt Service) / Proposed Debt Service</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
+
 
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1816,86 +1764,53 @@ export const FinancialAnalysis = () => {
                     </TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Global Liquidity</p>
-                        <p className={`text-xl font-bold ${ratios.global.liquidityRatio < 0.5 ? 'text-destructive' : ratios.global.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.liquidityRatio > 0 && ratios.global.liquidityRatio < 0.1
-                            ? ratios.global.liquidityRatio.toFixed(3)
-                            : ratios.global.liquidityRatio.toFixed(2)}
+                  {/* Global Liquidity, Global Current Ratio, and duplicate
+                      "Business DSCR (Proposed)" cards removed per underwriter
+                      review. Personal Liquidity Coverage & Guarantee Coverage
+                      cards render below. */}
 
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Combined Liquidity:</p>
-                        <p>Liquid Assets (Personal + Business Cash)</p>
-                        <p>Total Liabilities: ${ratios.global.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Liquidity = Liquid Assets / Total Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Personal Liquidity Coverage — months of proposed P&I covered by liquid assets */}
+                  {(() => {
+                    const monthlyPnI = ((ratios.dscr as any).proposedAnnualDebtService || 0) / 12;
+                    const val = monthlyPnI > 0 ? ratios.personal.liquidAssets / monthlyPnI : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Personal Liquidity Coverage</p>
+                            <p className={`text-xl font-bold ${monthlyPnI === 0 ? 'text-muted-foreground' : val < 3 ? 'text-destructive' : val < 6 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {monthlyPnI > 0 ? `${val.toFixed(1)} mo` : 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Target: &gt;6 mo</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Personal Liquid Assets / Monthly Proposed P&amp;I</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Global Current Ratio</p>
-                        <p className={`text-xl font-bold ${ratios.global.currentRatio < 1 ? 'text-destructive' : ratios.global.currentRatio < 2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.currentRatio.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;2.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Global Current Ratio:</p>
-                        <p>Total Assets: ${ratios.global.totalAssets.toLocaleString()}</p>
-                        <p>Total Liabilities: ${ratios.global.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Current Ratio = Total Assets / Total Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Business DSCR (Proposed)</p>
-                        <p className={`text-xl font-bold ${ratios.global.dscr < 1.0 ? 'text-destructive' : ratios.global.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.dscr.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.15</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Global Debt Service Coverage Ratio:</p>
-                        <div className="border-b pb-2 mb-2">
-                          <p className="font-medium text-sm">Business EBITDA:</p>
-                          <p className="text-sm">EBITDA: ${ratios.business.ebitda.toLocaleString()}</p>
-                        </div>
-                        <div className="border-b pb-2 mb-2">
-                          <p className="font-medium text-sm">Personal Cash Flow:</p>
-                          <p className="text-sm">Annual Income: ${ratios.personal.totalIncome.toLocaleString()}</p>
-                          <p className="text-sm">Annual Expenses: ${ratios.personal.totalExpenses.toLocaleString()}</p>
-                          <p className="text-sm">Net Personal Cash Flow: ${(ratios.personal.totalIncome - ratios.personal.totalExpenses).toLocaleString()}</p>
-                        </div>
-                        <div className="border-b pb-2 mb-2">
-                          <p className="font-medium text-sm">Total Available for Debt Service:</p>
-                          <p className="text-sm font-semibold">${(ratios.business.ebitda + (ratios.personal.totalIncome - ratios.personal.totalExpenses)).toLocaleString()}</p>
-                        </div>
-                        <div className="pb-2 mb-2">
-                          <p className="font-medium text-sm">Annual Debt Service:</p>
-                          <p className="text-sm">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
-                        </div>
-                        <p className="border-t pt-1 mt-1 font-semibold">Business DSCR (Proposed) = Business EBITDA / Total Proposed Debt Service = {ratios.global.dscr.toFixed(2)}</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Guarantee Coverage — personal net worth vs SBA loan */}
+                  {(() => {
+                    const sbaLoan = (ratios.dscr as any).sbaLoanAmount || 0;
+                    const val = sbaLoan > 0 ? ratios.personal.netWorth / sbaLoan : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Guarantee Coverage</p>
+                            <p className={`text-xl font-bold ${sbaLoan === 0 ? 'text-muted-foreground' : val < 0.5 ? 'text-destructive' : val < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {sbaLoan > 0 ? `${val.toFixed(2)}x` : 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Target: &gt;1.0x</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Personal Net Worth / SBA Loan Amount</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
                 </div>
               </div>
+
               
               {/* DSCR ANALYSIS - Existing vs Proposed */}
               <div className="pt-6 border-t">

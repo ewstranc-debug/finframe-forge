@@ -3,7 +3,7 @@ import { DollarSign, TrendingUp, TrendingDown, PieChart, Info, RotateCcw, AlertT
 import { EditableCell } from "../EditableCell";
 import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { calculateDSCR, classifyPeriods, findLastFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection, computeNewLoanAnnualPayment, computeSBAAnnualServiceFee } from "@/utils/financialCalculations";
+import { calculateDSCR, classifyPeriods, findLastFYEIndex, findLastHistoricalFYEIndex, findInterimIndices, calculateSBAGuaranteeFee, isLastFYEProjection, computeNewLoanAnnualPayment, computeSBAAnnualServiceFee, computeDownPaymentAndLoan } from "@/utils/financialCalculations";
 import { useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -45,8 +45,10 @@ export const Summary = () => {
     [businessPeriods, businessPeriodLabels]
   );
 
-  const lastFYEIndex = useMemo(() => 
-    findLastFYEIndex(periodClassifications),
+  // Cards / Financial Overview key off the LAST HISTORICAL FYE — Projections
+  // may only drive elements explicitly labeled "Projections".
+  const lastFYEIndex = useMemo(() =>
+    findLastHistoricalFYEIndex(periodClassifications),
     [periodClassifications]
   );
 
@@ -237,13 +239,19 @@ export const Summary = () => {
     return Math.max(0, personalPeriods.length - 1);
   };
 
+  // Bug 3 fix: Down-payment % is now a % of TOTAL PROJECT COST
+  // (primaryRequest + financed guarantee fee). Because the fee depends on the
+  // loan, and the loan depends on the down payment, we solve iteratively via
+  // computeDownPaymentAndLoan.
   const handleEquityPercentageChange = (value: string) => {
     setEquityPercentage(value);
-    const calculatedEquity = (parseFloat(value) || 0) / 100 * totalUses;
-    setInjectionEquity(Math.round(calculatedEquity).toString());
+    const pct = parseFloat(value) || 0;
+    const gp = parseFloat(guaranteePercent) || 75;
+    const { equity } = computeDownPaymentAndLoan(uses, pct, gp, financeGuaranteeFee);
+    setInjectionEquity(equity.toString());
   };
 
-  // Bug 3 fix: Auto-recalculate down payment when totalUses changes
+  // Auto-recompute down payment when totalUses/uses/rate change.
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -251,11 +259,12 @@ export const Summary = () => {
       return;
     }
     const pct = parseFloat(equityPercentage) || 0;
-    if (pct > 0 && totalUses > 0) {
-      const calculatedEquity = Math.round(pct / 100 * totalUses);
-      setInjectionEquity(calculatedEquity.toString());
+    if (pct > 0 && primaryRequest > 0) {
+      const gp = parseFloat(guaranteePercent) || 75;
+      const { equity } = computeDownPaymentAndLoan(uses, pct, gp, financeGuaranteeFee);
+      setInjectionEquity(equity.toString());
     }
-  }, [totalUses]);
+  }, [primaryRequest, guaranteePercent, financeGuaranteeFee]);
 
   // Final loan amount for payment calculation = SBA Loan (which already includes the upfront fee in the total uses balance)
   const finalLoanAmount = sbaLoanAmount;

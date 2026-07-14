@@ -95,6 +95,17 @@ export const findLastFYEIndex = (classifications: PeriodClassification[]): numbe
 };
 
 /**
+ * Find the last HISTORICAL full year end (12-mo, not projection, not interim).
+ * This is what all "Business/Global DSCR" and metric cards should key off — the
+ * Projections column must never drive underwriting cards.
+ */
+export const findLastHistoricalFYEIndex = (classifications: PeriodClassification[]): number | undefined => {
+  const fyePeriods = classifications.filter(p => p.isFYE && !p.isProjection);
+  if (fyePeriods.length === 0) return undefined;
+  return fyePeriods.sort((a, b) => b.index - a.index)[0].index;
+};
+
+/**
  * Check if the last FYE period is a projection
  */
 export const isLastFYEProjection = (classifications: PeriodClassification[]): boolean => {
@@ -336,6 +347,49 @@ export const computeSBALoanAmount = (
   return sba;
 };
 
+/**
+ * Iteratively solve for down-payment ($) and resulting SBA loan given a
+ * "% of total project cost" target. Total project cost = primaryRequest + fee
+ * (when fee is financed) OR primaryRequest (when not financed but fee is a
+ * separate injection — total project still includes it, so we always use
+ * primaryRequest + fee for the % basis, matching how the Summary displays it).
+ *   equity = pct × (primaryRequest + fee(loan))
+ *   loan   = primaryRequest + fee(loan) − equity   (if financeFee)
+ *          = primaryRequest − equity               (if !financeFee)
+ * Fee tier is piecewise, so we iterate to convergence.
+ */
+export const computeDownPaymentAndLoan = (
+  uses: UseOfFunds[],
+  downPaymentPct: number,
+  guaranteePercent: number,
+  financeFee: boolean = true
+): { equity: number; loan: number; fee: number; totalProject: number } => {
+  const primaryRequest = uses.reduce((sum, u) => sum + (parseFloat(u.amount) || 0), 0);
+  const gp = Number.isFinite(guaranteePercent) ? guaranteePercent : 75;
+  const pct = Math.max(0, Math.min(100, downPaymentPct || 0)) / 100;
+  if (primaryRequest <= 0) return { equity: 0, loan: 0, fee: 0, totalProject: 0 };
+  let equity = pct * primaryRequest;
+  let loan = 0;
+  let fee = 0;
+  for (let i = 0; i < 20; i++) {
+    loan = financeFee
+      ? Math.max(0, primaryRequest + fee - equity)
+      : Math.max(0, primaryRequest - equity);
+    const newFee = calculateSBAGuaranteeFee(loan, gp);
+    const totalProject = primaryRequest + newFee;
+    const newEquity = pct * totalProject;
+    if (Math.abs(newFee - fee) < 0.5 && Math.abs(newEquity - equity) < 0.5) {
+      fee = newFee;
+      equity = newEquity;
+      loan = financeFee ? Math.max(0, primaryRequest + fee - equity) : Math.max(0, primaryRequest - equity);
+      break;
+    }
+    fee = newFee;
+    equity = newEquity;
+  }
+  return { equity: Math.round(equity), loan, fee, totalProject: primaryRequest + fee };
+};
+
 
 /**
  * SBA annual service fee on the guaranteed portion (0.55%).
@@ -490,24 +544,7 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
   };
 };
 
-/**
- * Calculate Fixed Charge Coverage Ratio (FCCR)
- * FCCR = (EBITDA + Rent + Lease Payments) / (Debt Service + Rent + Lease Payments)
- * This is a key SBA lending metric
- */
-export const calculateFCCR = (
-  ebitda: number,
-  rentExpense: number,
-  debtService: number
-): { fccr: number; numerator: number; denominator: number } => {
-  const numerator = ebitda + rentExpense;
-  const denominator = debtService + rentExpense;
-  return {
-    fccr: denominator > 0 ? numerator / denominator : 0,
-    numerator,
-    denominator,
-  };
-};
+// (calculateFCCR removed per underwriter review — DSCR is the sole coverage metric.)
 
 /**
  * Calculate year-over-year change for a metric
