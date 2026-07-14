@@ -1764,86 +1764,53 @@ export const FinancialAnalysis = () => {
                     </TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Global Liquidity</p>
-                        <p className={`text-xl font-bold ${ratios.global.liquidityRatio < 0.5 ? 'text-destructive' : ratios.global.liquidityRatio < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.liquidityRatio > 0 && ratios.global.liquidityRatio < 0.1
-                            ? ratios.global.liquidityRatio.toFixed(3)
-                            : ratios.global.liquidityRatio.toFixed(2)}
+                  {/* Global Liquidity, Global Current Ratio, and duplicate
+                      "Business DSCR (Proposed)" cards removed per underwriter
+                      review. Personal Liquidity Coverage & Guarantee Coverage
+                      cards render below. */}
 
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Combined Liquidity:</p>
-                        <p>Liquid Assets (Personal + Business Cash)</p>
-                        <p>Total Liabilities: ${ratios.global.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Liquidity = Liquid Assets / Total Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Personal Liquidity Coverage — months of proposed P&I covered by liquid assets */}
+                  {(() => {
+                    const monthlyPnI = ((ratios.dscr as any).proposedAnnualDebtService || 0) / 12;
+                    const val = monthlyPnI > 0 ? ratios.personal.liquidAssets / monthlyPnI : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Personal Liquidity Coverage</p>
+                            <p className={`text-xl font-bold ${monthlyPnI === 0 ? 'text-muted-foreground' : val < 3 ? 'text-destructive' : val < 6 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {monthlyPnI > 0 ? `${val.toFixed(1)} mo` : 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Target: &gt;6 mo</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Personal Liquid Assets / Monthly Proposed P&amp;I</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Global Current Ratio</p>
-                        <p className={`text-xl font-bold ${ratios.global.currentRatio < 1 ? 'text-destructive' : ratios.global.currentRatio < 2 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.currentRatio.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;2.0</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Global Current Ratio:</p>
-                        <p>Total Assets: ${ratios.global.totalAssets.toLocaleString()}</p>
-                        <p>Total Liabilities: ${ratios.global.totalLiabilities.toLocaleString()}</p>
-                        <p className="border-t pt-1 mt-1">Current Ratio = Total Assets / Total Liabilities</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help">
-                        <p className="text-sm text-muted-foreground">Business DSCR (Proposed)</p>
-                        <p className={`text-xl font-bold ${ratios.global.dscr < 1.0 ? 'text-destructive' : ratios.global.dscr < 1.15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {ratios.global.dscr.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.15</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">Global Debt Service Coverage Ratio:</p>
-                        <div className="border-b pb-2 mb-2">
-                          <p className="font-medium text-sm">Business EBITDA:</p>
-                          <p className="text-sm">EBITDA: ${ratios.business.ebitda.toLocaleString()}</p>
-                        </div>
-                        <div className="border-b pb-2 mb-2">
-                          <p className="font-medium text-sm">Personal Cash Flow:</p>
-                          <p className="text-sm">Annual Income: ${ratios.personal.totalIncome.toLocaleString()}</p>
-                          <p className="text-sm">Annual Expenses: ${ratios.personal.totalExpenses.toLocaleString()}</p>
-                          <p className="text-sm">Net Personal Cash Flow: ${(ratios.personal.totalIncome - ratios.personal.totalExpenses).toLocaleString()}</p>
-                        </div>
-                        <div className="border-b pb-2 mb-2">
-                          <p className="font-medium text-sm">Total Available for Debt Service:</p>
-                          <p className="text-sm font-semibold">${(ratios.business.ebitda + (ratios.personal.totalIncome - ratios.personal.totalExpenses)).toLocaleString()}</p>
-                        </div>
-                        <div className="pb-2 mb-2">
-                          <p className="font-medium text-sm">Annual Debt Service:</p>
-                          <p className="text-sm">${Math.round(ratios.dscr.totalProposedAnnualDebtService).toLocaleString()}</p>
-                        </div>
-                        <p className="border-t pt-1 mt-1 font-semibold">Business DSCR (Proposed) = Business EBITDA / Total Proposed Debt Service = {ratios.global.dscr.toFixed(2)}</p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Guarantee Coverage — personal net worth vs SBA loan */}
+                  {(() => {
+                    const sbaLoan = (ratios.dscr as any).sbaLoanAmount || 0;
+                    const val = sbaLoan > 0 ? ratios.personal.netWorth / sbaLoan : 0;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="space-y-1 cursor-help">
+                            <p className="text-sm text-muted-foreground">Guarantee Coverage</p>
+                            <p className={`text-xl font-bold ${sbaLoan === 0 ? 'text-muted-foreground' : val < 0.5 ? 'text-destructive' : val < 1 ? 'text-yellow-600' : 'text-green-600'}`}>
+                              {sbaLoan > 0 ? `${val.toFixed(2)}x` : 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">Target: &gt;1.0x</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Personal Net Worth / SBA Loan Amount</p></TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
                 </div>
               </div>
+
               
               {/* DSCR ANALYSIS - Existing vs Proposed */}
               <div className="pt-6 border-t">
