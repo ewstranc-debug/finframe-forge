@@ -544,24 +544,7 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
   };
 };
 
-/**
- * Calculate Fixed Charge Coverage Ratio (FCCR)
- * FCCR = (EBITDA + Rent + Lease Payments) / (Debt Service + Rent + Lease Payments)
- * This is a key SBA lending metric
- */
-export const calculateFCCR = (
-  ebitda: number,
-  rentExpense: number,
-  debtService: number
-): { fccr: number; numerator: number; denominator: number } => {
-  const numerator = ebitda + rentExpense;
-  const denominator = debtService + rentExpense;
-  return {
-    fccr: denominator > 0 ? numerator / denominator : 0,
-    numerator,
-    denominator,
-  };
-};
+// (calculateFCCR removed per underwriter review — DSCR is the sole coverage metric.)
 
 /**
  * Calculate year-over-year change for a metric
