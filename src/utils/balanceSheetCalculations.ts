@@ -21,10 +21,19 @@ export const calculateNetFixedAssets = (period: BusinessBalanceSheetPeriodData):
 };
 
 /**
+ * Calculate intangibles & other non-current assets (goodwill, financed loan
+ * fees, non-competes, deposits). NOT part of current assets or working capital.
+ */
+export const calculateIntangiblesOtherAssets = (period: BusinessBalanceSheetPeriodData): number => {
+  return parseFloat((period as any).intangiblesOtherAssets ?? "0") || 0;
+};
+
+/**
  * Calculate total assets for a balance sheet period
+ * Includes intangibles/other non-current assets.
  */
 export const calculateTotalAssets = (period: BusinessBalanceSheetPeriodData): number => {
-  return calculateCurrentAssets(period) + calculateNetFixedAssets(period);
+  return calculateCurrentAssets(period) + calculateNetFixedAssets(period) + calculateIntangiblesOtherAssets(period);
 };
 
 /**
