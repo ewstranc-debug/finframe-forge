@@ -583,9 +583,6 @@ export const FinancialAnalysis = () => {
         totalProposedAnnualDebtService,     // = sum of the three lines above
         globalFullYear: globalFullYearDscr,
         globalInterim: globalInterimDscr,
-        fccr: fccrResult.fccr,
-        fccrNumerator: fccrResult.numerator,
-        fccrDenominator: fccrResult.denominator,
         isProjection: isProjectionPeriod,
         lastFYEIndex,
       },
