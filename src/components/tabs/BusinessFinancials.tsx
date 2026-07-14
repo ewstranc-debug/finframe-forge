@@ -16,6 +16,8 @@ export const BusinessFinancials = () => {
     interestRate,
     termMonths,
     guaranteePercent,
+    injectionEquity,
+    financeGuaranteeFee,
     uses,
     debts,
     personalLiabilities,
