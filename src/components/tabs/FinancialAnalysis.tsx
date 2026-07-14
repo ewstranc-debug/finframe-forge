@@ -1361,43 +1361,8 @@ export const FinancialAnalysis = () => {
                   </Tooltip>
                 </div>
 
-                {/* FCCR Card */}
-                <div className="mt-4">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="space-y-1 cursor-help bg-muted/30 p-3 rounded-lg border border-border inline-block">
-                        <p className="text-sm text-muted-foreground font-semibold">Fixed Charge Coverage Ratio (FCCR)</p>
-                        <p
-                          className={`text-2xl font-bold ${
-                            ratios.dscr.fccr === 0
-                              ? "text-muted-foreground"
-                              : ratios.dscr.fccr < 1.15
-                              ? "text-destructive"
-                              : ratios.dscr.fccr < 1.25
-                              ? "text-yellow-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {ratios.dscr.fccr > 0 ? ratios.dscr.fccr.toFixed(2) : "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Target: &gt;1.15</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-sm">
-                      <div className="space-y-2 text-sm">
-                        <p className="font-semibold">Fixed Charge Coverage Ratio:</p>
-                        <p>Measures ability to cover fixed charges including rent/lease payments.</p>
-                        <div className="border-t pt-2 mt-2 space-y-1">
-                          <p>EBITDA + Rent: ${ratios.dscr.fccrNumerator?.toLocaleString()}</p>
-                          <p>Total Debt Service + Rent: ${ratios.dscr.fccrDenominator?.toLocaleString()}</p>
-                        </div>
-                        <p className="font-semibold border-t pt-2 mt-2">
-                          FCCR = (EBITDA + Rent) / (Debt Service + Rent) = {ratios.dscr.fccr?.toFixed(2) || 'N/A'}
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                {/* FCCR removed per underwriter review. */}
+
 
                 {/* Cash Conversion Cycle */}
                 {(ratios.business as any).cashConversion && (ratios.business as any).cashConversion.length > 0 && (
