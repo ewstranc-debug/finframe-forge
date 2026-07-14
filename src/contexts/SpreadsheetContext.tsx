@@ -136,6 +136,10 @@ export interface BusinessBalanceSheetPeriodData {
   otherCurrentAssets: string;
   realEstate: string;
   accumulatedDepreciation: string;
+  /** Goodwill, financed loan fees, non-competes, deposits. Included in Total
+   *  Assets and Equity, EXCLUDED from Current Assets / Working Capital / Current
+   *  Ratio / Quick Ratio. Optional for backward compat; defaults to "0". */
+  intangiblesOtherAssets?: string;
   // Liabilities - now separated for accurate ratio calculations
   accountsPayable: string;        // NEW: Separate A/P for accurate turnover
   accruedExpenses: string;        // NEW: Accrued expenses
