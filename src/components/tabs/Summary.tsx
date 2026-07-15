@@ -217,9 +217,11 @@ export const Summary = () => {
     return {
       dscr: result.dscr,
       totalIncome: result.totalIncomeAvailable,
-      netCashFlow: result.netCashAvailable,
+      // Net Cash Flow shown on the Financial Overview card = numerator − denominator
+      // (Cash Flow Available for Debt Service minus Total Debt Service).
+      netCashFlow: result.businessCashFlow + (result.netCashAvailable - result.businessCashFlow) - result.annualDebtService,
       debtService: result.annualDebtService,
-      businessCashFlow: result.businessEbitda,
+      businessCashFlow: result.businessCashFlow,
       personalW2Income: result.personalW2Income,
       schedCNetIncome: result.schedCCashFlow,
       officersComp: result.officersComp,
