@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
-import { useSpreadsheet, type AffiliateIncomeData as IncomeData, type AffiliateBalanceSheetData as BalanceSheetData, type AffiliateEntity } from "@/contexts/SpreadsheetContext";
+import { useSpreadsheet, type AffiliateIncomeData as IncomeData, type AffiliateBalanceSheetData as BalanceSheetData, type AffiliateEntity, type Debt } from "@/contexts/SpreadsheetContext";
+
 
 export const AffiliateFinancials = () => {
   const { affiliateEntities: entities, setAffiliateEntities: setEntities, affiliatePeriodLabels: periodLabels, setAffiliatePeriodLabels: setPeriodLabels } = useSpreadsheet();
@@ -202,6 +204,83 @@ export const AffiliateFinancials = () => {
   // Dynamic grid columns for flexible period count
   const gridStyle = { gridTemplateColumns: `minmax(200px, 1fr) repeat(${periodLabels.length}, minmax(150px, 1fr))` };
   const minWidth = `${200 + periodLabels.length * 150}px`;
+
+
+  // Per-affiliate debt schedule helpers. `debts` is an optional field on the
+  // entity — undefined = empty. Each affiliate's flagged debt payments feed
+  // ONLY that affiliate's DSCR (never the main business DSCR).
+  const getAffiliateDebts = (entity: AffiliateEntity): Debt[] => entity.debts ?? [];
+
+  const setAffiliateDebts = (entityId: string, next: Debt[]) => {
+    setEntities(entities.map(e => e.id === entityId ? { ...e, debts: next } : e));
+  };
+
+  const addAffiliateDebt = (entity: AffiliateEntity) => {
+    const current = getAffiliateDebts(entity);
+    const newDebt: Debt = {
+      id: `${entity.id}-d-${Date.now()}`,
+      creditor: `Creditor ${current.length + 1}`,
+      balance: "0",
+      payment: "0",
+      rate: "0",
+      term: "0",
+      includeInDSCR: true,
+    };
+    setAffiliateDebts(entity.id, [...current, newDebt]);
+  };
+
+  const updateAffiliateDebt = (entityId: string, debtId: string, updates: Partial<Debt>) => {
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+    const next = getAffiliateDebts(entity).map(d => d.id === debtId ? { ...d, ...updates } : d);
+    setAffiliateDebts(entityId, next);
+  };
+
+  const removeAffiliateDebt = (entityId: string, debtId: string) => {
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+    setAffiliateDebts(entityId, getAffiliateDebts(entity).filter(d => d.id !== debtId));
+  };
+
+  const calcAffiliateAnnualDebtService = (entity: AffiliateEntity): number => {
+    return getAffiliateDebts(entity).reduce((sum, d) => {
+      if (d.includeInDSCR === false) return sum;
+      const pmt = parseFloat(d.payment) || 0;
+      return sum + pmt * 12;
+    }, 0);
+  };
+
+  // Affiliate DSCR — uses the last full 12-month historical period (falls back
+  // to the latest period with populated data). Numerator = period cash flow
+  // annualized to 12 months. Denominator = affiliate's own DSCR-flagged debt
+  // payments (annualized). NO SBA proposed debt service — that only feeds the
+  // main business DSCR.
+  const pickAffiliateReportingPeriod = (entity: AffiliateEntity): number => {
+    for (let i = entity.incomePeriods.length - 1; i >= 0; i--) {
+      const p = entity.incomePeriods[i];
+      if (!p) continue;
+      const months = parseFloat(p.periodMonths) || 12;
+      if (months === 12 && !p.isProjection) return i;
+    }
+    for (let i = entity.incomePeriods.length - 1; i >= 0; i--) {
+      const p = entity.incomePeriods[i];
+      if (!p) continue;
+      const hasData = ['revenue','cogs','operatingExpenses','rentExpense','officersComp'].some(k => (parseFloat((p as any)[k]) || 0) > 0);
+      if (hasData) return i;
+    }
+    return 0;
+  };
+
+  const calcAffiliateDSCR = (entity: AffiliateEntity) => {
+    const idx = pickAffiliateReportingPeriod(entity);
+    const period = entity.incomePeriods[idx];
+    const months = parseFloat(period?.periodMonths || "12") || 12;
+    const cf = calculateCashFlow(entity, idx) * (months > 0 ? 12 / months : 1);
+    const ds = calcAffiliateAnnualDebtService(entity);
+    const dscr = ds > 0 ? cf / ds : 0;
+    return { cf, ds, dscr, idx, label: periodLabels[idx] || `Period ${idx + 1}` };
+  };
+
 
   return (
     <div className="p-6">
@@ -751,6 +830,93 @@ export const AffiliateFinancials = () => {
                       ))}
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Per-affiliate Existing Debt Schedule + DSCR */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Existing Debt Schedule</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Debts owed by this affiliate. Flagged rows feed ONLY this affiliate's DSCR (never the main business).
+                    </p>
+                  </div>
+                  <Button onClick={() => addAffiliateDebt(entity)} variant="outline" size="sm" className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Debt
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const affDebts = getAffiliateDebts(entity);
+                    const dscrInfo = calcAffiliateDSCR(entity);
+                    return (
+                      <div className="space-y-4">
+                        <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
+                          <div className="grid bg-muted font-medium text-sm" style={{ gridTemplateColumns: 'minmax(140px,1.4fr) 130px 130px 90px 90px 90px 60px' }}>
+                            <div className="p-3 border-r border-border">Creditor</div>
+                            <div className="p-3 border-r border-border">Balance</div>
+                            <div className="p-3 border-r border-border">Monthly Payment</div>
+                            <div className="p-3 border-r border-border">Rate (%)</div>
+                            <div className="p-3 border-r border-border">Term (mo)</div>
+                            <div className="p-3 border-r border-border text-center">In DSCR?</div>
+                            <div className="p-3 text-center">Remove</div>
+                          </div>
+                          {affDebts.length === 0 && (
+                            <div className="p-4 text-sm text-muted-foreground text-center">No debts on this affiliate. Click "Add Debt" to add one.</div>
+                          )}
+                          {affDebts.map((d) => (
+                            <div key={d.id} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: 'minmax(140px,1.4fr) 130px 130px 90px 90px 90px 60px' }}>
+                              <div className="border-r border-border bg-secondary/30">
+                                <EditableCell value={d.creditor} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { creditor: v })} type="text" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.balance} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { balance: v })} type="currency" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.payment} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { payment: v })} type="currency" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.rate} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { rate: v })} type="number" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.term} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { term: v })} type="number" />
+                              </div>
+                              <div className="border-r border-border p-3 flex items-center justify-center">
+                                <Checkbox
+                                  checked={d.includeInDSCR !== false}
+                                  onCheckedChange={(v) => updateAffiliateDebt(entity.id, d.id, { includeInDSCR: v === true })}
+                                />
+                              </div>
+                              <div className="p-2 flex items-center justify-center">
+                                <Button variant="ghost" size="sm" onClick={() => removeAffiliateDebt(entity.id, d.id)} className="text-destructive hover:text-destructive">
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                            <p className="text-xs text-muted-foreground">Annual Debt Service (in-DSCR)</p>
+                            <p className="text-lg font-semibold mt-1">{formatCurrency(dscrInfo.ds)}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                            <p className="text-xs text-muted-foreground">Cash Flow — {dscrInfo.label} (annualized)</p>
+                            <p className="text-lg font-semibold mt-1">{formatCurrency(dscrInfo.cf)}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                            <p className="text-xs text-muted-foreground">Affiliate DSCR</p>
+                            <p className={`text-lg font-bold mt-1 ${dscrInfo.ds === 0 ? 'text-muted-foreground' : dscrInfo.dscr >= 1.25 ? 'text-green-600' : dscrInfo.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {dscrInfo.ds === 0 ? 'N/A (no debt)' : `${dscrInfo.dscr.toFixed(2)}x`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </div>

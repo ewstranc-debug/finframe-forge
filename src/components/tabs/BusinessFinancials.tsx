@@ -882,18 +882,32 @@ export const BusinessFinancials = () => {
                 </tr>
                 <tr className="bg-accent/20">
                   <td className="border border-border p-2 font-semibold sticky left-0 bg-accent/20">DSCR</td>
-                  {businessPeriods.map((_, i) => (
-                    <td key={i} className={`border border-border p-2 text-center font-semibold ${
-                      calculateDSCR(i) >= 1.25 ? 'text-green-600' : 
-                      calculateDSCR(i) >= 1.0 ? 'text-yellow-600' : 
-                      'text-red-600'
-                    }`}>
-                      {calculateDSCR(i).toFixed(2)}x
-                    </td>
-                  ))}
+                  {businessPeriods.map((p, i) => {
+                    const months = parseFloat(p.periodMonths) || 12;
+                    const rawCF = calculateCashFlow(i);
+                    const annDscr = calculateDSCR(i);
+                    const rawDscr = totalProposedDebtService > 0 ? rawCF / totalProposedDebtService : 0;
+                    const colorClass = annDscr >= 1.25 ? 'text-green-600' : annDscr >= 1.0 ? 'text-yellow-600' : 'text-red-600';
+                    const isPartial = months > 0 && months < 12;
+                    return (
+                      <td key={i} className="border border-border p-2 text-center">
+                        <div className={`font-semibold ${colorClass}`}>
+                          {annDscr.toFixed(2)}x{isPartial && <span className="ml-1 text-[10px] font-normal text-muted-foreground">(ann.)</span>}
+                        </div>
+                        {isPartial && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            raw: {rawDscr.toFixed(2)}x
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
-                {/* "DSCR with Rent Addback" row removed — the formula was
-                    ambiguous and did not tie to a documented debt service. */}
+                <tr>
+                  <td colSpan={businessPeriods.length + 1} className="border border-border p-2 text-[11px] text-muted-foreground italic sticky left-0">
+                    Cash flow annualized by 12/period months; proposed post-close debt service.
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

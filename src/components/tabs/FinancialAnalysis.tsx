@@ -3,27 +3,15 @@ import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet, StickyNote, Sparkles, Trash2 } from "lucide-react";
+import { TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet, StickyNote } from "lucide-react";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
-import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, classifyPeriods, findLastFYEIndex, findLastHistoricalFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount, computeNewLoanAnnualPayment } from "@/utils/financialCalculations";
+import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, classifyPeriods, findLastFYEIndex, findLastHistoricalFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount, computeNewLoanAnnualPayment, calculateBusinessCashFlow, getNonRecurringAdjustment } from "@/utils/financialCalculations";
 import { getDSCRColorClass } from "@/utils/dscrUtils";
 import { Textarea } from "@/components/ui/textarea";
-import { DocumentUpload } from "@/components/DocumentUpload";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 
-const AI_MODELS = [
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Fast & balanced (default)" },
-  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Most capable, complex reasoning" },
-  { value: "google/gemini-3-pro-preview", label: "Gemini 3 Pro Preview", description: "Next-gen model" },
-  { value: "openai/gpt-5", label: "GPT-5", description: "Premium accuracy & nuance" },
-  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", description: "Fast with strong reasoning" },
-];
 
 export const FinancialAnalysis = () => {
   const {
@@ -56,33 +44,62 @@ export const FinancialAnalysis = () => {
   const [dscrModalOpen, setDscrModalOpen] = useState(false);
   const [selectedDscrData, setSelectedDscrData] = useState<any>(null);
 
-  // Calculate income trends
-  const incomeData = personalPeriods.map((period, index) => {
-    const w2Income = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0);
-    const businessIncome = parseFloat(period.schedCRevenue) || 0;
-    const totalIncome = w2Income + businessIncome + (parseFloat(period.investments) || 0) + (parseFloat(period.rentalIncome) || 0);
-    
-    return {
-      name: personalPeriodLabels[index] || `Period ${index + 1}`,
-      w2Income,
-      businessIncome,
-      totalIncome,
-    };
-  });
+  // Trend charts — plot personal series when any personal data is entered;
+  // otherwise fall back to business periods (revenue / OpEx / line-18 CF) so
+  // the axes are never empty on business-only spreads.
+  const personalHasData = personalPeriods.some(p =>
+    ['salary','bonuses','investments','rentalIncome','retirementIncome','otherIncome','schedCRevenue','costOfLiving','personalTaxes']
+      .some(k => (parseFloat((p as any)[k]) || 0) !== 0)
+  );
 
-  // Calculate cash flow trends
-  const cashFlowData = personalPeriods.map((period, index) => {
-    const totalIncome = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0) + 
-                       (parseFloat(period.schedCRevenue) || 0) + (parseFloat(period.investments) || 0);
-    const totalExpenses = (parseFloat(period.costOfLiving) || 0) + (parseFloat(period.personalTaxes) || 0);
-    
-    return {
-      name: personalPeriodLabels[index] || `Period ${index + 1}`,
-      income: totalIncome,
-      expenses: totalExpenses,
-      netCashFlow: totalIncome - totalExpenses,
-    };
-  });
+  const incomeData = personalHasData
+    ? personalPeriods.map((period, index) => {
+        const w2Income = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0);
+        const businessIncome = parseFloat(period.schedCRevenue) || 0;
+        const totalIncome = w2Income + businessIncome + (parseFloat(period.investments) || 0) + (parseFloat(period.rentalIncome) || 0);
+        return {
+          name: personalPeriodLabels[index] || `Period ${index + 1}`,
+          w2Income,
+          businessIncome,
+          totalIncome,
+        };
+      })
+    : businessPeriods.map((p, i) => {
+        const rev = parseFloat(p.revenue) || 0;
+        const oi = parseFloat(p.otherIncome) || 0;
+        return {
+          name: businessPeriodLabels[i] || `Period ${i + 1}`,
+          w2Income: 0,
+          businessIncome: rev,
+          totalIncome: rev + oi,
+        };
+      });
+
+  const cashFlowData = personalHasData
+    ? personalPeriods.map((period, index) => {
+        const totalIncome = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0) +
+                           (parseFloat(period.schedCRevenue) || 0) + (parseFloat(period.investments) || 0);
+        const totalExpenses = (parseFloat(period.costOfLiving) || 0) + (parseFloat(period.personalTaxes) || 0);
+        return {
+          name: personalPeriodLabels[index] || `Period ${index + 1}`,
+          income: totalIncome,
+          expenses: totalExpenses,
+          netCashFlow: totalIncome - totalExpenses,
+        };
+      })
+    : businessPeriods.map((p, i) => {
+        const rev = (parseFloat(p.revenue) || 0) + (parseFloat(p.otherIncome) || 0);
+        const exp = (parseFloat(p.cogs) || 0) + (parseFloat(p.operatingExpenses) || 0) +
+                    (parseFloat(p.rentExpense) || 0) + (parseFloat(p.officersComp) || 0) +
+                    (parseFloat(p.otherExpenses) || 0);
+        const cf = calculateBusinessCashFlow(p, false) + getNonRecurringAdjustment(p, false);
+        return {
+          name: businessPeriodLabels[i] || `Period ${i + 1}`,
+          income: rev,
+          expenses: exp,
+          netCashFlow: cf,
+        };
+      });
 
   // Asset allocation pie chart data
   const assetAllocationData = [
@@ -625,134 +642,14 @@ export const FinancialAnalysis = () => {
     };
   };
 
-  const generateAnalysis = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Calculate comprehensive metrics for analysis
-      const totalPersonalAssets = Object.values(personalAssets).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-      // Personal liabilities exclude business Existing Debts (those are a
-      // contingent guaranteed liability, tracked separately).
-      const totalPersonalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) +
-                                       (parseFloat(personalLiabilities.mortgages) || 0) +
-                                       (parseFloat(personalLiabilities.vehicleLoans) || 0) +
-                                       (parseFloat(personalLiabilities.otherLiabilities) || 0);
-      const contingentBusinessDebt = debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
-      
-      // Calculate business metrics
-      const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
-      const businessRevenue = parseFloat(latestBusinessPeriod?.revenue) || 0;
-      const businessCOGS = parseFloat(latestBusinessPeriod?.cogs) || 0;
-      const businessOpEx = parseFloat(latestBusinessPeriod?.operatingExpenses) || 0;
-      const businessNetIncome = businessRevenue - businessCOGS - businessOpEx;
-      
-      // Calculate business balance sheet metrics
-      const latestBalanceSheet = businessBalanceSheetPeriods[2] || businessBalanceSheetPeriods[1] || businessBalanceSheetPeriods[0];
-      const businessCurrentAssets = (parseFloat(latestBalanceSheet?.cash) || 0) + 
-                                   (parseFloat(latestBalanceSheet?.accountsReceivable) || 0) +
-                                   (parseFloat(latestBalanceSheet?.inventory) || 0);
-      const businessTotalAssets = businessCurrentAssets + 
-                                 (parseFloat(latestBalanceSheet?.realEstate) || 0) -
-                                 (parseFloat(latestBalanceSheet?.accumulatedDepreciation) || 0);
-      const businessCurrentLiabilities = parseFloat(latestBalanceSheet?.currentLiabilities) || 0;
-      const businessTotalLiabilities = businessCurrentLiabilities + (parseFloat(latestBalanceSheet?.longTermDebt) || 0);
-      
-      // Fetch document contents if there are uploaded documents
-      const documentContents: { name: string; content: string }[] = [];
-      
-      for (const doc of uploadedDocuments) {
-        try {
-          const { data: fileData, error: downloadError } = await supabase.storage
-            .from('financial-documents')
-            .download(doc.path);
-          
-          if (downloadError) {
-            console.error('Error downloading document:', downloadError);
-            continue;
-          }
-          
-          // For text files, read content directly
-          if (doc.type === 'text/plain' || doc.name.endsWith('.txt')) {
-            const text = await fileData.text();
-            documentContents.push({ name: doc.name, content: text });
-          } else {
-            // For other files, note that they were provided (full parsing would need vision/OCR)
-            documentContents.push({ 
-              name: doc.name, 
-              content: `[Document uploaded: ${doc.name} (${doc.type}). The AI will analyze available context from this document type.]` 
-            });
-          }
-        } catch (err) {
-          console.error('Error processing document:', err);
-        }
-      }
-      
-      // Prepare comprehensive financial data for analysis
-      const financialData = {
-        personalPeriods,
-        personalPeriodLabels,
-        personalAssets,
-        personalLiabilities,
-        businessPeriods,
-        businessPeriodLabels,
-        businessBalanceSheetPeriods,
-        affiliateEntities,
-        debts,
-        calculatedMetrics: {
-          personal: {
-            totalAssets: totalPersonalAssets,
-            totalLiabilities: totalPersonalLiabilities,
-            netWorth: totalPersonalAssets - totalPersonalLiabilities,
-            liquidAssets: parseFloat(personalAssets.liquidAssets) || 0,
-            debtToAssets: totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0,
-            liquidityRatio: totalPersonalLiabilities > 0 ? (parseFloat(personalAssets.liquidAssets) || 0) / totalPersonalLiabilities : 0,
-            contingentBusinessDebt,
-          },
-          business: {
-            revenue: businessRevenue,
-            grossProfit: businessRevenue - businessCOGS,
-            grossMargin: businessRevenue > 0 ? ((businessRevenue - businessCOGS) / businessRevenue) * 100 : 0,
-            netIncome: businessNetIncome,
-            netMargin: businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0,
-            totalAssets: businessTotalAssets,
-            totalLiabilities: businessTotalLiabilities,
-            currentRatio: businessCurrentLiabilities > 0 ? businessCurrentAssets / businessCurrentLiabilities : 0,
-            debtToEquity: (businessTotalAssets - businessTotalLiabilities) > 0 ? 
-                         businessTotalLiabilities / (businessTotalAssets - businessTotalLiabilities) : 0,
-            cashConversion: (ratios.business as any).cashConversion,
-          },
-          combined: {
-            totalAssets: totalPersonalAssets + businessTotalAssets,
-            totalLiabilities: totalPersonalLiabilities + businessTotalLiabilities,
-            totalNetWorth: (totalPersonalAssets + businessTotalAssets) - (totalPersonalLiabilities + businessTotalLiabilities),
-          }
-        },
-      };
-
-      const { data, error } = await supabase.functions.invoke('generate-financial-analysis', {
-        body: { 
-          financialData,
-          analystNotes: analystNotes.trim() || undefined,
-          documentContents: documentContents.length > 0 ? documentContents : undefined,
-          model: selectedAIModel,
-        },
-      });
-
-      if (error) throw error;
-
-      setFinancialAnalysis(data.analysis);
-      toast.success("Financial analysis generated successfully");
-    } catch (error) {
-      console.error("Error generating analysis:", error);
-      toast.error("Failed to generate analysis");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // AI analysis feature removed. `financialAnalysis`, `uploadedDocuments`, and
+  // `selectedAIModel` remain in localStorage for backward compat but are no
+  // longer read or written by the UI.
 
   const handlePrint = () => {
     window.print();
   };
+
 
   const handleExportPDF = () => {
     try {
@@ -849,24 +746,6 @@ export const FinancialAnalysis = () => {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4 no-print">
           <h2 className="text-2xl font-bold">Financial Analysis & Insights</h2>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="ai-model" className="text-sm whitespace-nowrap">AI Model:</Label>
-              <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
-                <SelectTrigger id="ai-model" className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AI_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      <div className="flex flex-col">
-                        <span>{model.label}</span>
-                        <span className="text-xs text-muted-foreground">{model.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <Button onClick={handleExportPDF} variant="outline" className="gap-2">
               <FileDown className="h-4 w-4" />
               Export PDF
@@ -879,42 +758,11 @@ export const FinancialAnalysis = () => {
               <Printer className="h-4 w-4" />
               Print
             </Button>
-            <Button onClick={generateAnalysis} disabled={isLoading} className="gap-2">
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Generate AI Analysis
-                </>
-              )}
-            </Button>
-            {financialAnalysis && (
-              <Button 
-                onClick={() => {
-                  setFinancialAnalysis("");
-                  toast.success("AI analysis cleared");
-                }} 
-                variant="outline" 
-                className="gap-2 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                Clear Analysis
-              </Button>
-            )}
           </div>
         </div>
 
-        {/* Document Upload and Notes Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
-          <DocumentUpload 
-            documents={uploadedDocuments} 
-            onDocumentsChange={setUploadedDocuments} 
-          />
-          
+        {/* Analyst Notes (no AI) */}
+        <div className="no-print">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -926,15 +774,16 @@ export const FinancialAnalysis = () => {
               <Textarea
                 value={analystNotes}
                 onChange={(e) => setAnalystNotes(e.target.value)}
-                placeholder="Enter deal context, borrower history, special considerations, concerns, or any other notes that should be incorporated into the AI analysis..."
-                className="min-h-[180px] resize-none"
+                placeholder="Deal context, borrower history, concerns, or anything else worth recording on the file."
+                className="min-h-[160px] resize-none"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                These notes will be included in the AI analysis for additional context.
+                Notes for the file.
               </p>
             </CardContent>
           </Card>
         </div>
+
 
         <div className="print:block hidden">
           <h1 className="text-3xl font-bold mb-2">Financial Analysis Report</h1>
@@ -1188,7 +1037,7 @@ export const FinancialAnalysis = () => {
                         <p className="text-sm text-muted-foreground font-semibold">Business DSCR - Interim</p>
                         <p
                           className={`text-2xl font-bold ${
-                            !ratios.dscr.interim || !(ratios.dscr.interim.dscr > 0)
+                            !ratios.dscr.interim
                               ? "text-muted-foreground"
                               : ratios.dscr.interim.dscr < 1.0
                               ? "text-destructive"
@@ -1197,7 +1046,7 @@ export const FinancialAnalysis = () => {
                               : "text-green-600"
                           }`}
                         >
-                          {ratios.dscr.interim && ratios.dscr.interim.dscr > 0 ? ratios.dscr.interim.dscr.toFixed(2) : "N/A"}
+                          {ratios.dscr.interim ? ratios.dscr.interim.dscr.toFixed(2) : "N/A"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Target: &gt;1.15 | {ratios.dscr.interim ? `${ratios.dscr.interim.periodLabel} (${ratios.dscr.interim.periodMonths}mo)` : "No Data"}
@@ -1309,22 +1158,20 @@ export const FinancialAnalysis = () => {
                         }}
                       >
                         <p className="text-sm text-muted-foreground font-semibold">Global DSCR - Interim</p>
-                        <p
-                          className={`text-2xl font-bold ${
-                            !ratios.dscr.globalInterim || ratios.dscr.globalInterim.dscr === 0
-                              ? "text-muted-foreground"
-                              : ratios.dscr.globalInterim.dscr < 1.15
-                              ? "text-destructive"
-                              : ratios.dscr.globalInterim.dscr < 1.25
-                              ? "text-yellow-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {ratios.dscr.globalInterim && ratios.dscr.globalInterim.dscr > 0 ? ratios.dscr.globalInterim.dscr.toFixed(2) : "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Target: &gt;1.15 | {ratios.dscr.globalInterim ? `${ratios.dscr.globalInterim.periodLabel} (${ratios.dscr.globalInterim.periodMonths}mo)` : "No Data"}
-                        </p>
+                        {(() => {
+                          const hasData = !!ratios.dscr.globalInterim && ratios.dscr.globalInterim.periodLabel !== 'N/A';
+                          const d = ratios.dscr.globalInterim?.dscr ?? 0;
+                          return (
+                            <>
+                              <p className={`text-2xl font-bold ${!hasData ? 'text-muted-foreground' : d < 1.15 ? 'text-destructive' : d < 1.25 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                {hasData ? d.toFixed(2) : 'N/A'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Target: &gt;1.15 | {hasData ? `${ratios.dscr.globalInterim!.periodLabel} (${ratios.dscr.globalInterim!.periodMonths}mo)` : 'No Data'}
+                              </p>
+                            </>
+                          );
+                        })()}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
@@ -2139,7 +1986,9 @@ export const FinancialAnalysis = () => {
           </CardContent>
         </Card>
 
-        {/* Key Metrics Overview */}
+        {/* Key Metrics Overview — hidden when no personal data is entered, to
+            avoid rendering empty axes. */}
+        {personalHasData && (
         <Card className="print-chart page-break">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -2163,6 +2012,8 @@ export const FinancialAnalysis = () => {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+        )}
+
 
       {/* Income Trends */}
       <Card className="print-chart page-break">
@@ -2263,50 +2114,8 @@ export const FinancialAnalysis = () => {
         </Card>
       </div>
 
-      {/* AI-Generated Analysis Narrative */}
-      {financialAnalysis && (
-        <Card className="border-primary/20 bg-card page-break">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-primary" />
-              AI Financial Analysis & Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-slate dark:prose-invert max-w-none">
-              <ReactMarkdown
-                components={{
-                  h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-4 text-foreground" {...props} />,
-                  h2: ({node, ...props}) => <h2 className="text-xl font-semibold mt-5 mb-3 text-foreground" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground" {...props} />,
-                  p: ({node, ...props}) => <p className="mb-4 text-foreground leading-relaxed" {...props} />,
-                  ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
-                  ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
-                  li: ({node, ...props}) => <li className="text-foreground" {...props} />,
-                  strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                  em: ({node, ...props}) => <em className="italic text-muted-foreground" {...props} />,
-                  blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic my-4 text-muted-foreground" {...props} />,
-                  code: ({node, ...props}) => <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
-                }}
-              >
-                {financialAnalysis}
-              </ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* AI-Generated Analysis panel removed. */}
 
-      {!financialAnalysis && (
-        <Card className="border-dashed">
-          <CardContent className="pt-6">
-            <div className="text-center text-muted-foreground">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">No Analysis Generated Yet</p>
-              <p className="text-sm">Click "Generate AI Analysis" to get comprehensive insights and recommendations based on your financial data.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* DSCR Breakdown Modal */}
       {selectedDscrData && (
