@@ -201,9 +201,81 @@ export const AffiliateFinancials = () => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
   };
 
-  // Dynamic grid columns for flexible period count
-  const gridStyle = { gridTemplateColumns: `minmax(200px, 1fr) repeat(${periodLabels.length}, minmax(150px, 1fr))` };
-  const minWidth = `${200 + periodLabels.length * 150}px`;
+  // Per-affiliate debt schedule helpers. `debts` is an optional field on the
+  // entity — undefined = empty. Each affiliate's flagged debt payments feed
+  // ONLY that affiliate's DSCR (never the main business DSCR).
+  const getAffiliateDebts = (entity: AffiliateEntity): Debt[] => entity.debts ?? [];
+
+  const setAffiliateDebts = (entityId: string, next: Debt[]) => {
+    setEntities(entities.map(e => e.id === entityId ? { ...e, debts: next } : e));
+  };
+
+  const addAffiliateDebt = (entity: AffiliateEntity) => {
+    const current = getAffiliateDebts(entity);
+    const newDebt: Debt = {
+      id: `${entity.id}-d-${Date.now()}`,
+      creditor: `Creditor ${current.length + 1}`,
+      balance: "0",
+      payment: "0",
+      rate: "0",
+      term: "0",
+      includeInDSCR: true,
+    };
+    setAffiliateDebts(entity.id, [...current, newDebt]);
+  };
+
+  const updateAffiliateDebt = (entityId: string, debtId: string, updates: Partial<Debt>) => {
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+    const next = getAffiliateDebts(entity).map(d => d.id === debtId ? { ...d, ...updates } : d);
+    setAffiliateDebts(entityId, next);
+  };
+
+  const removeAffiliateDebt = (entityId: string, debtId: string) => {
+    const entity = entities.find(e => e.id === entityId);
+    if (!entity) return;
+    setAffiliateDebts(entityId, getAffiliateDebts(entity).filter(d => d.id !== debtId));
+  };
+
+  const calcAffiliateAnnualDebtService = (entity: AffiliateEntity): number => {
+    return getAffiliateDebts(entity).reduce((sum, d) => {
+      if (d.includeInDSCR === false) return sum;
+      const pmt = parseFloat(d.payment) || 0;
+      return sum + pmt * 12;
+    }, 0);
+  };
+
+  // Affiliate DSCR — uses the last full 12-month historical period (falls back
+  // to the latest period with populated data). Numerator = period cash flow
+  // annualized to 12 months. Denominator = affiliate's own DSCR-flagged debt
+  // payments (annualized). NO SBA proposed debt service — that only feeds the
+  // main business DSCR.
+  const pickAffiliateReportingPeriod = (entity: AffiliateEntity): number => {
+    for (let i = entity.incomePeriods.length - 1; i >= 0; i--) {
+      const p = entity.incomePeriods[i];
+      if (!p) continue;
+      const months = parseFloat(p.periodMonths) || 12;
+      if (months === 12 && !p.isProjection) return i;
+    }
+    for (let i = entity.incomePeriods.length - 1; i >= 0; i--) {
+      const p = entity.incomePeriods[i];
+      if (!p) continue;
+      const hasData = ['revenue','cogs','operatingExpenses','rentExpense','officersComp'].some(k => (parseFloat((p as any)[k]) || 0) > 0);
+      if (hasData) return i;
+    }
+    return 0;
+  };
+
+  const calcAffiliateDSCR = (entity: AffiliateEntity) => {
+    const idx = pickAffiliateReportingPeriod(entity);
+    const period = entity.incomePeriods[idx];
+    const months = parseFloat(period?.periodMonths || "12") || 12;
+    const cf = calculateCashFlow(entity, idx) * (months > 0 ? 12 / months : 1);
+    const ds = calcAffiliateAnnualDebtService(entity);
+    const dscr = ds > 0 ? cf / ds : 0;
+    return { cf, ds, dscr, idx, label: periodLabels[idx] || `Period ${idx + 1}` };
+  };
+
 
   return (
     <div className="p-6">
