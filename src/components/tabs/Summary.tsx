@@ -303,9 +303,84 @@ export const Summary = () => {
     return 0;
   }, [lastFullYear, interimPeriod, lastFYEIndex, interimIndices]);
 
+  // Save / Load spread — writes every `financialTool_*` localStorage key to a
+  // single JSON file and restores it on load. Does not rename or reshape any
+  // key; a saved file round-trips byte-identical.
+  const handleSaveSpread = () => {
+    try {
+      const payload: Record<string, string> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('financialTool_')) continue;
+        const val = localStorage.getItem(key);
+        if (val !== null) payload[key] = val;
+      }
+      const borrower = (uses.find(u => (parseFloat(u.amount) || 0) > 0)?.description || 'spread')
+        .replace(/[^a-z0-9\-_. ]/gi, '').trim().replace(/\s+/g, '_') || 'spread';
+      const today = new Date().toISOString().slice(0, 10);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${borrower}_${today}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: 'Spread saved', description: `Downloaded ${a.download}` });
+    } catch (e) {
+      toast({ title: 'Save failed', description: 'Could not export the spread.', variant: 'destructive' });
+    }
+  };
+
+  const loadInputRef = useRef<HTMLInputElement>(null);
+  const handleLoadClick = () => loadInputRef.current?.click();
+  const handleLoadSpread = async (file: File | null) => {
+    if (!file) return;
+    if (!window.confirm('This will replace the current spread. Continue?')) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as Record<string, string>;
+      const keys = Object.keys(parsed).filter(k => k.startsWith('financialTool_'));
+      if (keys.length === 0) {
+        toast({ title: 'Load failed', description: 'No financialTool_* keys found in file.', variant: 'destructive' });
+        return;
+      }
+      // Wipe existing financialTool_* keys, then write the file contents.
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('financialTool_')) toRemove.push(key);
+      }
+      toRemove.forEach(k => localStorage.removeItem(k));
+      for (const k of keys) localStorage.setItem(k, String(parsed[k]));
+      toast({ title: 'Spread loaded', description: 'Reloading…' });
+      setTimeout(() => window.location.reload(), 300);
+    } catch (e) {
+      toast({ title: 'Load failed', description: 'File is not a valid spread JSON.', variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-col md:flex-row md:justify-end items-start md:items-center gap-2">
+        <div className="flex flex-wrap gap-2 md:mr-auto">
+          <Button variant="outline" size="sm" onClick={handleSaveSpread}>
+            <Download className="h-4 w-4 mr-2" />
+            Save Spread
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleLoadClick}>
+            <Upload className="h-4 w-4 mr-2" />
+            Load Spread
+          </Button>
+          <input
+            ref={loadInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => { handleLoadSpread(e.target.files?.[0] ?? null); e.currentTarget.value = ''; }}
+          />
+        </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -328,7 +403,6 @@ export const Summary = () => {
                     <li>Existing Debts</li>
                     <li>Affiliate Financials</li>
                     <li>Business Balance Sheet</li>
-                    <li>AI Analysis</li>
                   </ul>
                   <p className="mt-2 font-medium">This action cannot be undone.</p>
                 </div>
@@ -343,6 +417,9 @@ export const Summary = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      <p className="text-xs text-muted-foreground -mt-4">
+        Data is saved in this browser tab's storage. Use Save Spread to back up or move it.
+      </p>
 
       <Card>
         <CardHeader>
