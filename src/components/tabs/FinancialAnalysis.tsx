@@ -3,27 +3,15 @@ import { useSpreadsheet } from "@/contexts/SpreadsheetContext";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet, StickyNote, Sparkles, Trash2 } from "lucide-react";
+import { TrendingUp, AlertCircle, Printer, FileDown, FileSpreadsheet, StickyNote } from "lucide-react";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DSCRBreakdownModal } from "@/components/DSCRBreakdownModal";
 import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
-import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, classifyPeriods, findLastFYEIndex, findLastHistoricalFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount, computeNewLoanAnnualPayment } from "@/utils/financialCalculations";
+import { calculateDSCR, calculateSBAGuaranteeFee, calculateLoanAnnualDebtService, classifyPeriods, findLastFYEIndex, findLastHistoricalFYEIndex, findInterimIndices, isLastFYEProjection, computeSBAAnnualServiceFee, computeSBALoanAmount, computeNewLoanAnnualPayment, calculateBusinessCashFlow, getNonRecurringAdjustment } from "@/utils/financialCalculations";
 import { getDSCRColorClass } from "@/utils/dscrUtils";
 import { Textarea } from "@/components/ui/textarea";
-import { DocumentUpload } from "@/components/DocumentUpload";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 
-const AI_MODELS = [
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", description: "Fast & balanced (default)" },
-  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "Most capable, complex reasoning" },
-  { value: "google/gemini-3-pro-preview", label: "Gemini 3 Pro Preview", description: "Next-gen model" },
-  { value: "openai/gpt-5", label: "GPT-5", description: "Premium accuracy & nuance" },
-  { value: "openai/gpt-5-mini", label: "GPT-5 Mini", description: "Fast with strong reasoning" },
-];
 
 export const FinancialAnalysis = () => {
   const {
