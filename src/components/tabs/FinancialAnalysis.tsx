@@ -1311,7 +1311,7 @@ export const FinancialAnalysis = () => {
                         <p className="text-sm text-muted-foreground font-semibold">Global DSCR - Interim</p>
                         <p
                           className={`text-2xl font-bold ${
-                            !ratios.dscr.globalInterim || ratios.dscr.globalInterim.dscr === 0
+                            !ratios.dscr.globalInterim
                               ? "text-muted-foreground"
                               : ratios.dscr.globalInterim.dscr < 1.15
                               ? "text-destructive"
@@ -1320,7 +1320,7 @@ export const FinancialAnalysis = () => {
                               : "text-green-600"
                           }`}
                         >
-                          {ratios.dscr.globalInterim && ratios.dscr.globalInterim.dscr > 0 ? ratios.dscr.globalInterim.dscr.toFixed(2) : "N/A"}
+                          {ratios.dscr.globalInterim ? ratios.dscr.globalInterim.dscr.toFixed(2) : "N/A"}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Target: &gt;1.15 | {ratios.dscr.globalInterim ? `${ratios.dscr.globalInterim.periodLabel} (${ratios.dscr.globalInterim.periodMonths}mo)` : "No Data"}
