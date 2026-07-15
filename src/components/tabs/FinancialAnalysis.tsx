@@ -717,24 +717,6 @@ export const FinancialAnalysis = () => {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4 no-print">
           <h2 className="text-2xl font-bold">Financial Analysis & Insights</h2>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="ai-model" className="text-sm whitespace-nowrap">AI Model:</Label>
-              <Select value={selectedAIModel} onValueChange={setSelectedAIModel}>
-                <SelectTrigger id="ai-model" className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AI_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      <div className="flex flex-col">
-                        <span>{model.label}</span>
-                        <span className="text-xs text-muted-foreground">{model.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <Button onClick={handleExportPDF} variant="outline" className="gap-2">
               <FileDown className="h-4 w-4" />
               Export PDF
@@ -747,42 +729,11 @@ export const FinancialAnalysis = () => {
               <Printer className="h-4 w-4" />
               Print
             </Button>
-            <Button onClick={generateAnalysis} disabled={isLoading} className="gap-2">
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Generate AI Analysis
-                </>
-              )}
-            </Button>
-            {financialAnalysis && (
-              <Button 
-                onClick={() => {
-                  setFinancialAnalysis("");
-                  toast.success("AI analysis cleared");
-                }} 
-                variant="outline" 
-                className="gap-2 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                Clear Analysis
-              </Button>
-            )}
           </div>
         </div>
 
-        {/* Document Upload and Notes Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
-          <DocumentUpload 
-            documents={uploadedDocuments} 
-            onDocumentsChange={setUploadedDocuments} 
-          />
-          
+        {/* Analyst Notes (no AI) */}
+        <div className="no-print">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -794,15 +745,16 @@ export const FinancialAnalysis = () => {
               <Textarea
                 value={analystNotes}
                 onChange={(e) => setAnalystNotes(e.target.value)}
-                placeholder="Enter deal context, borrower history, special considerations, concerns, or any other notes that should be incorporated into the AI analysis..."
-                className="min-h-[180px] resize-none"
+                placeholder="Deal context, borrower history, concerns, or anything else worth recording on the file."
+                className="min-h-[160px] resize-none"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                These notes will be included in the AI analysis for additional context.
+                Notes for the file.
               </p>
             </CardContent>
           </Card>
         </div>
+
 
         <div className="print:block hidden">
           <h1 className="text-3xl font-bold mb-2">Financial Analysis Report</h1>
