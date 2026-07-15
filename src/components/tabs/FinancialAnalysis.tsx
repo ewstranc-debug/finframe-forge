@@ -2081,50 +2081,8 @@ export const FinancialAnalysis = () => {
         </Card>
       </div>
 
-      {/* AI-Generated Analysis Narrative */}
-      {financialAnalysis && (
-        <Card className="border-primary/20 bg-card page-break">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-primary" />
-              AI Financial Analysis & Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="prose prose-slate dark:prose-invert max-w-none">
-              <ReactMarkdown
-                components={{
-                  h1: ({node, ...props}) => <h1 className="text-2xl font-bold mt-6 mb-4 text-foreground" {...props} />,
-                  h2: ({node, ...props}) => <h2 className="text-xl font-semibold mt-5 mb-3 text-foreground" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="text-lg font-semibold mt-4 mb-2 text-foreground" {...props} />,
-                  p: ({node, ...props}) => <p className="mb-4 text-foreground leading-relaxed" {...props} />,
-                  ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
-                  ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2" {...props} />,
-                  li: ({node, ...props}) => <li className="text-foreground" {...props} />,
-                  strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                  em: ({node, ...props}) => <em className="italic text-muted-foreground" {...props} />,
-                  blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic my-4 text-muted-foreground" {...props} />,
-                  code: ({node, ...props}) => <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono" {...props} />,
-                }}
-              >
-                {financialAnalysis}
-              </ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* AI-Generated Analysis panel removed. */}
 
-      {!financialAnalysis && (
-        <Card className="border-dashed">
-          <CardContent className="pt-6">
-            <div className="text-center text-muted-foreground">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">No Analysis Generated Yet</p>
-              <p className="text-sm">Click "Generate AI Analysis" to get comprehensive insights and recommendations based on your financial data.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* DSCR Breakdown Modal */}
       {selectedDscrData && (
