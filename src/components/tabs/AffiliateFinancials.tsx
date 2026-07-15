@@ -832,6 +832,93 @@ export const AffiliateFinancials = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Per-affiliate Existing Debt Schedule + DSCR */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Existing Debt Schedule</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Debts owed by this affiliate. Flagged rows feed ONLY this affiliate's DSCR (never the main business).
+                    </p>
+                  </div>
+                  <Button onClick={() => addAffiliateDebt(entity)} variant="outline" size="sm" className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Debt
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    const affDebts = getAffiliateDebts(entity);
+                    const dscrInfo = calcAffiliateDSCR(entity);
+                    return (
+                      <div className="space-y-4">
+                        <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
+                          <div className="grid bg-muted font-medium text-sm" style={{ gridTemplateColumns: 'minmax(140px,1.4fr) 130px 130px 90px 90px 90px 60px' }}>
+                            <div className="p-3 border-r border-border">Creditor</div>
+                            <div className="p-3 border-r border-border">Balance</div>
+                            <div className="p-3 border-r border-border">Monthly Payment</div>
+                            <div className="p-3 border-r border-border">Rate (%)</div>
+                            <div className="p-3 border-r border-border">Term (mo)</div>
+                            <div className="p-3 border-r border-border text-center">In DSCR?</div>
+                            <div className="p-3 text-center">Remove</div>
+                          </div>
+                          {affDebts.length === 0 && (
+                            <div className="p-4 text-sm text-muted-foreground text-center">No debts on this affiliate. Click "Add Debt" to add one.</div>
+                          )}
+                          {affDebts.map((d) => (
+                            <div key={d.id} className="grid border-b border-border last:border-b-0" style={{ gridTemplateColumns: 'minmax(140px,1.4fr) 130px 130px 90px 90px 90px 60px' }}>
+                              <div className="border-r border-border bg-secondary/30">
+                                <EditableCell value={d.creditor} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { creditor: v })} type="text" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.balance} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { balance: v })} type="currency" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.payment} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { payment: v })} type="currency" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.rate} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { rate: v })} type="number" />
+                              </div>
+                              <div className="border-r border-border">
+                                <EditableCell value={d.term} onChange={(v) => updateAffiliateDebt(entity.id, d.id, { term: v })} type="number" />
+                              </div>
+                              <div className="border-r border-border p-3 flex items-center justify-center">
+                                <Checkbox
+                                  checked={d.includeInDSCR !== false}
+                                  onCheckedChange={(v) => updateAffiliateDebt(entity.id, d.id, { includeInDSCR: v === true })}
+                                />
+                              </div>
+                              <div className="p-2 flex items-center justify-center">
+                                <Button variant="ghost" size="sm" onClick={() => removeAffiliateDebt(entity.id, d.id)} className="text-destructive hover:text-destructive">
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                            <p className="text-xs text-muted-foreground">Annual Debt Service (in-DSCR)</p>
+                            <p className="text-lg font-semibold mt-1">{formatCurrency(dscrInfo.ds)}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                            <p className="text-xs text-muted-foreground">Cash Flow — {dscrInfo.label} (annualized)</p>
+                            <p className="text-lg font-semibold mt-1">{formatCurrency(dscrInfo.cf)}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                            <p className="text-xs text-muted-foreground">Affiliate DSCR</p>
+                            <p className={`text-lg font-bold mt-1 ${dscrInfo.ds === 0 ? 'text-muted-foreground' : dscrInfo.dscr >= 1.25 ? 'text-green-600' : dscrInfo.dscr >= 1.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {dscrInfo.ds === 0 ? 'N/A (no debt)' : `${dscrInfo.dscr.toFixed(2)}x`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
             </div>
           ))}
         </CardContent>
