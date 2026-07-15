@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditableCell } from "../EditableCell";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
-import { useSpreadsheet, type AffiliateIncomeData as IncomeData, type AffiliateBalanceSheetData as BalanceSheetData, type AffiliateEntity } from "@/contexts/SpreadsheetContext";
+import { useSpreadsheet, type AffiliateIncomeData as IncomeData, type AffiliateBalanceSheetData as BalanceSheetData, type AffiliateEntity, type Debt } from "@/contexts/SpreadsheetContext";
+
 
 export const AffiliateFinancials = () => {
   const { affiliateEntities: entities, setAffiliateEntities: setEntities, affiliatePeriodLabels: periodLabels, setAffiliatePeriodLabels: setPeriodLabels } = useSpreadsheet();
