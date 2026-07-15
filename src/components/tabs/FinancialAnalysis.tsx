@@ -1309,22 +1309,20 @@ export const FinancialAnalysis = () => {
                         }}
                       >
                         <p className="text-sm text-muted-foreground font-semibold">Global DSCR - Interim</p>
-                        <p
-                          className={`text-2xl font-bold ${
-                            !ratios.dscr.globalInterim
-                              ? "text-muted-foreground"
-                              : ratios.dscr.globalInterim.dscr < 1.15
-                              ? "text-destructive"
-                              : ratios.dscr.globalInterim.dscr < 1.25
-                              ? "text-yellow-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {ratios.dscr.globalInterim ? ratios.dscr.globalInterim.dscr.toFixed(2) : "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Target: &gt;1.15 | {ratios.dscr.globalInterim ? `${ratios.dscr.globalInterim.periodLabel} (${ratios.dscr.globalInterim.periodMonths}mo)` : "No Data"}
-                        </p>
+                        {(() => {
+                          const hasData = !!ratios.dscr.globalInterim && ratios.dscr.globalInterim.periodLabel !== 'N/A';
+                          const d = ratios.dscr.globalInterim?.dscr ?? 0;
+                          return (
+                            <>
+                              <p className={`text-2xl font-bold ${!hasData ? 'text-muted-foreground' : d < 1.15 ? 'text-destructive' : d < 1.25 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                {hasData ? d.toFixed(2) : 'N/A'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Target: &gt;1.15 | {hasData ? `${ratios.dscr.globalInterim!.periodLabel} (${ratios.dscr.globalInterim!.periodMonths}mo)` : 'No Data'}
+                              </p>
+                            </>
+                          );
+                        })()}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
