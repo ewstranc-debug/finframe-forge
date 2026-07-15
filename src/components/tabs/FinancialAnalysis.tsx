@@ -44,33 +44,62 @@ export const FinancialAnalysis = () => {
   const [dscrModalOpen, setDscrModalOpen] = useState(false);
   const [selectedDscrData, setSelectedDscrData] = useState<any>(null);
 
-  // Calculate income trends
-  const incomeData = personalPeriods.map((period, index) => {
-    const w2Income = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0);
-    const businessIncome = parseFloat(period.schedCRevenue) || 0;
-    const totalIncome = w2Income + businessIncome + (parseFloat(period.investments) || 0) + (parseFloat(period.rentalIncome) || 0);
-    
-    return {
-      name: personalPeriodLabels[index] || `Period ${index + 1}`,
-      w2Income,
-      businessIncome,
-      totalIncome,
-    };
-  });
+  // Trend charts — plot personal series when any personal data is entered;
+  // otherwise fall back to business periods (revenue / OpEx / line-18 CF) so
+  // the axes are never empty on business-only spreads.
+  const personalHasData = personalPeriods.some(p =>
+    ['salary','bonuses','investments','rentalIncome','retirementIncome','otherIncome','schedCRevenue','costOfLiving','personalTaxes']
+      .some(k => (parseFloat((p as any)[k]) || 0) !== 0)
+  );
 
-  // Calculate cash flow trends
-  const cashFlowData = personalPeriods.map((period, index) => {
-    const totalIncome = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0) + 
-                       (parseFloat(period.schedCRevenue) || 0) + (parseFloat(period.investments) || 0);
-    const totalExpenses = (parseFloat(period.costOfLiving) || 0) + (parseFloat(period.personalTaxes) || 0);
-    
-    return {
-      name: personalPeriodLabels[index] || `Period ${index + 1}`,
-      income: totalIncome,
-      expenses: totalExpenses,
-      netCashFlow: totalIncome - totalExpenses,
-    };
-  });
+  const incomeData = personalHasData
+    ? personalPeriods.map((period, index) => {
+        const w2Income = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0);
+        const businessIncome = parseFloat(period.schedCRevenue) || 0;
+        const totalIncome = w2Income + businessIncome + (parseFloat(period.investments) || 0) + (parseFloat(period.rentalIncome) || 0);
+        return {
+          name: personalPeriodLabels[index] || `Period ${index + 1}`,
+          w2Income,
+          businessIncome,
+          totalIncome,
+        };
+      })
+    : businessPeriods.map((p, i) => {
+        const rev = parseFloat(p.revenue) || 0;
+        const oi = parseFloat(p.otherIncome) || 0;
+        return {
+          name: businessPeriodLabels[i] || `Period ${i + 1}`,
+          w2Income: 0,
+          businessIncome: rev,
+          totalIncome: rev + oi,
+        };
+      });
+
+  const cashFlowData = personalHasData
+    ? personalPeriods.map((period, index) => {
+        const totalIncome = (parseFloat(period.salary) || 0) + (parseFloat(period.bonuses) || 0) +
+                           (parseFloat(period.schedCRevenue) || 0) + (parseFloat(period.investments) || 0);
+        const totalExpenses = (parseFloat(period.costOfLiving) || 0) + (parseFloat(period.personalTaxes) || 0);
+        return {
+          name: personalPeriodLabels[index] || `Period ${index + 1}`,
+          income: totalIncome,
+          expenses: totalExpenses,
+          netCashFlow: totalIncome - totalExpenses,
+        };
+      })
+    : businessPeriods.map((p, i) => {
+        const rev = (parseFloat(p.revenue) || 0) + (parseFloat(p.otherIncome) || 0);
+        const exp = (parseFloat(p.cogs) || 0) + (parseFloat(p.operatingExpenses) || 0) +
+                    (parseFloat(p.rentExpense) || 0) + (parseFloat(p.officersComp) || 0) +
+                    (parseFloat(p.otherExpenses) || 0);
+        const cf = calculateBusinessCashFlow(p, false) + getNonRecurringAdjustment(p, false);
+        return {
+          name: businessPeriodLabels[i] || `Period ${i + 1}`,
+          income: rev,
+          expenses: exp,
+          netCashFlow: cf,
+        };
+      });
 
   // Asset allocation pie chart data
   const assetAllocationData = [
