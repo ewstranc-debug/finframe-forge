@@ -449,25 +449,25 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
   const months = parseFloat(businessPeriod.periodMonths) || 12;
   const annualizationFactor = 12 / months;
 
-  // EBITDA (annualized) — excludes Officers Comp (added back below)
-  const businessRevenue = (parseFloat(businessPeriod.revenue) || 0) + (parseFloat(businessPeriod.otherIncome) || 0);
-  const businessExpenses = (parseFloat(businessPeriod.cogs) || 0) +
-                          (parseFloat(businessPeriod.operatingExpenses) || 0) +
-                          (parseFloat(businessPeriod.rentExpense) || 0) +
-                          (parseFloat(businessPeriod.otherExpenses) || 0);
-  // Non-recurring adjustment (positive removes one-time expense, negative
-  // removes one-time income). Flows into EBITDA/CFADS/DSCR/FCCR only.
-  const nonRecurringAdj = (parseFloat(businessPeriod.nonRecurringAdjustment || "0") || 0) * annualizationFactor;
-  const businessEbitda = (businessRevenue - businessExpenses) * annualizationFactor + nonRecurringAdj;
+  // BUSINESS LINE-18 CASH FLOW (annualized) — the SAME figure the Business
+  // DSCR card and P&L line 18 use: NI + D + A + Sec179 + Interest + Addbacks
+  // + Non-recurring adjustment. Officers comp is already inside NI as an
+  // expense; adding it again at the global level would double-count against
+  // the guarantor's personal W-2 income.
+  const businessLine18CF = calculateBusinessCashFlow(businessPeriod, true) +
+                           getNonRecurringAdjustment(businessPeriod, true);
 
+  // Retained for tooltip transparency (annualized components).
+  const businessEbitda = businessLine18CF;
   const officersComp = (parseFloat(businessPeriod.officersComp) || 0) * annualizationFactor;
   const depreciationAddback = (parseFloat(businessPeriod.depreciation) || 0) * annualizationFactor;
   const amortizationAddback = (parseFloat(businessPeriod.amortization) || 0) * annualizationFactor;
   const section179Addback = (parseFloat(businessPeriod.section179) || 0) * annualizationFactor;
   const otherAddbacks = (parseFloat(businessPeriod.addbacks) || 0) * annualizationFactor;
+  const businessCashFlow = businessLine18CF;
 
-  const businessCashFlow = businessEbitda + depreciationAddback + amortizationAddback + section179Addback + otherAddbacks;
-
+  // PERSONAL CASH INCOME (guarantor). W-2 already includes any salary drawn
+  // from the subject business, so we do NOT also add officers comp above.
   const personalW2Income = (parseFloat(personalPeriod.salary) || 0) +
                           (parseFloat(personalPeriod.bonuses) || 0) +
                           (parseFloat(personalPeriod.investments) || 0) +
@@ -485,13 +485,11 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
 
   const schedEK1Income = (parseFloat(personalPeriod.schedENetRentalIncome) || 0) +
                          (parseFloat(personalPeriod.k1OrdinaryIncome) || 0) +
-                         (parseFloat(personalPeriod.k1GuaranteedPayments) || 0);
-
-  const totalIncomeAvailable = businessCashFlow + officersComp + personalW2Income + schedCCashFlow + schedEK1Income + affiliateCashFlow;
+                         (parseFloat(personalPeriod.k1GuaranteedPayments) || 0) +
+                         (parseFloat(personalPeriod.k1Distributions) || 0);
 
   const personalExpenses = (parseFloat(personalPeriod.costOfLiving) || 0) + (parseFloat(personalPeriod.personalTaxes) || 0);
-  const estimatedTaxOnOfficersComp = officersComp * 0.30;
-  const rentAddback = includeRentAddback ? (parseFloat(businessPeriod.rentExpense) || 0) * annualizationFactor : 0;
+  const personalCashFlowNet = personalW2Income + schedCCashFlow + schedEK1Income - personalExpenses;
 
   // Existing business debt (annual P&I) — only debts flagged includeInDSCR (undefined defaults to true).
   const existingDebtPayment = debts.reduce((sum, debt) => {
@@ -506,7 +504,16 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
     (parseFloat(personalLiabilitiesMonthly.vehicleLoansMonthly) || 0) * 12 +
     (parseFloat(personalLiabilitiesMonthly.otherLiabilitiesMonthly) || 0) * 12;
 
-  const netCashAvailable = totalIncomeAvailable - personalExpenses - estimatedTaxOnOfficersComp + rentAddback - personalDebtPayment;
+  const rentAddback = includeRentAddback ? (parseFloat(businessPeriod.rentExpense) || 0) * annualizationFactor : 0;
+  // Officers comp is no longer double-counted in the numerator, so its
+  // estimated tax is not deducted here either.
+  const estimatedTaxOnOfficersComp = 0;
+
+  // GLOBAL DSCR numerator = business line-18 CF + guarantor personal cash flow
+  // (net of living expenses and personal taxes) + affiliate NET cash flow
+  // (caller passes affiliate CF already net of that affiliate's own DS).
+  const totalIncomeAvailable = businessLine18CF + personalW2Income + schedCCashFlow + schedEK1Income + affiliateCashFlow;
+  const netCashAvailable = businessLine18CF + personalCashFlowNet + affiliateCashFlow + rentAddback;
 
   const equity = parseFloat(equityInjection) || 0;
   const guaranteePct = parseFloat(guaranteePercent) || 75;
@@ -514,7 +521,9 @@ export const calculateDSCR = (input: DSCRCalculationInput): DSCRCalculationResul
   const proposedDebtPayment = computeNewLoanAnnualPayment(sbaLoanAmount, interestRate, termMonths);
   const sbaAnnualServiceFee = computeSBAAnnualServiceFee(sbaLoanAmount, guaranteePct);
 
-  const annualDebtService = existingDebtPayment + proposedDebtPayment + sbaAnnualServiceFee;
+  // GLOBAL DSCR denominator = existing business DS (in-DSCR flagged) +
+  // personal DS + proposed P&I + SBA annual service fee.
+  const annualDebtService = existingDebtPayment + personalDebtPayment + proposedDebtPayment + sbaAnnualServiceFee;
 
   const dscr = annualDebtService > 0 ? netCashAvailable / annualDebtService : 0;
 
