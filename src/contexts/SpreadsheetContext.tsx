@@ -127,6 +127,11 @@ export interface AffiliateEntity {
   name: string;
   incomePeriods: AffiliateIncomeData[];
   balancePeriods: AffiliateBalanceSheetData[];
+  /** Per-affiliate business debt schedule. Optional for backward compat with
+   *  existing saved spreads; defaults to []. Each affiliate's flagged debt
+   *  payments feed ONLY that affiliate's DSCR — never the main business DSCR
+   *  or another affiliate. */
+  debts?: Debt[];
 }
 
 export interface BusinessBalanceSheetPeriodData {
