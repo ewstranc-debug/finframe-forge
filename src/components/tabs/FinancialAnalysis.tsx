@@ -613,134 +613,14 @@ export const FinancialAnalysis = () => {
     };
   };
 
-  const generateAnalysis = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Calculate comprehensive metrics for analysis
-      const totalPersonalAssets = Object.values(personalAssets).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-      // Personal liabilities exclude business Existing Debts (those are a
-      // contingent guaranteed liability, tracked separately).
-      const totalPersonalLiabilities = (parseFloat(personalLiabilities.creditCards) || 0) +
-                                       (parseFloat(personalLiabilities.mortgages) || 0) +
-                                       (parseFloat(personalLiabilities.vehicleLoans) || 0) +
-                                       (parseFloat(personalLiabilities.otherLiabilities) || 0);
-      const contingentBusinessDebt = debts.reduce((sum, debt) => sum + (parseFloat(debt.balance) || 0), 0);
-      
-      // Calculate business metrics
-      const latestBusinessPeriod = businessPeriods[2] || businessPeriods[1] || businessPeriods[0];
-      const businessRevenue = parseFloat(latestBusinessPeriod?.revenue) || 0;
-      const businessCOGS = parseFloat(latestBusinessPeriod?.cogs) || 0;
-      const businessOpEx = parseFloat(latestBusinessPeriod?.operatingExpenses) || 0;
-      const businessNetIncome = businessRevenue - businessCOGS - businessOpEx;
-      
-      // Calculate business balance sheet metrics
-      const latestBalanceSheet = businessBalanceSheetPeriods[2] || businessBalanceSheetPeriods[1] || businessBalanceSheetPeriods[0];
-      const businessCurrentAssets = (parseFloat(latestBalanceSheet?.cash) || 0) + 
-                                   (parseFloat(latestBalanceSheet?.accountsReceivable) || 0) +
-                                   (parseFloat(latestBalanceSheet?.inventory) || 0);
-      const businessTotalAssets = businessCurrentAssets + 
-                                 (parseFloat(latestBalanceSheet?.realEstate) || 0) -
-                                 (parseFloat(latestBalanceSheet?.accumulatedDepreciation) || 0);
-      const businessCurrentLiabilities = parseFloat(latestBalanceSheet?.currentLiabilities) || 0;
-      const businessTotalLiabilities = businessCurrentLiabilities + (parseFloat(latestBalanceSheet?.longTermDebt) || 0);
-      
-      // Fetch document contents if there are uploaded documents
-      const documentContents: { name: string; content: string }[] = [];
-      
-      for (const doc of uploadedDocuments) {
-        try {
-          const { data: fileData, error: downloadError } = await supabase.storage
-            .from('financial-documents')
-            .download(doc.path);
-          
-          if (downloadError) {
-            console.error('Error downloading document:', downloadError);
-            continue;
-          }
-          
-          // For text files, read content directly
-          if (doc.type === 'text/plain' || doc.name.endsWith('.txt')) {
-            const text = await fileData.text();
-            documentContents.push({ name: doc.name, content: text });
-          } else {
-            // For other files, note that they were provided (full parsing would need vision/OCR)
-            documentContents.push({ 
-              name: doc.name, 
-              content: `[Document uploaded: ${doc.name} (${doc.type}). The AI will analyze available context from this document type.]` 
-            });
-          }
-        } catch (err) {
-          console.error('Error processing document:', err);
-        }
-      }
-      
-      // Prepare comprehensive financial data for analysis
-      const financialData = {
-        personalPeriods,
-        personalPeriodLabels,
-        personalAssets,
-        personalLiabilities,
-        businessPeriods,
-        businessPeriodLabels,
-        businessBalanceSheetPeriods,
-        affiliateEntities,
-        debts,
-        calculatedMetrics: {
-          personal: {
-            totalAssets: totalPersonalAssets,
-            totalLiabilities: totalPersonalLiabilities,
-            netWorth: totalPersonalAssets - totalPersonalLiabilities,
-            liquidAssets: parseFloat(personalAssets.liquidAssets) || 0,
-            debtToAssets: totalPersonalAssets > 0 ? (totalPersonalLiabilities / totalPersonalAssets) * 100 : 0,
-            liquidityRatio: totalPersonalLiabilities > 0 ? (parseFloat(personalAssets.liquidAssets) || 0) / totalPersonalLiabilities : 0,
-            contingentBusinessDebt,
-          },
-          business: {
-            revenue: businessRevenue,
-            grossProfit: businessRevenue - businessCOGS,
-            grossMargin: businessRevenue > 0 ? ((businessRevenue - businessCOGS) / businessRevenue) * 100 : 0,
-            netIncome: businessNetIncome,
-            netMargin: businessRevenue > 0 ? (businessNetIncome / businessRevenue) * 100 : 0,
-            totalAssets: businessTotalAssets,
-            totalLiabilities: businessTotalLiabilities,
-            currentRatio: businessCurrentLiabilities > 0 ? businessCurrentAssets / businessCurrentLiabilities : 0,
-            debtToEquity: (businessTotalAssets - businessTotalLiabilities) > 0 ? 
-                         businessTotalLiabilities / (businessTotalAssets - businessTotalLiabilities) : 0,
-            cashConversion: (ratios.business as any).cashConversion,
-          },
-          combined: {
-            totalAssets: totalPersonalAssets + businessTotalAssets,
-            totalLiabilities: totalPersonalLiabilities + businessTotalLiabilities,
-            totalNetWorth: (totalPersonalAssets + businessTotalAssets) - (totalPersonalLiabilities + businessTotalLiabilities),
-          }
-        },
-      };
-
-      const { data, error } = await supabase.functions.invoke('generate-financial-analysis', {
-        body: { 
-          financialData,
-          analystNotes: analystNotes.trim() || undefined,
-          documentContents: documentContents.length > 0 ? documentContents : undefined,
-          model: selectedAIModel,
-        },
-      });
-
-      if (error) throw error;
-
-      setFinancialAnalysis(data.analysis);
-      toast.success("Financial analysis generated successfully");
-    } catch (error) {
-      console.error("Error generating analysis:", error);
-      toast.error("Failed to generate analysis");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // AI analysis feature removed. `financialAnalysis`, `uploadedDocuments`, and
+  // `selectedAIModel` remain in localStorage for backward compat but are no
+  // longer read or written by the UI.
 
   const handlePrint = () => {
     window.print();
   };
+
 
   const handleExportPDF = () => {
     try {
