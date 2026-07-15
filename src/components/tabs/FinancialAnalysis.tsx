@@ -1986,7 +1986,9 @@ export const FinancialAnalysis = () => {
           </CardContent>
         </Card>
 
-        {/* Key Metrics Overview */}
+        {/* Key Metrics Overview — hidden when no personal data is entered, to
+            avoid rendering empty axes. */}
+        {personalHasData && (
         <Card className="print-chart page-break">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -2010,6 +2012,8 @@ export const FinancialAnalysis = () => {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+        )}
+
 
       {/* Income Trends */}
       <Card className="print-chart page-break">
