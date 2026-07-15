@@ -201,6 +201,11 @@ export const AffiliateFinancials = () => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
   };
 
+  // Dynamic grid columns for flexible period count
+  const gridStyle = { gridTemplateColumns: `minmax(200px, 1fr) repeat(${periodLabels.length}, minmax(150px, 1fr))` };
+  const minWidth = `${200 + periodLabels.length * 150}px`;
+
+
   // Per-affiliate debt schedule helpers. `debts` is an optional field on the
   // entity — undefined = empty. Each affiliate's flagged debt payments feed
   // ONLY that affiliate's DSCR (never the main business DSCR).
