@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "sdk_version": "0.22.2",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "sba-spreading-tool-mcp",
+      "version": "0.1.0",
+      "title": "SBA Spreading Tool — Calculators"
+    },
+    "tools": [
+      {
+        "name": "sba_loan_sizing",
+        "title": "SBA 7(a) loan sizing (Sources & Uses plug)",
+        "description": "Given the total primary financing request (uses), an equity injection, guarantee %, and whether the upfront fee is financed, solve for the SBA 7(a) loan amount, upfront fee, annual P&I, and annual SBA service fee. Mirrors the Summary tab's Sources & Uses solver.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "primaryRequest": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Sum of Uses of Funds excluding SBA guarantee fee (USD)."
+            },
+            "equityInjection": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Borrower equity injection (USD)."
+            },
+            "guaranteePercent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "SBA guarantee percent (e.g. 75)."
+            },
+            "financeFee": {
+              "type": "boolean",
+              "description": "If true, the SBA upfront fee is rolled into the loan (circular). If false, treat fee as a separate borrower injection source."
+            },
+            "interestRatePct": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Optional: annual interest % for P&I."
+            },
+            "termMonths": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Optional: amortization term in months for P&I."
+            }
+          },
+          "required": [
+            "primaryRequest",
+            "equityInjection",
+            "guaranteePercent",
+            "financeFee"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sba_guarantee_fee",
+        "title": "SBA 7(a) upfront guarantee fee",
+        "description": "Calculate the SBA 7(a) upfront guarantee fee for a given loan amount and guarantee percentage using the FY2026 tier table.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loanAmount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Total SBA 7(a) loan amount in USD."
+            },
+            "guaranteePercent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "SBA guarantee percentage (e.g. 75 or 85)."
+            }
+          },
+          "required": [
+            "loanAmount",
+            "guaranteePercent"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "loan_payment",
+        "title": "Amortizing loan payment",
+        "description": "Compute the monthly and annual principal & interest payment for a fully-amortizing loan.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "principal": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Loan principal in USD."
+            },
+            "interestRatePct": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Annual interest rate as a percent, e.g. 9.5"
+            },
+            "termMonths": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Amortization term in months, e.g. 120"
+            }
+          },
+          "required": [
+            "principal",
+            "interestRatePct",
+            "termMonths"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "down_payment_solver",
+        "title": "Down payment on total project cost",
+        "description": "Solve iteratively for the equity injection and resulting SBA 7(a) loan when the down payment is a percentage of total project cost (primary request + upfront fee).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "primaryRequest": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Sum of Uses of Funds excluding fee (USD)."
+            },
+            "downPaymentPct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Down payment as % of total project cost."
+            },
+            "guaranteePercent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "SBA guarantee percent (e.g. 75)."
+            },
+            "financeFee": {
+              "type": "boolean",
+              "description": "Whether the upfront SBA fee is financed into the loan."
+            }
+          },
+          "required": [
+            "primaryRequest",
+            "downPaymentPct",
+            "guaranteePercent",
+            "financeFee"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "dscr",
+        "title": "Debt Service Coverage Ratio",
+        "description": "Compute DSCR = cash flow available for debt service / total annual debt service. Optionally annualizes interim cash flow by period months.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cashFlow": {
+              "type": "number",
+              "description": "Cash flow available for debt service for the period (USD). Business CFADS, global net cash, etc."
+            },
+            "annualDebtService": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Total annual debt service (USD)."
+            },
+            "periodMonths": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 24,
+              "description": "If the cash flow is for a partial period, months in that period. Cash flow will be annualized as cashFlow × 12 / periodMonths."
+            }
+          },
+          "required": [
+            "cashFlow",
+            "annualDebtService"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
